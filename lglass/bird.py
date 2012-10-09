@@ -1,8 +1,10 @@
 # coding: utf-8
 
+import netaddr
+
 class Route:
 	def __init__(self, network):
-		self.network = network
+		self.network = netaddr.IPNetwork(network)
 
 	def __repr__(self):
 		return "Route({0})".format(self.network)
@@ -20,7 +22,7 @@ class BGPRoute(Route):
 
 		self.origin = origin
 		self.as_path = list(map(lambda a: int(a), as_path))
-		self.next_hop = next_hop
+		self.next_hop = netaddr.IPAddress(next_hop)
 		self.community = list(map(lambda c: (int(c[0]), int(c[1])), community))
 		self.med = med
 
