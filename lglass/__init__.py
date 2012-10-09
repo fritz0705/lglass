@@ -4,5 +4,4 @@ import bottle
 import json
 
 config = json.load(open("lglass.json"))
-
-import lglass.graphviz
+application = bottle.Bottle()
