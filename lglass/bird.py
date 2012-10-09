@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import netaddr
+import subprocess
 
 class Route:
 	def __init__(self, network):
@@ -111,3 +112,36 @@ class Parser:
 	def parse_protocols(self, protocols):
 		pass
  
+class Bird:
+	def __init__(self, birdc="birdc", parser=None):
+		if parser is None:
+			parser = Parser()
+
+		self.parser = parser
+		self.birdc = birdc
+
+	def get_routes(self, selector=None, table=None, protocol=None, primary=False):
+		query = [ self.birdc, "show", "route" ]
+		if selector is not None:
+			query.append("for")
+			query.append(str(selector))
+
+		if table is not None:
+			query.append("table")
+			query.append(str(table))
+
+		if protocol is not None:
+			query.append("protocol")
+			query.append(str(protocol))
+
+		if primary:
+			query.append("primary")
+
+		query.append("all")
+
+		proc = subprocess.Popen(query, stdout=subprocess.PIPE)
+		data = proc.stdout.read().decode()
+		proc.wait()
+
+		return self.parser.parse_routes(data)
+
