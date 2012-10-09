@@ -113,14 +113,18 @@ class Parser:
 		pass
  
 class Bird:
-	def __init__(self, birdc="birdc", parser=None):
+	def __init__(self, birdc="birdc", parser=None, default_table=None):
 		if parser is None:
 			parser = Parser()
 
+		self.default_table = default_table
 		self.parser = parser
 		self.birdc = birdc
 
 	def get_routes(self, selector=None, table=None, protocol=None, primary=False):
+		if table is None:
+			table = self.default_table
+
 		query = [ self.birdc, "show", "route" ]
 		if selector is not None:
 			query.append("for")

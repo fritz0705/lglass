@@ -2,6 +2,6 @@
 
 import bottle
 import json
+import jinja2
+import lglass.bird
 
-config = json.load(open("lglass.json"))
-application = bottle.Bottle()
