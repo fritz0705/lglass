@@ -1,0 +1,7 @@
+{
+	"programs": {
+		"birdc": "birdc",
+		"dot": "dot"
+	},
+	"registry": "dn42.registry"
+}
