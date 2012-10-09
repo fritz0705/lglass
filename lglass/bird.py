@@ -107,4 +107,7 @@ class Parser:
 			routes += self.parse_route_body(network, route_body)
 
 		return routes
+	
+	def parse_protocols(self, protocols):
+		pass
  
