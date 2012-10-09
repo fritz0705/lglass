@@ -8,7 +8,7 @@ class Route:
 		self.network = netaddr.IPNetwork(network)
 
 	def __repr__(self):
-		return "Route({0})".format(self.network)
+		return "Route({0})".format(repr(self.network))
 
 class BGPRoute(Route):
 	def __init__(self, network, origin="IGP", as_path=[], next_hop=None,
