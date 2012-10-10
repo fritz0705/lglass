@@ -12,4 +12,5 @@ jinja2_env = jinja2.Environment(loader=jinja2.PackageLoader("lglass.web", "templ
 
 import lglass.web.home
 import lglass.web.registry
+import lglass.web.lg
 

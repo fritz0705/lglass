@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>AS {{ asn }}</h2>
+
+<pre>{{ rpsl | string }}</pre>
+
+<h3>Networks</h3>
+
+<ul>
+	{% for network in networks %}
+	<li><a href="/network/{{ network | string | replace("/", "_") }}">{{ network }}</a></li>
+	{% endfor %}
+</ul>
+
+<h3>Routes</h3>
+
+<ul>
+	{% for route in routes %}
+	<li><pre>{{ route }}</pre></li>
+	{% endfor %}
+</ul>
+{% endblock %}

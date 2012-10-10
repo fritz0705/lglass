@@ -9,9 +9,12 @@ class Route:
 
 	def __repr__(self):
 		return "Route({0})".format(repr(self.network))
+
+	def __str__(self):
+		return "{0}\n".format(self.network)
 	
 	@classmethod
-	def route_filter(cls, route):
+	def type_filter(cls, route):
 		return isinstance(route, cls)
 
 class BGPRoute(Route):
@@ -50,6 +53,20 @@ class BGPRoute(Route):
 			community=repr(self.community),
 			med=repr(self.med)
 		)
+	
+	def __str__(self):
+		string = Route.__str__(self)
+
+		string += "\tType: BGP unicast univ\n"
+		string += "\tBGP.origin: {0}\n".format(self.origin)
+		string += "\tBGP.as_path: {0}\n".format(" ".join(map(lambda x: str(x), self.as_path)))
+		string += "\tBGP.next_hop: {0}\n".format(self.next_hop)
+		string += "\tBGP.med: {0}\n".format(self.med)
+
+		if self.community:
+			string += "\tBGP.community: {0}\n".format(" ".join(map(lambda x: "({0[0]},{0[1]})".format(x), self.community)))
+
+		return string
 
 class Parser:
 	def __init__(self, static_route=Route, bgp_route=BGPRoute):
@@ -126,7 +143,7 @@ class Bird:
 		self.parser = parser
 		self.birdc = birdc
 
-	def get_routes(self, selector=None, table=None, protocol=None, primary=False, sort=False):
+	def get_routes(self, selector=None, table=None, protocol=None, primary=False, sort=False, extern=None):
 		if table is None:
 			table = self.default_table
 
@@ -158,6 +175,9 @@ class Bird:
 
 		if sort:
 			routes = sorted(routes, key=lambda r: r.network)
+
+		if extern:
+			routes = list(filter(lambda r: len(r.as_path) > 0, routes))
 
 		return routes
 
