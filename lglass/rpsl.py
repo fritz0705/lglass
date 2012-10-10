@@ -80,6 +80,14 @@ class Database:
 
 		return None
 
+	def get_object(self, type, query):
+		try:
+			with open(self._path("{0}/{1}".format(type, query))) as file:
+				obj = RPSLObject(type, file.read())
+		except IOError:
+			return None
+		return obj
+
 	def get_all(self, query):
 		result = []
 		for method in self.search_list:
