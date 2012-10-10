@@ -133,7 +133,7 @@ class Parser:
 	def parse_protocols(self, protocols):
 		pass
  
-class Bird:
+class Client:
 	def __init__(self, birdc="birdc", parser=None, default_table=None, route_filter=None):
 		if parser is None:
 			parser = Parser()
@@ -180,4 +180,5 @@ class Bird:
 			routes = list(filter(lambda r: len(r.as_path) > 0, routes))
 
 		return routes
+
 
