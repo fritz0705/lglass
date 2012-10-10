@@ -9,6 +9,10 @@ class Route:
 
 	def __repr__(self):
 		return "Route({0})".format(repr(self.network))
+	
+	@classmethod
+	def route_filter(cls, route):
+		return isinstance(route, cls)
 
 class BGPRoute(Route):
 	def __init__(self, network, origin="IGP", as_path=[], next_hop=None,
@@ -113,15 +117,16 @@ class Parser:
 		pass
  
 class Bird:
-	def __init__(self, birdc="birdc", parser=None, default_table=None):
+	def __init__(self, birdc="birdc", parser=None, default_table=None, route_filter=None):
 		if parser is None:
 			parser = Parser()
 
+		self.route_filter = route_filter
 		self.default_table = default_table
 		self.parser = parser
 		self.birdc = birdc
 
-	def get_routes(self, selector=None, table=None, protocol=None, primary=False):
+	def get_routes(self, selector=None, table=None, protocol=None, primary=False, sort=False):
 		if table is None:
 			table = self.default_table
 
@@ -147,5 +152,12 @@ class Bird:
 		data = proc.stdout.read().decode()
 		proc.wait()
 
-		return self.parser.parse_routes(data)
+		routes = self.parser.parse_routes(data)
+		if self.route_filter:
+			routes = list(filter(self.route_filter, routes))
+
+		if sort:
+			routes = sorted(routes, key=lambda r: r.network)
+
+		return routes
 
