@@ -27,6 +27,14 @@ class RPSLObject(list):
 		else:
 			list.extend(self, data)
 
+	def __getitem__(self, key):
+		if isinstance(key, str):
+			obj = self.get(key)
+			if obj == []:
+				raise KeyError(key)
+			return obj[0]
+		return list.__getitem__(self, key)
+
 	def get(self, key):
 		for _key, value in self:
 			if _key == key:
@@ -56,6 +64,13 @@ class Database:
 			self.get_as_block.__func__
 		]
 
+	def __getitem__(self, key):
+		obj = self.get(key)
+		if obj is None:
+			raise KeyError(key)
+
+		return obj
+
 	def get(self, query):
 		for method in self.search_list:
 			obj = method(self, query)
@@ -77,7 +92,7 @@ class Database:
 		if type(query) != str:
 			query = str(query)
 
-		if query[0:1] != "AS":
+		if query[0:2] != "AS":
 			query = "AS" + query
 
 		try:
