@@ -46,7 +46,15 @@ class RPSLObject(list):
 class Database:
 	def __init__(self, prefix="dn42"):
 		self.prefix = prefix
-		self.search_list = [ self.get_autnum.__func__, self.get_person.__func__ ]
+		self.search_list = [
+			self.get_autnum.__func__,
+			self.get_person.__func__,
+			self.get_inetnum.__func__,
+			self.get_inet6num.__func__,
+			self.get_route.__func__,
+			self.get_route6.__func__,
+			self.get_as_block.__func__
+		]
 
 	def get(self, query):
 		for method in self.search_list:
@@ -84,6 +92,60 @@ class Database:
 		try:
 			with open(self._path("person/{0}".format(name))) as file:
 				obj = RPSLObject("person", file.read())
+		except IOError:
+			return None
+		return obj
+
+	def get_inetnum(self, query):
+		query = str(query)
+		query = query.replace("/", "_")
+
+		try:
+			with open(self._path("inetnum/{0}".format(query))) as file:
+				obj = RPSLObject("inetnum", file.read())
+		except IOError:
+			return None
+		return obj
+
+	def get_inet6num(self, query):
+		query = str(query)
+		query = query.replace("/", "_")
+		try:
+			with open(self._path("inet6num/{0}".format(query))) as file:
+				obj = RPSLObject("inet6num", file.read())
+		except IOError:
+			return None
+		return obj
+
+	def get_route(self, query):
+		query = str(query)
+		query = query.replace("/", "_")
+
+		try:
+			with open(self._path("route/{0}".format(query))) as file:
+				obj = RPSLObject("route", file.read())
+		except IOError:
+			return None
+		return obj
+
+	def get_route6(self, query):
+		query = str(query)
+		query = query.replace("/", "_")
+
+		try:
+			with open(self._path("route6/{0}".format(query))) as file:
+				obj = RPSLObject("route6", file.read())
+		except IOError:
+			return None
+		return obj
+
+	def get_as_block(self, query):
+		if isinstance(query, range) or isinstance(query, list):
+			query = "{0}_{1}".format(query[0], query[-1])
+
+		try:
+			with open(self._path("as-block/{0}".format(query))) as file:
+				obj = RPSLObject("as-block", file.read())
 		except IOError:
 			return None
 		return obj
