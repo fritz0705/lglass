@@ -61,7 +61,8 @@ class Database:
 			self.get_inet6num.__func__,
 			self.get_route.__func__,
 			self.get_route6.__func__,
-			self.get_as_block.__func__
+			self.get_as_block.__func__,
+			self.get_dns.__func__
 		]
 
 	def __getitem__(self, key):
@@ -161,6 +162,14 @@ class Database:
 		try:
 			with open(self._path("as-block/{0}".format(query))) as file:
 				obj = RPSLObject("as-block", file.read())
+		except IOError:
+			return None
+		return obj
+
+	def get_dns(self, query):
+		try:
+			with open(self._path("dns/{0}".format(query))) as file:
+				obj = RPSLObject("dns", file.read())
 		except IOError:
 			return None
 		return obj
