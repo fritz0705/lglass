@@ -7,7 +7,7 @@ from lglass import bird_client, registry
 def get_as(asn):
 	asn = int(asn)
 	obj = registry.get_autnum(asn)
-	routes = bird_client.get_routes(extern=True)
+	routes = bird_client.get_routes()
 	routes = list(filter(lambda r: r.as_path[-1] == asn, routes))
 	networks = set(map(lambda r: r.network, routes))
 
