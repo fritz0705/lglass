@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Autonomous systems</h2>
+
+<ul>
+	{% for as_number in as_numbers %}
+	<li><a href="/as/{{ as_number }}">{{ as_number }}</a></li>
+	{% endfor %}
+</ul>
+{% endblock %}
