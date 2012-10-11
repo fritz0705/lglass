@@ -25,11 +25,14 @@ class BGPRoute(Route):
 		else:
 			med = 0
 
+		if next_hop is not None:
+			next_hop = netaddr.IPAddress(next_hop)
+
 		as_path = filter(lambda x: x.isnumeric(), as_path)
 
 		self.origin = origin
 		self.as_path = list(map(lambda a: int(a), as_path))
-		self.next_hop = netaddr.IPAddress(next_hop)
+		self.next_hop = next_hop
 		self.community = list(map(lambda c: (int(c[0]), int(c[1])), community))
 		self.med = med
 
