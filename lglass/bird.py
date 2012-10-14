@@ -69,7 +69,7 @@ class Parser:
 		pass
  
 class Client:
-	def __init__(self, birdc="birdc", parser=None, default_table=None, route_filter=None):
+	def __init__(self, birdc="birdc", parser=None, default_table="master", route_filter=None):
 		if parser is None:
 			parser = Parser()
 
@@ -89,6 +89,7 @@ class Client:
 		
 		query.append("all")
 
+		print(query)
 		proc = subprocess.Popen(query, stdout=subprocess.PIPE)
 		routes = self.parser.parse_routes(proc.stdout.read().decode())
 		proc.wait()

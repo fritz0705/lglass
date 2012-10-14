@@ -181,6 +181,9 @@ class Database:
 		except IOError:
 			return None
 		return obj
+
+	def ls(self):
+		return self.persons() + self.as_blocks() + self.autnums() + self.dns() + self.inet6nums() + self.inetnums() + self.routes() + self.route6s()
 	
 	def persons(self):
 		return os.listdir(self._path("person"))
@@ -201,10 +204,10 @@ class Database:
 		return os.listdir(self._path("inetnum"))
 
 	def routes(self):
-		return os.listdir(self._path("routes"))
+		return os.listdir(self._path("route"))
 
 	def route6s(self):
-		return os.listdir(self._path("route6s"))
+		return os.listdir(self._path("route6"))
 
 	def _path(self, path):
 		return os.path.join(self.prefix, path)
