@@ -66,6 +66,7 @@ class Parser:
 		return routes
 	
 	def parse_protocols(self, protocols):
+		indent = 0
 		pass
  
 class Client:
@@ -89,7 +90,6 @@ class Client:
 		
 		query.append("all")
 
-		print(query)
 		proc = subprocess.Popen(query, stdout=subprocess.PIPE)
 		routes = self.parser.parse_routes(proc.stdout.read().decode())
 		proc.wait()
