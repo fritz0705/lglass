@@ -7,7 +7,7 @@ class Route:
 		self.network = netaddr.IPNetwork(network)
 
 	def __repr__(self):
-		return "Route({0})".format(repr(self.network))
+		return "Route({self.network!r})".format(self=self)
 
 	def __str__(self):
 		return "{0}\n".format(self.network)
@@ -47,14 +47,7 @@ class BGPRoute(Route):
 		return pairs
 
 	def __repr__(self):
-		return "BGPRoute({network}, origin={origin}, as_path={as_path}, next_hop={next_hop}, community={community}, med={med})".format(
-			network=repr(self.network),
-			origin=repr(self.origin),
-			as_path=repr(self.as_path),
-			next_hop=repr(self.next_hop),
-			community=repr(self.community),
-			med=repr(self.med)
-		)
+		return "BGPRoute({self.network!r}, origin={self.origin!r}, as_path={self.as_path!r}, next_hop={self.next_hop!r}, community={self.community!r}, med={self.med!r})".format(self=self)
 	
 	def __str__(self):
 		string = Route.__str__(self)
