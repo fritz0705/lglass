@@ -10,6 +10,11 @@ def parse_rpsl(lines):
 			continue
 		if line[0] == '%':
 			continue
+		if line[0] == ' ':
+			new_entry = kv_pairs[-1][1] + " " + line.strip()
+			kv_pairs[-1] = (kv_pairs[-1][0], new_entry)
+			continue
+
 		kv_pairs.append(tuple(map(lambda p: p.strip(), line.split(":", 1))))
 	return kv_pairs
 
@@ -32,7 +37,7 @@ class RPSLObject(list):
 			for key, value in data.items():
 				self.get(key).append(value)
 		elif isinstance(data, str):
-			self.extend(parse_rpsl(data))
+			self.extend(parse_rpsl(data.split("\n")))
 		elif isinstance(data, list):
 			for key, value in data:
 				self.get(key).append(value)
@@ -58,12 +63,55 @@ class RPSLObject(list):
 		self.append((key, l))
 		return l
 	
+	def name(self):
+		return self[self.type]
+
+	def handle(self):
+		return self["nic-hdl"]
+	
 	def __str__(self):
 		string = []
 		for key, values in self:
 			for value in values:
 				string.append("{0}: {1}".format(key, value))
 		return "\n".join(string)
+
+class MemoryDatabase:
+	def __init__(self):
+		self.persons = {}
+		self.autnums = {}
+
+	def update(self, other):
+		for person in other.persons():
+			person = other.get_person(person)
+			self.persons[person.handle()] = person
+
+		for autnum in other.autnums():
+			print(autnum)
+			autnum = other.get_autnum(autnum)
+			number = int(autnum.name().replace("AS", ""))
+			self.autnums[number] = autnum
+	
+	def get_autnum(self, autnum):
+		if isinstance(query, str):
+			query = int(query.replace("AS", ""))
+
+		try:
+			return self.autnums[query]
+		except:
+			return None
+	
+	def get_person(self, person):
+		try:
+			return self.person[query]
+		except:
+			return None
+
+	def persons(self):
+		return list(self.persons.keys())
+
+	def autnums(self):
+		return list(map(lambda k: "AS{0}".format(k), self.persons.keys()))
 
 class Database:
 	def __init__(self, prefix="dn42"):
@@ -97,7 +145,7 @@ class Database:
 	def get_object(self, type, query):
 		try:
 			with open(self._path("{0}/{1}".format(type, query))) as file:
-				obj = RPSLObject(type, file.read())
+				obj = RPSLObject(file.read(), type=type)
 		except IOError:
 			return None
 		return obj
@@ -118,83 +166,43 @@ class Database:
 		if query[0:2] != "AS":
 			query = "AS" + query
 
-		try:
-			with open(self._path("aut-num/{0}".format(query))) as file:
-				obj = RPSLObject("aut-num", file.read())
-		except IOError:
-			return None
-
-		return obj
+		return self.get_object("aut-num", query)
 	
 	def get_person(self, name):
-		try:
-			with open(self._path("person/{0}".format(name))) as file:
-				obj = RPSLObject("person", file.read())
-		except IOError:
-			return None
-		return obj
+		return self.get_object("person", name)
 
 	def get_inetnum(self, query):
 		query = str(query)
 		query = query.replace("/", "_")
 
-		try:
-			with open(self._path("inetnum/{0}".format(query))) as file:
-				obj = RPSLObject("inetnum", file.read())
-		except IOError:
-			return None
-		return obj
+		return self.get_object("inetnum", query)
 
 	def get_inet6num(self, query):
 		query = str(query)
 		query = query.replace("/", "_")
-		try:
-			with open(self._path("inet6num/{0}".format(query))) as file:
-				obj = RPSLObject("inet6num", file.read())
-		except IOError:
-			return None
-		return obj
+
+		return self.get_object("inet6num", query)
 
 	def get_route(self, query):
 		query = str(query)
 		query = query.replace("/", "_")
 
-		try:
-			with open(self._path("route/{0}".format(query))) as file:
-				obj = RPSLObject("route", file.read())
-		except IOError:
-			return None
-		return obj
+		return self.get_object("route", query)
 
 	def get_route6(self, query):
 		query = str(query)
 		query = query.replace("/", "_")
 
-		try:
-			with open(self._path("route6/{0}".format(query))) as file:
-				obj = RPSLObject("route6", file.read())
-		except IOError:
-			return None
-		return obj
+		return self.get_object("route6", query)
 
 	def get_as_block(self, query):
 		if isinstance(query, range) or isinstance(query, list):
 			query = "{0}_{1}".format(query[0], query[-1])
 
-		try:
-			with open(self._path("as-block/{0}".format(query))) as file:
-				obj = RPSLObject("as-block", file.read())
-		except IOError:
-			return None
-		return obj
+		return self.get_object("as-block", query)
 
 	def get_dns(self, query):
-		try:
-			with open(self._path("dns/{0}".format(query))) as file:
-				obj = RPSLObject("dns", file.read())
-		except IOError:
-			return None
-		return obj
+		return self.get_object("dns", query)
 
 	def ls(self):
 		return self.persons() + self.as_blocks() + self.autnums() + self.dns() + self.inet6nums() + self.inetnums() + self.routes() + self.route6s()
@@ -225,4 +233,7 @@ class Database:
 
 	def _path(self, path):
 		return os.path.join(self.prefix, path)
+
+	def update(self, other):
+		raise NotImplemented()
 
