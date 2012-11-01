@@ -3,27 +3,41 @@
 import os
 import os.path
 
+def parse_rpsl(lines):
+	kv_pairs = []
+	for line in lines:
+		if not line.strip():
+			continue
+		if line[0] == '%':
+			continue
+		kv_pairs.append(tuple(map(lambda p: p.strip(), line.split(":", 1))))
+	return kv_pairs
+
 class RPSLObject(list):
-	def __init__(self, type, data):
+	def __init__(self, data=None, type=None):
 		list.__init__(self)
 
-		self.type = type
 		self.extend(data)
+
+		if type is not None:
+			self.type = type
+		else:
+			if data and len(self) > 0:
+				self.type = self[0][0]
+			else:
+				raise Exception("Too unspecific")
 	
 	def extend(self, data):
 		if isinstance(data, dict):
 			for key, value in data.items():
 				self.get(key).append(value)
 		elif isinstance(data, str):
-			kv_pairs = []
-			for line in data.split("\n"):
-				if not line.strip():
-					continue
-				kv_pairs.append(tuple(map(lambda p: p.strip(), line.split(":", 1))))
-			self.extend(kv_pairs)
+			self.extend(parse_rpsl(data))
 		elif isinstance(data, list):
 			for key, value in data:
 				self.get(key).append(value)
+		elif data is None:
+			pass
 		else:
 			list.extend(self, data)
 
