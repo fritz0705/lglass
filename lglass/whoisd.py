@@ -5,9 +5,10 @@ import asyncore
 import traceback
 
 class WhoisHandler(object):
-	def __init__(self, database, preamble=None):
+	def __init__(self, database, preamble=None, keys=[]):
 		self.database = database
 		self.preamble = preamble
+		self.keys = set(keys)
 	
 	def handle(self, request):
 		""" This method handles a simple WHOIS request and returns a plain response.
@@ -30,13 +31,25 @@ class WhoisHandler(object):
 			response.append("% {}\n\n".format(self.preamble))
 
 		for req in requested:
-			response.append("% Query {}\n\n".format(req))
+			response.append("% Query {} [{}]\n\n".format(req, "".join(flags)))
 
-			if "e" not in flags:
-				objects = self.database.find(req)
+			if "a" in flags:
+				# whois database transfer
+				# don't use it!
+				if req not in self.keys:
+					response.append("% Access not authorized\n\n")
+					continue
+
+				objects = [self.database.get(*ls) for ls in self.database.list()]
+			elif "x" in flags:
+				req = req.split(";", 1)
+				if len(req) == 2:
+					objects = [self.database.get(*req)]
+				else:
+					req = req[0]
+					objects = [self.database.get(*ls) for ls in self.database.list() if ls[1] == req]
 			else:
-				req = req.split("~", 1)
-				objects = [self.database.get(*req)]
+				objects = self.database.find(req)
 
 			for obj in objects:
 				response.append("% Object {}\n\n".format(obj.spec))
@@ -113,6 +126,7 @@ if __name__ == '__main__':
 	argparser.add_argument("--group", "-g")
 	argparser.add_argument("--pidfile", "-p", type=str)
 	argparser.add_argument("--preamble")
+	argparser.add_argument("--key", "-k", action='append')
 
 	args = argparser.parse_args()
 
@@ -121,7 +135,7 @@ if __name__ == '__main__':
 	if not args.no_cache:
 		db = lglass.database.CachedDatabase(db)
 
-	handler = WhoisHandler(db, preamble=args.preamble)
+	handler = WhoisHandler(db, preamble=args.preamble, keys=(args.key or []))
 
 	def sighup(sig, frame):
 		if not args.no_cache:
