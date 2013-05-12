@@ -152,6 +152,9 @@ class Object(object):
 
 		return "".join(result)
 
+	def __str__(self):
+		return self.pretty_print()
+
 	@property
 	def type(self):
 		return self.data[0][0]
@@ -159,6 +162,10 @@ class Object(object):
 	@property
 	def primary_key(self):
 		return self.data[0][1]
+
+	@property
+	def spec(self):
+		return (self.type, self.primary_key)
 
 	@classmethod
 	def from_string(cls, string):

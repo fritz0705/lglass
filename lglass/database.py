@@ -19,8 +19,8 @@ class FileDatabase(Database):
 	keys as files. """
 	root_dir = '.'
 
-	object_types = ["inetnum", "inet6num", "route", "route6", "aut-num",
-		"as-block", "dns", "mntner", "person", "route-set"]
+	object_types = {"inetnum", "inet6num", "route", "route6", "aut-num",
+		"as-block", "dns", "mntner", "person", "route-set"}
 
 	def __init__(self, root_dir='.'):
 		self.root_dir = root_dir
@@ -50,9 +50,11 @@ class FileDatabase(Database):
 		
 		return objects
 
-	def find(self, primary_key):
+	def find(self, primary_key, types=None):
+		if types is None:
+			types = self.object_types
 		objects = []
-		for type in self.object_types:
+		for type in types:
 			try:
 				objects.append(self.get(type, primary_key))
 			except KeyError:
@@ -89,13 +91,13 @@ class CachedDatabase(Database):
 
 		return ls
 
-	def find(self, primary_key):
-		cache_key = (None, primary_key)
+	def find(self, primary_key, types=None):
+		cache_key = (types, primary_key)
 
 		if cache_key in self.cache:
 			return self.cache[cache_key]
 
-		objs = self.database.find(primary_key)
+		objs = self.database.find(primary_key, types=types)
 		self.cache[cache_key] = objs
 
 		return objs
@@ -104,60 +106,76 @@ class CachedDatabase(Database):
 		self.cache = {}
 
 class CIDRDatabase(Database):
-	""" Extended database type which is a layer before another database. Performs
-	more "complex" CIDR operations on requests like CIDR matching. By default,
-	this performs only on requests to inetnums, inet6nums, route and route6's """
-
+	""" Extended database type which is a layer between the user and another
+	database. It performs CIDR matching and AS range matching on find calls. """
 	# TODO reimplement this using a trie
 
-	cidr_types = ["inetnum", "inet6num", "route", "route6"]
+	range_types = {"as-block"}
+	cidr_types = {"inetnum", "inet6num", "route", "route6"}
 
 	def __init__(self, database):
 		self.database = database
 
 	def get(self, type, primary_key):
-		try:
-			obj = self.database.get(type, primary_key)
-		except KeyError:
-			if type in self.cidr_types:
-				search_list = [o for o in self.list() if o[0] == type]
-				obj = self._find_by_cidr(search_list, primary_key)
-				if obj:
-					return self.get(obj[0][0], obj[0][1])
-			raise
+		return self.database.get(type, primary_key)
 
-		return obj
+	def find(self, primary_key, types=None):
+		objects = self.database.find(primary_key, types=types)
+		found_objects = set([obj.spec for obj in objects])
 
-	def find(self, primary_key):
-		found_objs = set()
-		objects = []
+		objects.extend([o[1] for o in self.find_by_cidr(primary_key, types)
+			if o[0] not in found_objects])
+		found_objects = set([obj.spec for obj in objects])
 
-		for object in self.database.find(primary_key):
-			objects.append(object)
-			found_objs.add((object.type, object.primary_key))
-
-		cidr_list = [kv for kv in self.list() if kv[0] in self.cidr_types]
-		for object in self._find_by_cidr(cidr_list, primary_key):
-			object = self.get(object[0], object[1])
-			if (object.type, object.primary_key) in found_objs:
-				continue
-			objects.append(object)
-			found_objs.add((object.type, object.primary_key))
+		objects.extend([o[1] for o in self.find_by_range(primary_key, types)
+			if o[0] not in found_objects])
+		found_objects = set([obj.spec for obj in objects])
 
 		return objects
 
+	def find_by_cidr(self, primary_key, types=None):
+		cidr_types = self.cidr_types
+		if types:
+			cidr_types = cidr_types & set(types)
+
+		try:
+			primary_key = netaddr.IPNetwork(primary_key)
+		except (ValueError, netaddr.core.AddrFormatError):
+			return []
+		matches = []
+
+		for obj in self.list():
+			if obj[0] not in cidr_types:
+				continue
+			obj_addr = netaddr.IPNetwork(obj[1])
+			if primary_key in obj_addr:
+				matches.append((obj_addr.prefixlen, obj))
+
+		return [(m[0], self.get(*m[1])) for m in sorted(matches, key=lambda o: o[0])]
+
+	def find_by_range(self, primary_key, types=None):
+		range_types = self.range_types
+		if types:
+			range_types = range_types & set(types)
+
+		try:
+			primary_key = int(primary_key.replace("AS", ""))
+		except ValueError:
+			return []
+
+		matches = []
+
+		for obj in self.list():
+			if obj[0] not in range_types:
+				continue
+			obj_range = tuple([int(x.strip()) for x in obj[1].split("/", 2)])
+			if len(obj_range) != 2:
+				raise ValueError("Expected obj_range to be 2. Your database might be broken")
+			if primary_key >= obj_range[0] and primary_key <= obj_range[1]:
+				matches.append(((obj_range[1] - obj_range[0]), obj))
+
+		return [(m[0], self.get(*m[1])) for m in sorted(matches, key=lambda o: o[0])]
+
 	def list(self):
 		return self.database.list()
-
-	def _find_by_cidr(self, search_list, primary_key):
-		primary_key = netaddr.IPNetwork(primary_key)
-		objects = []
-		for typ, key in search_list:
-			key = netaddr.IPNetwork(key)
-			if primary_key not in key:
-				continue
-			objects.append((key.prefixlen, (typ, str(key))))
-		objects = sorted(objects, key=lambda o: o[0], reverse=True)
-
-		return [obj[1] for obj in objects]
 
