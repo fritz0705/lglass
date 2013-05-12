@@ -120,15 +120,18 @@ class CIDRDatabase(Database):
 		return self.database.get(type, primary_key)
 
 	def find(self, primary_key, types=None):
-		objects = self.database.find(primary_key, types=types)
+		objects = []
+		found_objects = set([])
+
+		objects.extend([o for o in self.find_by_cidr(primary_key, types)
+			if o.spec not in found_objects])
 		found_objects = set([obj.spec for obj in objects])
 
-		objects.extend([o[1] for o in self.find_by_cidr(primary_key, types)
-			if o[0] not in found_objects])
+		objects.extend([o for o in self.find_by_range(primary_key, types)
+			if o.spec not in found_objects])
 		found_objects = set([obj.spec for obj in objects])
 
-		objects.extend([o[1] for o in self.find_by_range(primary_key, types)
-			if o[0] not in found_objects])
+		objects.extend(self.database.find(primary_key, types=types))
 		found_objects = set([obj.spec for obj in objects])
 
 		return objects
@@ -151,7 +154,7 @@ class CIDRDatabase(Database):
 			if primary_key in obj_addr:
 				matches.append((obj_addr.prefixlen, obj))
 
-		return [(m[0], self.get(*m[1])) for m in sorted(matches, key=lambda o: o[0])]
+		return [self.get(*m[1]) for m in sorted(matches, key=lambda o: o[0])]
 
 	def find_by_range(self, primary_key, types=None):
 		range_types = self.range_types
@@ -174,7 +177,7 @@ class CIDRDatabase(Database):
 			if primary_key >= obj_range[0] and primary_key <= obj_range[1]:
 				matches.append(((obj_range[1] - obj_range[0]), obj))
 
-		return [(m[0], self.get(*m[1])) for m in sorted(matches, key=lambda o: o[0])]
+		return [self.get(*m[1]) for m in sorted(matches, key=lambda o: o[0])]
 
 	def list(self):
 		return self.database.list()
