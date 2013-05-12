@@ -113,8 +113,9 @@ class CIDRDatabase(Database):
 	range_types = {"as-block"}
 	cidr_types = {"inetnum", "inet6num", "route", "route6"}
 
-	def __init__(self, database):
-		self.database = database
+	def __init__(self, db, **kwargs):
+		self.database = db
+		self.__dict__.update(kwargs)
 
 	def get(self, type, primary_key):
 		return self.database.get(type, primary_key)
