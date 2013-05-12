@@ -78,12 +78,36 @@ if __name__ == '__main__':
 	import socket
 	import signal
 	import sys
+	import os
+	import pwd
+
+	def drop_priv(user, group):
+		try:
+			pw = pwd.getpwnam(user)
+		except KeyError:
+			pw = pwd.getpwuid(int(user))
+
+		uid, gid = pw.pw_uid, pw.pw_gid
+
+		if group:
+			try:
+				gr = grp.getgrnam(group)
+			except KeyError:
+				gr = grp.getgrgid(int(group))
+
+			gid = grp.gid
+
+		os.setgid(gid)
+		os.setuid(uid)
 
 	argparser = argparse.ArgumentParser(description="Simple whois server")
 	argparser.add_argument("--host", "-H", type=str, default="0.0.0.0")
 	argparser.add_argument("--port", "-P", type=int, default=4343)
 	argparser.add_argument("--db", "-D", type=str, default=".")
 	argparser.add_argument("--no-cache", action="store_true", default=False)
+	argparser.add_argument("--user", "-u")
+	argparser.add_argument("--group", "-g")
+	argparser.add_argument("--pidfile", "-p", type=str)
 
 	args = argparser.parse_args()
 
@@ -102,10 +126,17 @@ if __name__ == '__main__':
 	for sig in [signal.SIGHUP, signal.SIGUSR1]:
 		signal.signal(sig, sighup)
 
+	if args.pidfile:
+		with open(args.pidfile, "w") as f:
+			f.write(str(os.getpid()))
+
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((args.host, args.port))
 	sock.listen(5)
+
+	if args.user:
+		drop_priv(args.user, args.group)
 
 	WhoisdServer(sock, handler)
 	asyncore.loop()
