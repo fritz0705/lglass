@@ -76,6 +76,8 @@ class WhoisdServer(asyncore.dispatcher):
 if __name__ == '__main__':
 	import argparse
 	import socket
+	import signal
+	import sys
 
 	argparser = argparse.ArgumentParser(description="Simple whois server")
 	argparser.add_argument("--host", "-H", type=str, default="0.0.0.0")
@@ -91,6 +93,14 @@ if __name__ == '__main__':
 		db = lglass.database.CachedDatabase(db)
 
 	handler = WhoisHandler(db)
+
+	def sighup(sig, frame):
+		if not args.no_cache:
+			print("Flush query cache", file=sys.stderr)
+			db.flush()
+	
+	for sig in [signal.SIGHUP, signal.SIGUSR1]:
+		signal.signal(sig, sighup)
 
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
