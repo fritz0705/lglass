@@ -5,8 +5,9 @@ import asyncore
 import traceback
 
 class WhoisHandler(object):
-	def __init__(self, database):
+	def __init__(self, database, preamble=None):
 		self.database = database
+		self.preamble = preamble
 	
 	def handle(self, request):
 		""" This method handles a simple WHOIS request and returns a plain response.
@@ -25,6 +26,9 @@ class WhoisHandler(object):
 			requested.append(req)
 
 		response = []
+		if self.preamble is not None:
+			response.append("% {}\n\n".format(self.preamble))
+
 		for req in requested:
 			response.append("% Query {}\n\n".format(req))
 
@@ -108,6 +112,7 @@ if __name__ == '__main__':
 	argparser.add_argument("--user", "-u")
 	argparser.add_argument("--group", "-g")
 	argparser.add_argument("--pidfile", "-p", type=str)
+	argparser.add_argument("--preamble")
 
 	args = argparser.parse_args()
 
@@ -116,7 +121,7 @@ if __name__ == '__main__':
 	if not args.no_cache:
 		db = lglass.database.CachedDatabase(db)
 
-	handler = WhoisHandler(db)
+	handler = WhoisHandler(db, preamble=args.preamble)
 
 	def sighup(sig, frame):
 		if not args.no_cache:
