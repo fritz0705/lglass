@@ -131,7 +131,8 @@ class CIDRDatabase(Database):
 			if o.spec not in found_objects])
 		found_objects = set([obj.spec for obj in objects])
 
-		objects.extend(self.database.find(primary_key, types=types))
+		objects.extend([o for o in self.database.find(primary_key, types=types)
+			if o.spec not in found_objects])
 		found_objects = set([obj.spec for obj in objects])
 
 		return objects

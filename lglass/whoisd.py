@@ -38,6 +38,8 @@ class WhoisHandler(object):
 				response.append("% Object {}\n\n".format(obj.spec))
 				response.append(obj.pretty_print())
 				response.append("\n")
+			if not objects:
+				response.append("% No matching objects found\n\n")
 
 		return "".join(response)
 
