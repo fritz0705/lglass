@@ -52,7 +52,7 @@ class WhoisdHandler(asyncore.dispatcher):
 	def handle_read(self):
 		self.line += self.recv(1)
 		if b"\n" in self.line:
-			self.line = self.line.decode().split("\n")[0]
+			self.line = self.line.decode().split("\n")[0].strip()
 			try:
 				result = handler.handle(self.line).encode()
 			except:
@@ -93,8 +93,8 @@ if __name__ == '__main__':
 	handler = WhoisHandler(db)
 
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	sock.bind((args.host, args.port))
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	sock.bind((args.host, args.port))
 	sock.listen(5)
 
 	WhoisdServer(sock, handler)
