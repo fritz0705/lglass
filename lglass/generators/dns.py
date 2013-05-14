@@ -5,6 +5,8 @@ import netaddr
 import time
 
 def generate_delegation(dns, with_glue=True):
+	""" Generate a valid DNS delegation to the given dns object. This function
+	may generate glue records if with_glue == True. """
 	result = []
 
 	for _, nserver in dns.get("nserver"):
@@ -68,4 +70,24 @@ def generate_rdns6_delegation(inet6num):
 				nserver=ns))
 	
 	return result
+
+def generate_soa(domain, master, email, serial=None, refresh=86400, retry=7200,
+		expire=3600000, ttl=172800):
+	""" Useful utility to generate a RIPE-NCC-compilant SOA record for defined
+	domain. Required fields are the domain, the master name server, the email
+	address in zonefile format. Additional fields are the serial, refresh time,
+	retry time, expire time and minimum ttl. If the serial is ommitted, then
+	this function will generate a unique serial based on the current time. """
+	if serial is None:
+		serial = int(time.time())
+	
+	return "{domain}. IN SOA {master} {email} {serial} {refresh} {retry} {expire} {ttl}".format(
+		domain=domain,
+		master=master,
+		email=email,
+		serial=serial,
+		refresh=refresh,
+		retry=retry,
+		expire=expire,
+		ttl=ttl)
 
