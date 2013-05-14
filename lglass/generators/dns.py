@@ -1,8 +1,47 @@
 # coding: utf-8
 
+# XXX This code is so horrible, don't read it
+
 import lglass.rpsl
 import netaddr
 import time
+
+def delegation(domain, nameserver):
+	nameserver, *trash = nameserver.split()
+	return "{domain}. IN NS {nserver}.".format(
+		domain=domain,
+		nserver=nameserver)
+
+def rdns4_delegation(network, nameserver):
+	""" Generate delegating resource record for a given IPv4 network and one
+	nameserver. This function does not check whether there is a valid rDNS
+	representation for the given network prefix length. """
+	return delegation(
+		".".join(map(str, reversed(
+			network.ip.words[:network.prefixlen // 8]
+		))) + ".in-addr.arpa", nameserver)
+
+def rdns6_delegation(network, nameserver):
+	""" Generate delegating resource record for a given IPv6 network and one
+	nameserver. This function does not check whether there is a valid rDNS
+	representation for the given network prefix length. """
+	return delegation(
+		".".join(map(str, reversed(
+			list("".join(hex(n)[2:].rjust(4, "0") for n in network.ip.words))[:network.prefixlen // 4]
+		))) + ".ip6.arpa",
+		nameserver)
+
+def rdns_delegation(network, nameserver):
+	if network.version == 4:
+		return rdns4_delegation(network, nameserver)
+	elif network.version == 6:
+		return rdns6_delegation(network, nameserver)
+
+def glue(domain, addr):
+	if addr.version == 4:
+		return "{ns}. IN A {glue}.".format(ns=domain, glue=str(addr))
+	elif addr.version == 6:
+		return "{ns}. IN AAAA {glue}.".format(ns=domain, glue=str(addr))
 
 def generate_delegation(dns, with_glue=True):
 	""" Generate a valid DNS delegation to the given dns object. This function
@@ -11,18 +50,15 @@ def generate_delegation(dns, with_glue=True):
 
 	for _, nserver in dns.get("nserver"):
 		ns, *glues = nserver.split()
-		result.append("{domain}. IN NS {nserver}.".format(domain=dns.primary_key,
-			nserver=ns))
-		if with_glue is False: glues = []
-		for glue in glues:
+		result.append(delegation(dns.primary_key, ns))
+		if with_glue is False:
+			glues = []
+		for _glue in glues:
 			if not ns.endswith(dns.primary_key):
 				continue
 			try:
-				glue = netaddr.IPAddress(glue)
-				if glue.version == 4:
-					result.append("{ns}. IN A {glue}.".format(ns=ns, glue=str(glue)))
-				elif glue.version == 6:
-					result.append("{ns}. IN AAAA {glue}.".format(ns=ns, glue=str(glue)))
+				_glue = netaddr.IPAddress(_glue)
+				result.append(glue(ns, _glue))
 			except:
 				pass
 	
@@ -35,17 +71,14 @@ def generate_rdns4_delegation(inetnum):
 	networks = networks.cidrs()
 
 	for network in networks:
-		if network.prefixlen % 8 != 0:
+		if network.prefixlen > 24:
 			continue
-
-		domain = network.ip.words[:network.prefixlen // 8]
-		domain = reversed(domain)
-		domain = ".".join(str(w) for w in domain) + ".in-addr.arpa"
-
-		for _, nserver in inetnum.get("nserver"):
-			ns, *glues = nserver.split()
-			result.append("{domain}. IN NS {nserver}.".format(
-				domain=domain, nserver=ns))
+		elif network.prefixlen % 8 != 0:
+			subnets = network.subnet(network.prefixlen // 8 * 8 + 8)
+			for subnet in subnets:
+				result.extend(rdns4_delegation(subnet, ns) for _, ns in inetnum.get("nserver"))
+		else:
+			result.extend(rdns4_delegation(network, ns) for _, ns in inetnum.get("nserver"))
 	
 	return result
 
@@ -57,17 +90,11 @@ def generate_rdns6_delegation(inet6num):
 
 	for network in networks:
 		if network.prefixlen % 4 != 0:
-			continue
-
-		byte_s = list("".join(hex(n)[2:].rjust(4, "0") for n in network.ip.words))
-		byte_s = byte_s[:network.prefixlen // 4]
-		byte_s = reversed(byte_s)
-		domain = ".".join(byte_s) + ".ip6.arpa"
-
-		for _, nserver in inet6num.get("nserver"):
-			ns, *glues = nserver.split()
-			result.append("{domain}. IN NS {nserver}.".format(domain=domain,
-				nserver=ns))
+			subnets = network.subnet(network.prefixlen // 4 * 4 + 4)
+			for subnet in subnets:
+				result.extend(rdns6_delegation(subnet, ns) for _, ns in inet6num.get("nserver"))
+		else:
+			result.extend(rdns6_delegation(network, ns) for _, ns in inet6num.get("nserver"))
 	
 	return result
 
