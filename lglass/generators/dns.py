@@ -67,8 +67,7 @@ def generate_delegation(dns, with_glue=True):
 def generate_rdns4_delegation(inetnum):
 	result = []
 
-	networks = netaddr.IPRange(*[ipr.strip() for ipr in inetnum.primary_key.split("-", 1)])
-	networks = networks.cidrs()
+	networks = lglass.rpsl.inetnum_cidrs(inetnum)
 
 	for network in networks:
 		if network.prefixlen > 24:
@@ -85,8 +84,7 @@ def generate_rdns4_delegation(inetnum):
 def generate_rdns6_delegation(inet6num):
 	result = []
 
-	networks = netaddr.IPRange(*[ipr.strip() for ipr in inet6num.primary_key.split("-", 1)])
-	networks = networks.cidrs()
+	networks = lglass.rpsl.inetnum_cidrs(inetnum)
 
 	for network in networks:
 		if network.prefixlen % 4 != 0:
