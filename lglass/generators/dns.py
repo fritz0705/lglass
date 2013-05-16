@@ -39,9 +39,9 @@ def rdns_delegation(network, nameserver):
 
 def glue(domain, addr):
 	if addr.version == 4:
-		return "{ns}. IN A {glue}.".format(ns=domain, glue=str(addr))
+		return "{ns}. IN A {glue}".format(ns=domain, glue=str(addr))
 	elif addr.version == 6:
-		return "{ns}. IN AAAA {glue}.".format(ns=domain, glue=str(addr))
+		return "{ns}. IN AAAA {glue}".format(ns=domain, glue=str(addr))
 
 def generate_delegation(dns, with_glue=True):
 	""" Generate a valid DNS delegation to the given dns object. This function
@@ -108,7 +108,7 @@ def generate_soa(domain, master, email, serial=None, refresh=86400, retry=7200,
 	if serial is None:
 		serial = int(time.time())
 	
-	return "{domain}. IN SOA {master} {email} {serial} {refresh} {retry} {expire} {ttl}".format(
+	return "{domain}. IN SOA {master}. {email}. {serial} {refresh} {retry} {expire} {ttl}".format(
 		domain=domain,
 		master=master,
 		email=email,
@@ -117,4 +117,29 @@ def generate_soa(domain, master, email, serial=None, refresh=86400, retry=7200,
 		retry=retry,
 		expire=expire,
 		ttl=ttl)
+
+def generate_zone(zone, domains, soa=None, nameservers=[]):
+	""" Generate fully compilant zone for given domains, which need delegation. """
+
+	result = []
+
+	if soa is not None:
+		if isinstance(soa, tuple):
+			soa = generate_soa(zone, *soa)
+		elif isinstance(soa, dict):
+			soa = generate_soa(zone, **soa)
+		result.append(soa)
+
+	for nameserver in nameservers:
+		result.append(delegation(zone, nameserver))
+	
+	for domain in domains:
+		if not domain.primary_key.endswith("." + zone):
+			result.append("; {domain} is out-of-zone".format(domain=domain.primary_key))
+			continue
+		
+		result.append("; {domain}".format(domain=domain.primary_key))
+		result.extend(generate_delegation(domain))
+	
+	return result
 
