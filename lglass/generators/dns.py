@@ -6,36 +6,23 @@ import lglass.rpsl
 import netaddr
 import time
 
+def rdns_domain(network):
+	if network.version == 4:
+		return ".".join(map(str, reversed(network.ip.words[:network.prefixlen // 8]))) + ".in-addr.arpa"
+	elif network.version == 6:
+		return ".".join(map(str, reversed(list("".join(hex(n)[2:].rjust(4, "0") for n in network.ip.words))[:network.prefixlen // 4]))) + ".ip6.arpa"
+
 def delegation(domain, nameserver):
 	nameserver, *trash = nameserver.split()
 	return "{domain}. IN NS {nserver}.".format(
 		domain=domain,
 		nserver=nameserver)
 
-def rdns4_delegation(network, nameserver):
-	""" Generate delegating resource record for a given IPv4 network and one
-	nameserver. This function does not check whether there is a valid rDNS
-	representation for the given network prefix length. """
-	return delegation(
-		".".join(map(str, reversed(
-			network.ip.words[:network.prefixlen // 8]
-		))) + ".in-addr.arpa", nameserver)
-
-def rdns6_delegation(network, nameserver):
-	""" Generate delegating resource record for a given IPv6 network and one
-	nameserver. This function does not check whether there is a valid rDNS
-	representation for the given network prefix length. """
-	return delegation(
-		".".join(map(str, reversed(
-			list("".join(hex(n)[2:].rjust(4, "0") for n in network.ip.words))[:network.prefixlen // 4]
-		))) + ".ip6.arpa",
-		nameserver)
-
 def rdns_delegation(network, nameserver):
-	if network.version == 4:
-		return rdns4_delegation(network, nameserver)
-	elif network.version == 6:
-		return rdns6_delegation(network, nameserver)
+	return delegation(rdns_domain(network), nameserver)
+
+rdns4_delegation = rdns_delegation
+rdns6_delegation = rdns_delegation
 
 def glue(domain, addr):
 	if addr.version == 4:
@@ -64,35 +51,27 @@ def generate_delegation(dns, with_glue=True):
 	
 	return result
 
-def generate_rdns4_delegation(inetnum):
+def generate_rdns4_delegation(net, inetnum):
 	result = []
 
 	networks = lglass.rpsl.inetnum_cidrs(inetnum)
 
 	for network in networks:
-		if network.prefixlen > 24:
-			continue
-		elif network.prefixlen % 8 != 0:
-			subnets = network.subnet(network.prefixlen // 8 * 8 + 8)
-			for subnet in subnets:
-				result.extend(rdns4_delegation(subnet, ns) for _, ns in inetnum.get("nserver"))
-		else:
-			result.extend(rdns4_delegation(network, ns) for _, ns in inetnum.get("nserver"))
+		for subnet in network.subnet(net.prefixlen // 8 * 8 + 8):
+			for _, nserver in inetnum.get("nserver"):
+				result.append(rdns_delegation(subnet, nserver))
 	
 	return result
 
-def generate_rdns6_delegation(inet6num):
+def generate_rdns6_delegation(net, inet6num):
 	result = []
-
-	networks = lglass.rpsl.inetnum_cidrs(inetnum)
+	
+	networks = lglass.rpsl.inetnum_cidrs(inet6num)
 
 	for network in networks:
-		if network.prefixlen % 4 != 0:
-			subnets = network.subnet(network.prefixlen // 4 * 4 + 4)
-			for subnet in subnets:
-				result.extend(rdns6_delegation(subnet, ns) for _, ns in inet6num.get("nserver"))
-		else:
-			result.extend(rdns6_delegation(network, ns) for _, ns in inet6num.get("nserver"))
+		for subnet in network.subnet(net.prefixlen // 4 * 4 + 4):
+			for _, nserver in inet6num.get("nserver"):
+				result.append(rdns_delegation(subnet, nserver))
 	
 	return result
 
@@ -139,5 +118,24 @@ def generate_zone(zone, domains, soa=None, nameservers=[]):
 		result.append("; {domain}".format(domain=domain.primary_key))
 		result.extend(generate_delegation(domain))
 	
+	return result
+
+def generate_zone_rdns4(network, inetnums, soa=None, nameservers=[]):
+	result = []
+
+	zone = rdns_domain(network)
+	delegated_len = network.prefixlen // 8 * 8 + 8
+
+	if soa is not None:
+		if isinstance(soa, tuple):
+			soa = generate_soa(zone, *soa)
+		elif isinstance(soa, dict):
+			soa = generate_soa(zone, **soa)
+		result.append(soa)
+	
+	for inetnum in inetnums:
+		result.append("; {inetnum}".format(inetnum=inetnum.primary_key))
+		result.extend(generate_rdns4_delegation(network, inetnum))
+
 	return result
 
