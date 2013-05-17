@@ -57,6 +57,8 @@ def generate_rdns4_delegation(net, inetnum):
 	networks = lglass.rpsl.inetnum_cidrs(inetnum)
 
 	for network in networks:
+		if network not in net:
+			continue
 		for subnet in network.subnet(net.prefixlen // 8 * 8 + 8):
 			for _, nserver in inetnum.get("nserver"):
 				result.append(rdns_delegation(subnet, nserver))
