@@ -13,7 +13,7 @@ if __name__ == "__main__":
 	argparser.add_argument("--nameserver", "-n", action="append", help="Nameserver")
 	argparser.add_argument("--master", "-m", help="Master nameserver")
 	argparser.add_argument("--email", "-e", help="Email address of zone maintainer", required=True)
-	argparser.add_argument("--ttl", "-t", help="Time to live for generated records"
+	argparser.add_argument("--ttl", "-t", help="Time to live for generated records",
 			type=int, default=3600)
 
 	args = argparser.parse_args()
