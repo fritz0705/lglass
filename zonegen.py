@@ -13,6 +13,8 @@ if __name__ == "__main__":
 	argparser.add_argument("--nameserver", "-n", action="append", help="Nameserver")
 	argparser.add_argument("--master", "-m", help="Master nameserver")
 	argparser.add_argument("--email", "-e", help="Email address of zone maintainer", required=True)
+	argparser.add_argument("--ttl", "-t", help="Time to live for generated records"
+			type=int, default=3600)
 
 	args = argparser.parse_args()
 
@@ -29,12 +31,14 @@ if __name__ == "__main__":
 		master_nameserver,
 		args.email)
 
-	zone = lglass.generators.dns.generate_zone(
+	zone = ["$TTL {time}".format(time=args.ttl)]
+
+	zone.extend(lglass.generators.dns.generate_zone(
 		args.zone,
 		domains,
 		soa=soa,
 		nameservers=args.nameserver
-	)
+	))
 
 	print("\n".join(zone))
 
