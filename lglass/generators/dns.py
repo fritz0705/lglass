@@ -71,6 +71,8 @@ def generate_rdns6_delegation(net, inet6num):
 	networks = lglass.rpsl.inetnum_cidrs(inet6num)
 
 	for network in networks:
+		if network not in net:
+			continue
 		for subnet in network.subnet(net.prefixlen // 4 * 4 + 4):
 			for _, nserver in inet6num.get("nserver"):
 				result.append(rdns_delegation(subnet, nserver))
@@ -122,7 +124,7 @@ def generate_zone(zone, domains, soa=None, nameservers=[]):
 	
 	return result
 
-def generate_zone_rdns4(network, inetnums, soa=None, nameservers=[]):
+def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
 	result = []
 
 	zone = rdns_domain(network)
@@ -135,9 +137,34 @@ def generate_zone_rdns4(network, inetnums, soa=None, nameservers=[]):
 			soa = generate_soa(zone, **soa)
 		result.append(soa)
 	
+	for nameserver in nameservers:
+		result.append(delegation(zone, nameserver))
+	
 	for inetnum in inetnums:
 		result.append("; {inetnum}".format(inetnum=inetnum.primary_key))
 		result.extend(generate_rdns4_delegation(network, inetnum))
 
+	return result
+
+def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
+	result = []
+
+	zone = rdns_domain(network)
+	delegated_len = network.prefixlen // 4 * 4 + 4
+
+	if soa is not None:
+		if isinstance(soa, tuple):
+			soa = generate_soa(zone, *soa)
+		elif isinstance(soa, dict):
+			soa = generate_soa(zone, **soa)
+		result.append(soa)
+	
+	for nameserver in nameservers:
+		result.append(delegation(zone, nameserver))
+	
+	for inet6num in inet6nums:
+		result.append("; {inet6num}".format(inet6num=inet6num.primary_key))
+		result.extend(generate_rdns6_delegation(network, inet6num))
+	
 	return result
 
