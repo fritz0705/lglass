@@ -5,6 +5,7 @@
 import lglass.rpsl
 import netaddr
 import time
+import traceback
 
 def rdns_domain(network):
 	if network.version == 4:
@@ -142,7 +143,11 @@ def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
 	
 	for inetnum in inetnums:
 		result.append("; {inetnum}".format(inetnum=inetnum.primary_key))
-		result.extend(generate_rdns4_delegation(network, inetnum))
+		try:
+			result.extend(generate_rdns4_delegation(network, inetnum))
+		except:
+			traceback.print_exc()
+			result.append("; Exception occured.")
 
 	return result
 
@@ -164,7 +169,11 @@ def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
 	
 	for inet6num in inet6nums:
 		result.append("; {inet6num}".format(inet6num=inet6num.primary_key))
-		result.extend(generate_rdns6_delegation(network, inet6num))
+		try:
+			result.extend(generate_rdns6_delegation(network, inet6num))
+		except:
+			traceback.print_exc()
+			result.append("; Exception occured.")
 	
 	return result
 
