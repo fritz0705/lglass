@@ -147,10 +147,10 @@ def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
 			soa = generate_soa(zone, *soa)
 		elif isinstance(soa, dict):
 			soa = generate_soa(zone, **soa)
-		result.append(soa)
+		yield soa
 	
 	for nameserver in nameservers:
-		result.append(delegation(zone, nameserver))
+		yield delegation(zone, nameserver)
 
 	delegations = {}
 
@@ -158,14 +158,15 @@ def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
 		for net in lglass.rpsl.inetnum_cidrs(inetnum):
 			if net not in network:
 				continue
+
 			for subnet in net.subnet(delegated_len):
 				if subnet not in delegations:
 					delegations[subnet] = inetnum
-				elif subnet in delegations:
-					range1, range2 = map(lglass.rpsl.inetnum_range, (inetnum, delegations[subnet]))
-					if range1 < range2:
-						delegations[subnet] = inetnum
+
+				range1, range2 = map(lglass.rpsl.inetnum_range, (inetnum, delegations[subnet]))
+				if range1 > range2:
+					delegations[subnet] = inetnum
 	
 	for subnet, inetnum in delegations.items():
 		yield from generate_rdns6_delegation(subnet, inetnum)
-	
+
