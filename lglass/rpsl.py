@@ -155,6 +155,9 @@ class Object(object):
 	def __str__(self):
 		return self.pretty_print()
 
+	def __hash__(self):
+		return hash((self.type, self.primary_key))
+
 	@property
 	def type(self):
 		return self.data[0][0]
@@ -197,13 +200,16 @@ def parse_rpsl(lines):
 
 	return result
 
-def inetnum_cidrs(inetnum):
-	""" Return all CIDRs included in given inetnum object. """
-
+def inetnum_range(inetnum):
 	import netaddr
 
 	if isinstance(inetnum, Object):
 		inetnum = inetnum.primary_key
 
-	return netaddr.IPRange(*[ipr.strip() for ipr in inetnum.split("-", 1)]).cidrs()
+	return netaddr.IPRange(*[ipr.strip() for ipr in inetnum.split("-", 1)])
+
+def inetnum_cidrs(inetnum):
+	""" Return all CIDRs included in given inetnum object. """
+
+	return inetnum_range(inetnum).cidrs()
 

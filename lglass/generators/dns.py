@@ -13,6 +13,9 @@ def rdns_domain(network):
 	elif network.version == 6:
 		return ".".join(map(str, reversed(list("".join(hex(n)[2:].rjust(4, "0") for n in network.ip.words))[:network.prefixlen // 4]))) + ".ip6.arpa"
 
+def comment(txt):
+	return "; {}".format(str(txt))
+
 def delegation(domain, nameserver):
 	nameserver, *trash = nameserver.split()
 	return "{domain}. IN NS {nserver}.".format(
@@ -34,11 +37,9 @@ def glue(domain, addr):
 def generate_delegation(dns, with_glue=True):
 	""" Generate a valid DNS delegation to the given dns object. This function
 	may generate glue records if with_glue == True. """
-	result = []
-
 	for _, nserver in dns.get("nserver"):
 		ns, *glues = nserver.split()
-		result.append(delegation(dns.primary_key, ns))
+		yield delegation(dns.primary_key, ns)
 		if with_glue is False:
 			glues = []
 		for _glue in glues:
@@ -46,29 +47,15 @@ def generate_delegation(dns, with_glue=True):
 				continue
 			try:
 				_glue = netaddr.IPAddress(_glue)
-				result.append(glue(ns, _glue))
+				yield glue(ns, _glue)
 			except:
 				pass
-	
-	return result
 
-def generate_rdns4_delegation(net, inetnum):
-	result = []
-
-	networks = lglass.rpsl.inetnum_cidrs(inetnum)
-
-	for network in networks:
-		if network not in net:
-			continue
-		for subnet in network.subnet(net.prefixlen // 8 * 8 + 8):
-			for _, nserver in inetnum.get("nserver"):
-				result.append(rdns_delegation(subnet, nserver))
-	
-	return result
+def generate_rdns4_delegation(subnet, inetnum):
+	for _, nserver in inetnum.get("nserver"):
+		yield rdns_delegation(subnet, nserver)
 
 def generate_rdns6_delegation(net, inet6num):
-	result = []
-	
 	networks = lglass.rpsl.inetnum_cidrs(inet6num)
 
 	for network in networks:
@@ -76,9 +63,7 @@ def generate_rdns6_delegation(net, inet6num):
 			continue
 		for subnet in network.subnet(net.prefixlen // 4 * 4 + 4):
 			for _, nserver in inet6num.get("nserver"):
-				result.append(rdns_delegation(subnet, nserver))
-	
-	return result
+				yield rdns_delegation(subnet, nserver)
 
 def generate_soa(domain, master, email, serial=None, refresh=86400, retry=7200,
 		expire=3600000, ttl=172800):
@@ -103,31 +88,25 @@ def generate_soa(domain, master, email, serial=None, refresh=86400, retry=7200,
 def generate_zone(zone, domains, soa=None, nameservers=[]):
 	""" Generate fully compilant zone for given domains, which need delegation. """
 
-	result = []
-
 	if soa is not None:
 		if isinstance(soa, tuple):
 			soa = generate_soa(zone, *soa)
 		elif isinstance(soa, dict):
 			soa = generate_soa(zone, **soa)
-		result.append(soa)
+		yield soa
 
 	for nameserver in nameservers:
-		result.append(delegation(zone, nameserver))
+		yield delegation(zone, nameserver)
 	
 	for domain in domains:
 		if not domain.primary_key.endswith("." + zone):
-			result.append("; {domain} is out-of-zone".format(domain=domain.primary_key))
+			yield "; {domain} is out-of-zone".format(domain=domain.primary_key)
 			continue
 		
-		result.append("; {domain}".format(domain=domain.primary_key))
-		result.extend(generate_delegation(domain))
-	
-	return result
+		yield "; {domain}".format(domain=domain.primary_key)
+		yield from generate_delegation(domain)
 
 def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
-	result = []
-
 	zone = rdns_domain(network)
 	delegated_len = network.prefixlen // 8 * 8 + 8
 
@@ -136,24 +115,30 @@ def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
 			soa = generate_soa(zone, *soa)
 		elif isinstance(soa, dict):
 			soa = generate_soa(zone, **soa)
-		result.append(soa)
+		yield soa
 	
 	for nameserver in nameservers:
-		result.append(delegation(zone, nameserver))
-	
-	for inetnum in inetnums:
-		result.append("; {inetnum}".format(inetnum=inetnum.primary_key))
-		try:
-			result.extend(generate_rdns4_delegation(network, inetnum))
-		except:
-			traceback.print_exc()
-			result.append("; Exception occured.")
+		yield delegation(zone, nameserver)
 
-	return result
+	delegations = {}
+
+	for inetnum in inetnums:
+		for net in lglass.rpsl.inetnum_cidrs(inetnum):
+			if net not in network:
+				continue
+
+			for subnet in net.subnet(delegated_len):
+				if subnet not in delegations:
+					delegations[subnet] = inetnum
+
+				range1, range2 = map(lglass.rpsl.inetnum_range, (inetnum, delegations[subnet]))
+				if range1 > range2:
+					delegations[subnet] = inetnum
+	
+	for subnet, inetnum in delegations.items():
+		yield from generate_rdns4_delegation(subnet, inetnum)
 
 def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
-	result = []
-
 	zone = rdns_domain(network)
 	delegated_len = network.prefixlen // 4 * 4 + 4
 
@@ -166,14 +151,21 @@ def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
 	
 	for nameserver in nameservers:
 		result.append(delegation(zone, nameserver))
-	
-	for inet6num in inet6nums:
-		result.append("; {inet6num}".format(inet6num=inet6num.primary_key))
-		try:
-			result.extend(generate_rdns6_delegation(network, inet6num))
-		except:
-			traceback.print_exc()
-			result.append("; Exception occured.")
-	
-	return result
 
+	delegations = {}
+
+	for inetnum in inet6nums:
+		for net in lglass.rpsl.inetnum_cidrs(inetnum):
+			if net not in network:
+				continue
+			for subnet in net.subnet(delegated_len):
+				if subnet not in delegations:
+					delegations[subnet] = inetnum
+				elif subnet in delegations:
+					range1, range2 = map(lglass.rpsl.inetnum_range, (inetnum, delegations[subnet]))
+					if range1 < range2:
+						delegations[subnet] = inetnum
+	
+	for subnet, inetnum in delegations.items():
+		yield from generate_rdns6_delegation(subnet, inetnum)
+	

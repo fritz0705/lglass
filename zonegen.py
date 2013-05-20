@@ -81,8 +81,8 @@ def main_rdns4(args, db):
 	zone = ["$TTL {time}".format(time=args.ttl)]
 
 	zone.extend(lglass.generators.dns.generate_rdns4_zone(
-		network,
-		inetnums,
+		network=network,
+		inetnums=inetnums,
 		soa=soa,
 		nameservers=args.nameservers
 	))
