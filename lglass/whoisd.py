@@ -118,15 +118,28 @@ if __name__ == '__main__':
 		os.setuid(uid)
 
 	argparser = argparse.ArgumentParser(description="Simple whois server")
-	argparser.add_argument("--host", "-H", type=str, default="0.0.0.0")
-	argparser.add_argument("--port", "-P", type=int, default=4343)
-	argparser.add_argument("--db", "-D", type=str, default=".")
-	argparser.add_argument("--no-cache", action="store_true", default=False)
-	argparser.add_argument("--user", "-u")
-	argparser.add_argument("--group", "-g")
-	argparser.add_argument("--pidfile", "-p", type=str)
-	argparser.add_argument("--preamble")
-	argparser.add_argument("--key", "-k", action='append')
+	argparser.add_argument("--host", "-H", type=str, default="0.0.0.0",
+		help="Address to bind")
+	argparser.add_argument("--port", "-P", type=int, default=4343,
+		help="Port to bind")
+	argparser.add_argument("--db", "-D", type=str, default=".",
+		help="Path to Whois database")
+	argparser.add_argument("--no-cache", action="store_true", default=False,
+		help="Disable caching layer and serve requests directly from database")
+	argparser.add_argument("--user", "-u",
+		help="Drop priviliges after start and set uid")
+	argparser.add_argument("--group", "-g",
+		help="Set group")
+	argparser.add_argument("--pidfile", "-p", type=str,
+		help="Write PID to file after startup")
+	argparser.add_argument("--preamble",
+		help="Preamble for any whois response")
+	argparser.add_argument("--key", "-k", action='append',
+		help="Add key to transfer keys")
+	argparser.add_argument("-4", dest="protocol", action='store_const', const=4,
+		help="Operate in IPv4 mode")
+	argparser.add_argument("-6", dest="protocol", action='store_const', const=6,
+		help="Operate in IPv6 mode")
 
 	args = argparser.parse_args()
 
@@ -149,7 +162,10 @@ if __name__ == '__main__':
 		with open(args.pidfile, "w") as f:
 			f.write(str(os.getpid()))
 
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	if args.protocol == 4 or args.protocol is None:
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	elif args.protocol == 6:
+		sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((args.host, args.port))
 	sock.listen(5)
