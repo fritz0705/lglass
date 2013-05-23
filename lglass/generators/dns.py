@@ -55,15 +55,7 @@ def generate_rdns4_delegation(subnet, inetnum):
 	for _, nserver in inetnum.get("nserver"):
 		yield rdns_delegation(subnet, nserver)
 
-def generate_rdns6_delegation(net, inet6num):
-	networks = lglass.rpsl.inetnum_cidrs(inet6num)
-
-	for network in networks:
-		if network not in net:
-			continue
-		for subnet in network.subnet(net.prefixlen // 4 * 4 + 4):
-			for _, nserver in inet6num.get("nserver"):
-				yield rdns_delegation(subnet, nserver)
+generate_rdns6_delegation = generate_rdns4_delegation
 
 def generate_soa(domain, master, email, serial=None, refresh=86400, retry=7200,
 		expire=3600000, ttl=172800):
@@ -107,6 +99,9 @@ def generate_zone(zone, domains, soa=None, nameservers=[]):
 		yield from generate_delegation(domain)
 
 def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
+	if network.prefixlen % 8:
+		raise ValueError("Network prefixlen must be a multiple of 8, got {}".format(network.prefixlen))
+
 	zone = rdns_domain(network)
 	delegated_len = network.prefixlen // 8 * 8 + 8
 
@@ -139,8 +134,10 @@ def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
 		yield from generate_rdns4_delegation(subnet, inetnum)
 
 def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
+	if network.prefixlen % 4:
+		raise ValueError("Network prefixlen must be a multiple of 4, got {}".format(network.prefixlen))
+
 	zone = rdns_domain(network)
-	delegated_len = network.prefixlen // 4 * 4 + 4
 
 	if soa is not None:
 		if isinstance(soa, tuple):
@@ -158,6 +155,8 @@ def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
 		for net in lglass.rpsl.inetnum_cidrs(inetnum):
 			if net not in network:
 				continue
+
+			delegated_len = net.prefixlen // 4 * 4 + 4
 
 			for subnet in net.subnet(delegated_len):
 				if subnet not in delegations:
