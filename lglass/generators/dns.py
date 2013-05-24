@@ -156,7 +156,7 @@ def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
 			if net not in network:
 				continue
 
-			delegated_len = net.prefixlen // 4 * 4 + 4
+			delegated_len = net.prefixlen // 4 * 4 + 4 if net.prefixlen % 4 else net.prefixlen
 
 			for subnet in net.subnet(delegated_len):
 				if subnet not in delegations:
