@@ -42,7 +42,7 @@ class WhoisHandler(object):
 
 				objects = [self.database.get(*ls) for ls in self.database.list()]
 			elif "x" in flags:
-				req = req.split(";", 1)
+				req = req.split("+", 1)
 				if len(req) == 2:
 					objects = [self.database.get(*req)]
 				else:
