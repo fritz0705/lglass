@@ -82,7 +82,7 @@ class CachedDatabase(Database):
 
 		obj = self.database.get(type, primary_key)
 		if self.version_field:
-			obj.add(self.version_field, int(time.time()))
+			obj.add(self.version_field, str(int(time.time())))
 
 		self.cache[cache_key] = obj
 
@@ -108,7 +108,7 @@ class CachedDatabase(Database):
 		objs = self.database.find(primary_key, types=types)
 		if self.version_field:
 			for obj in objs:
-				obj.add(self.version_field, int(time.time()))
+				obj.add(self.version_field, str(int(time.time())))
 		self.cache[cache_key] = objs
 
 		return objs
