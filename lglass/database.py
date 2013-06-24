@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os.path
+import time
 
 import netaddr
 
@@ -65,9 +66,13 @@ class CachedDatabase(Database):
 	""" Simple in-memory cache for any database type. Will cache any object and
 	flush it on request. """
 
-	def __init__(self, database):
+	version_field = "x-cache-version"
+
+	def __init__(self, database, **kwargs):
 		self.database = database
 		self.cache = {}
+
+		self.__dict__.update(kwargs)
 
 	def get(self, type, primary_key):
 		cache_key = (type, primary_key)
@@ -76,6 +81,9 @@ class CachedDatabase(Database):
 			return self.cache[cache_key]
 
 		obj = self.database.get(type, primary_key)
+		if self.version_field:
+			obj.add(self.version_field, time.time())
+
 		self.cache[cache_key] = obj
 
 		return obj
