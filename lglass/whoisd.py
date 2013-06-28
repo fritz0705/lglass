@@ -63,22 +63,38 @@ class WhoisHandler(object):
 class WhoisdHandler(asyncore.dispatcher):
 	def __init__(self, sock, handler):
 		asyncore.dispatcher_with_send.__init__(self, sock)
+
 		self.handler = handler
-		self.line = b""
+
+		self.__readable = True
+		self.recv_buffer = b""
+		self.send_buffer = b""
+
+	def readable(self):
+		return self.__readable
+	
+	def writable(self):
+		return len(self.send_buffer) > 0
+
+	def handle_write(self):
+		sent = self.send(self.send_buffer)
+		self.send_buffer = self.send_buffer[sent:]
+
+		if len(self.send_buffer) == 0:
+			self.close()
 
 	def handle_read(self):
-		self.line += self.recv(1)
-		if b"\n" in self.line:
-			self.line = self.line.decode().split("\n")[0].strip()
+		self.recv_buffer += self.recv(1024)
+		if b"\n" in self.recv_buffer:
+			self.__readable = False
+			line = self.recv_buffer.split(b"\n")[0].strip()
 			try:
-				result = handler.handle(self.line).encode()
+				self.send_buffer = self.handler.handle(line.decode()).encode()
 			except:
-				traceback.print_exc()
-				self.send("% An error occured while handling the query\n")
-				send.close()
-
-			self.send(result)
-			self.close()
+				self.send_buffer += b"% An error occured while handling the query:\n"
+				exception = traceback.format_exc()
+				for line in exception.splitlines():
+					self.send_buffer += b"%   " + line.encode() + b"\n"
 
 class WhoisdServer(asyncore.dispatcher):
 	accepting = True
