@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import disutils.core
+import distutils.core
 
 with open("README.md") as f:
 	long_description = f.read()
