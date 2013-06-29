@@ -200,16 +200,25 @@ def parse_rpsl(lines):
 
 	return result
 
-def inetnum_range(inetnum):
+try:
 	import netaddr
 
-	if isinstance(inetnum, Object):
-		inetnum = inetnum.primary_key
+	def inetnum_range(inetnum):
 
-	return netaddr.IPRange(*[ipr.strip() for ipr in inetnum.split("-", 1)])
+		if isinstance(inetnum, Object):
+			inetnum = inetnum.primary_key
 
-def inetnum_cidrs(inetnum):
-	""" Return all CIDRs included in given inetnum object. """
+		return netaddr.IPRange(*[ipr.strip() for ipr in inetnum.split("-", 1)])
 
-	return inetnum_range(inetnum).cidrs()
+	def inetnum_cidrs(inetnum):
+		""" Return all CIDRs included in given inetnum object. """
 
+		try:
+			return netaddr.IPNetwork(inetnum.primary_key)
+		except netaddr.core.AddrFormatError:
+			if "-" in inetnum.primary_key:
+				return inetnum_range(inetnum).cidrs()
+			else:
+				raise
+except LoadError:
+	pass
