@@ -215,7 +215,7 @@ try:
 
 		try:
 			return netaddr.IPNetwork(inetnum.primary_key)
-		except netaddr.core.AddrFormatError:
+		except (netaddr.core.AddrFormatError, ValueError):
 			if "-" in inetnum.primary_key:
 				return inetnum_range(inetnum).cidrs()
 			else:
