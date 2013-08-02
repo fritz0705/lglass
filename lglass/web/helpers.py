@@ -3,7 +3,6 @@
 import functools
 import os
 import json
-from pprint import pprint
 
 import jinja2
 import bottle
@@ -30,7 +29,6 @@ DEFAULT_CONFIG = {
 
 def get_config():
 	config = DEFAULT_CONFIG
-	pprint(bottle.request.environ)
 	config.update(bottle.request.environ.get("lglass-web.config", {}))
 	if "LGLASS_WEB_CFG" in os.environ:
 		try:
