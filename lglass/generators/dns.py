@@ -37,9 +37,12 @@ def glue(domain, addr):
 def generate_delegation(dns, with_glue=True):
 	""" Generate a valid DNS delegation to the given dns object. This function
 	may generate glue records if with_glue == True. """
+	seen_servers = set()
 	for _, nserver in dns.get("nserver"):
 		ns, *glues = nserver.split()
-		yield delegation(dns.primary_key, ns)
+		if ns not in seen_servers:
+			seen_servers.add(ns)
+			yield delegation(dns.primary_key, ns)
 		if with_glue is False:
 			glues = []
 		for _glue in glues:
@@ -50,6 +53,17 @@ def generate_delegation(dns, with_glue=True):
 				yield glue(ns, _glue)
 			except:
 				pass
+	if with_glue is True:
+		for _, glueval in dns.get("glue"):
+			domain, *glues = glueval.split()
+			if not domain.endswith(dns.primary_key):
+				continue
+			for _glue in glues:
+				try:
+					_glue = netaddr.IPAddress(_glue)
+					yield glue(ns, _glue)
+				except:
+					pass
 
 def generate_rdns4_delegation(subnet, inetnum):
 	for _, nserver in inetnum.get("nserver"):
