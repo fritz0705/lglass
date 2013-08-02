@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+
+{% block title %}registry - lglass{% endblock %}
+
+{% block content %}
+<h1>{{ object.type }}: {{ object.primary_key }}</h1>
+
+<dl class="dl-horizontal">
+	{% for key, value in object %}
+	<dt>{{ key }}</dt>
+	<dd><pre>{{ value|e }}</pre></dd>
+	{% endfor %}
+</dl>
+
+<h2>Raw</h2>
+<pre>{{ object.pretty_print()|e }}</pre>
+{% endblock %}
