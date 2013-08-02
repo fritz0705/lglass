@@ -7,7 +7,7 @@ with open("README.md") as f:
 
 distutils.core.setup(
 	name="lglass",
-	version="1.0dev1",
+	version="1.0dev",
 	packages=["lglass"],
 	author="Fritz Grimpen",
 	author_email="fritz@grimpen.net",
@@ -18,11 +18,17 @@ distutils.core.setup(
 		"Development Status :: 4 - Beta",
 		"Operating System :: POSIX",
 		"Programming Language :: Python :: 3.3",
-		"Topic :: Internet :: Log Analysis"
+		"Topic :: Internet :: Log Analysis",
+		"Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+		"Topic :: System :: Networking",
+		"Topic :: System :: Systems Administration"
 	],
 	long_description=long_description,
 	install_requires=[
-		"netaddr>=0.7.10"
+		"netaddr>=0.7.10",
+		"bottle>=0.11.6",
+		"Jinja2>=2.7",
+		"MarkupSafe>=0.18"
 	]
 )
 
