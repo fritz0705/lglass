@@ -13,7 +13,35 @@ class Database(object):
 	get = None
 	list = None
 	find = None
+	save = None
+	delete = None
 
+	def __len__(self):
+		return len(self.list())
+
+	def __iter__(self):
+		for type, primary_key in self.list():
+			yield self.get(type, primary_key)
+
+	def __contains__(self, key):
+		if not isinstance(key, tuple):
+			raise TypeError("Expected key to be tuple of length 2, got {}".format(key))
+		try:
+			self.get(*key)
+		except KeyError:
+			return False
+		return True
+
+	def __getitem__(self, key):
+		if not isinstance(key, tuple):
+			raise TypeError("Expected key to be tuple of length 2, got {}".format(key))
+		return self.get(*key)
+	
+	def __delitem__(self, key):
+		if not isinstance(key, tuple):
+			raise TypeError("Expected key to be tuple of length 2, got {}".format(key))
+		self.delete(*key)
+	
 class FileDatabase(Database):
 	""" Simple database type which acts on a structured directory structure,
 	where types are represented as directories and objects resp. their primary
@@ -61,6 +89,21 @@ class FileDatabase(Database):
 			except KeyError:
 				pass
 		return objects
+
+	def save(self, object):
+		path = self._path_for(object.type, object.primary_key)
+		try:
+			os.makedirs(os.path.dirname(path))
+		except FileExistsError:
+			pass
+		with open(path, "w") as fh:
+			fh.write(object.pretty_print())
+
+	def delete(self, type, primary_key):
+		try:
+			os.unlink(self._path_for(type, primary_key))
+		except FileNotFoundError:
+			raise KeyError(repr((type, primary_key)))
 
 class CachedDatabase(Database):
 	""" Simple in-memory cache for any database type. Will cache any object and
@@ -112,6 +155,16 @@ class CachedDatabase(Database):
 		self.cache[cache_key] = objs
 
 		return objs
+
+	def save(self, object):
+		self.database.save(object)
+		cache_key = (object.type, object.primary_key)
+		self.cache[cache_key] = object
+
+	def delete(self, type, primary_key):
+		self.database.delete(object)
+		cache_key = (type, primary_key)
+		del self.cache[cache_key]
 
 	def flush(self):
 		self.cache = {}
@@ -191,6 +244,12 @@ class CIDRDatabase(Database):
 				matches.append(((obj_range[1] - obj_range[0]), obj))
 
 		return [self.get(*m[1]) for m in sorted(matches, key=lambda o: o[0])]
+
+	def save(self, object):
+		self.database.save(object)
+
+	def delete(self, type, primary_key):
+		self.database.delete(type, primary_key)
 
 	def list(self):
 		return self.database.list()
