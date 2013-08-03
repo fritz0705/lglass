@@ -22,4 +22,5 @@ app.route("/registry", "GET", lglass.web.registry.show_object_types)
 app.route("/registry/<obj>", "GET", lglass.web.registry.show_objects)
 app.route("/registry/find/<spec>", "GET", lglass.web.registry.find_objects)
 app.route("/registry/<obj>/<key>", "GET", lglass.web.registry.show_object)
+app.route("/registry/<obj>/<key>/raw", "GET", lglass.web.registry.show_raw_object)
 
