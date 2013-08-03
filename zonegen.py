@@ -54,7 +54,9 @@ def main(argv=sys.argv[1:]):
 		return main_rdns6(args, db)
 
 def main_dns(args, db):
-	domains = (db.get(*spec) for spec in db.list() if spec[0] == "dns" and spec[1].endswith("." + args.zone))
+	domains = (db.get(*spec) for spec in db.list()
+		if (spec[0] == "dns" or spec[0] == "domain")
+		and spec[1].endswith("." + args.zone))
 
 	soa = lglass.generators.dns.generate_soa(args.zone,
 		args.master,
