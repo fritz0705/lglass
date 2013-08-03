@@ -135,7 +135,10 @@ class Object(object):
 		return list(set([kvpair[0] for kvpair in self.data]))
 
 	def pretty_print(self, kv_padding=8):
-		left_padding = sorted([len(k) for k in self.keys()], reverse=True)[0] + kv_padding
+		try:
+			left_padding = sorted([len(k) for k in self.keys()], reverse=True)[0] + kv_padding
+		except IndexError:
+			return ""
 		result = []
 
 		for key, value in self:
@@ -174,6 +177,10 @@ class Object(object):
 	def from_string(cls, string):
 		return cls(parse_rpsl(string.split("\n")))
 
+	@classmethod
+	def from_iterable(cls, iterable):
+		return cls(parse_rpsl(iterable))
+
 def parse_rpsl(lines):
 	""" Simple RPSL "parser", which expects a list of lines as input """
 	result = []
@@ -194,7 +201,10 @@ def parse_rpsl(lines):
 			result.append((entry[0], value))
 			continue
 
-		key, value = line.split(":", 1)
+		try:
+			key, value = line.split(":", 1)
+		except ValueError:
+			raise ValueError("Syntax error: Missing value")
 
 		result.append((key.strip(), value.strip()))
 
@@ -222,3 +232,16 @@ try:
 				raise
 except LoadError:
 	pass
+
+if __name__ == '__main__':
+	import argparse
+	import sys
+	
+	argparser = argparse.ArgumentParser(description="Simple tool for RPSL formatting")
+	argparser.add_argument("--padding", "-p", default=8, type=int)
+
+	args = argparser.parse_args()
+
+	obj = Object.from_iterable(sys.stdin)
+	sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
+
