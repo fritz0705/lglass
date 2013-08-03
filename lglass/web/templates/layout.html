@@ -4,21 +4,15 @@
 		<meta charset="utf-8" />
 		<title>{% block title %}{% endblock title %}</title>
 		<meta name="generator" content="lglass utils" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-rc1/css/bootstrap.min.css">
 	</head>
 	<body>
-		<header class="navbar">
-			<a class="navbar-brand" href="/">lglass</a>
-			<ul class="nav navbar-nav">
-				<li><a href="/registry">Registry</a></li>
-				<li><a href="/dns">DNS</a></li>
-				<li><a href="/routing">Routing</a></li>
-			</ul>
+		<header>
+			<h1>lglass</h1>
 		</header>
 
-		<div class="container">
-			{% block content %}{% endblock content %}
-		</div>
+		<article>
+			{% block content %}
+			{% endblock %}
+		</article>
 	</body>
 </html>

@@ -1,13 +1,11 @@
 {% extends "layout.html" %}
 
-{% block title %}registry - lglass{% endblock %}
+{% block title %}lglass » registry{% endblock %}
 
 {% block content %}
-<h1>Registry Object Types</h1>
-
 <ul>
-	{% for object_type in object_types %}
-	<li><a href="/registry/{{ object_type|e }}">{{ object_type|e }}</a></li>
+	{% for type in object_types %}
+	<li><a href="/registry/{{ type|e }}">{{ type }}</a></li>
 	{% endfor %}
 </ul>
 {% endblock %}
