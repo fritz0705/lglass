@@ -10,6 +10,8 @@ class Object(object):
 	dict. """
 
 	def __init__(self, data=None):
+		""" Initialize empty RPSL object and fill it with data by passing its value
+		to extend """
 		self.data = []
 		if data:
 			self.extend(data)
@@ -160,6 +162,14 @@ class Object(object):
 
 	def __hash__(self):
 		return hash((self.type, self.primary_key))
+
+	def to_dict(self):
+		new_dict = dict()
+		for key, value in self:
+			if key not in new_dict:
+				new_dict[key] = []
+			new_dict[key].append(value)
+		return new_dict
 
 	@property
 	def type(self):
