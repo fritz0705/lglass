@@ -105,6 +105,9 @@ class FileDatabase(Database):
 		except FileNotFoundError:
 			raise KeyError(repr((type, primary_key)))
 
+	def __hash__(self):
+		return hash(self.root_dir) ^ hash(type(self))
+
 class CachedDatabase(Database):
 	""" Simple in-memory cache for any database type. Will cache any object and
 	flush it on request. """
@@ -168,6 +171,9 @@ class CachedDatabase(Database):
 
 	def flush(self):
 		self.cache = {}
+
+	def __hash__(self):
+		return hash(self.database)
 
 class CIDRDatabase(Database):
 	""" Extended database type which is a layer between the user and another
@@ -253,4 +259,7 @@ class CIDRDatabase(Database):
 
 	def list(self):
 		return self.database.list()
+
+	def __hash__(self):
+		return hash(self.database)
 
