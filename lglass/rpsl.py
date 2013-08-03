@@ -36,20 +36,23 @@ class Object(object):
 					raise ValueError("offset {}: expected value to be str, got {}".format(off, type(kvpair[0])))
 
 			self.data.extend(ex)
-			return
 		elif isinstance(ex, dict):
 			# the same for dicts, we will check the given dict and then we will
 			# add the values to the structure
 			for key, value in ex.items():
 				if not isinstance(key, str):
 					raise ValueError("expected key to be str, got {}: {}".format(type(key), key))
-				if not isinstance(value, str):
-					raise ValueError("key {}: expected value to be str, got {}".format(key, type(value)))
+				if not isinstance(value, str) and not isinstance(value, list):
+					raise ValueError("key {}: expected value to be str or list, got {}".format(key, type(value)))
 
 			for key, value in ex.items():
-				self[key] = value
-			return
-		raise TypeError("Expected ex to be dict or list, got {}".format(type(ex)))
+				if isinstance(value, list):
+					for sval in value:
+						self.append(key, sval)
+				else:
+					self[key] = value
+		else:
+			raise TypeError("Expected ex to be dict or list, got {}".format(type(ex)))
 
 	def __getitem__(self, key):
 		if isinstance(key, str):
@@ -57,7 +60,7 @@ class Object(object):
 				return self.get(key)[0][1]
 			except IndexError:
 				raise KeyError(repr(key))
-		elif isinstance(key, int):
+		elif isinstance(key, int) or isinstance(key, slice):
 			return self.data[key]
 
 		raise TypeError("Expected key to be str or int, got {}".format(type(key)))
@@ -90,14 +93,15 @@ class Object(object):
 					self.add(key, v)
 			else:
 				self.add(key, value)
-			return
 		elif isinstance(key, int):
 			if not isinstance(value, tuple):
 				raise TypeError("Expected value to be tuple, got {}".format(type(key)))
 			self.data[key] = value
-			return
-
-		raise TypeError("Expected key to be str or int, got {}".format(type(key)))
+		elif isinstance(key, slice):
+			if not isinstance(value, list):
+				raise TypeError("Expected value to be list, got {}".format(type(key)))
+		else:
+			raise TypeError("Expected key to be str or int, got {}".format(type(key)))
 
 	def __delitem__(self, key):
 		""" __delitem__ has also special semantics. If key is an instance of str,
