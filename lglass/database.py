@@ -16,6 +16,30 @@ class Database(object):
 	save = None
 	delete = None
 
+	object_types = {
+		"as-block",
+		"as-set",
+		"aut-num",
+		"dns",
+		"filter-set",
+		"inet6num",
+		"inetnum",
+		"inet-rtr",
+		"irt",
+		"key-cert",
+		"mntner",
+		"organisation",
+		"peering-set",
+		"person",
+		"poem",
+		"poetic-form",
+		"role",
+		"route",
+		"route6",
+		"route-set",
+		"rtr-set"
+	}
+
 	def __len__(self):
 		return len(self.list())
 
@@ -47,9 +71,6 @@ class FileDatabase(Database):
 	where types are represented as directories and objects resp. their primary
 	keys as files. """
 	root_dir = '.'
-
-	object_types = {"inetnum", "inet6num", "route", "route6", "aut-num",
-		"as-block", "dns", "mntner", "person", "route-set"}
 
 	def __init__(self, root_dir='.'):
 		self.root_dir = root_dir
