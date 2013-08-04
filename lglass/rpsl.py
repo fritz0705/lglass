@@ -25,7 +25,7 @@ class Object(object):
 		if isinstance(ex, list):
 			# at first we will check the whole struture of ex, if we encounter any
 			# error, we will raise an exception, so we are never in undefined state
-			for off, kvpair in zip(range(len(ex)), ex):
+			for off, kvpair in enumerate(ex):
 				if not isinstance(kvpair, tuple):
 					raise ValueError("offset {}: expected entry to be tuple, got {}".format(off, type(kvpair)))
 				if len(kvpair) != 2:
@@ -133,7 +133,7 @@ class Object(object):
 
 	def index(self, key):
 		""" Return index of first entry for key. """
-		for kvpair, offset in zip(self.data, range(len(self.data))):
+		for offset, kvpair in enumerate(self.data):
 			if kvpair[0] == key:
 				return offset
 		raise ValueError("{} not found".format(key))
