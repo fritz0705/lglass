@@ -51,6 +51,8 @@ class Object(object):
 						self.append(key, sval)
 				else:
 					self[key] = value
+		elif isinstance(ex, Object):
+			self.data.extend(ex.data)
 		else:
 			raise TypeError("Expected ex to be dict or list, got {}".format(type(ex)))
 
@@ -250,6 +252,8 @@ except LoadError:
 if __name__ == '__main__':
 	import argparse
 	import sys
+	import traceback
+	import warnings
 	
 	argparser = argparse.ArgumentParser(description="Simple tool for RPSL formatting")
 	argparser.add_argument("--padding", "-p", default=8, type=int)
@@ -260,7 +264,11 @@ if __name__ == '__main__':
 	if args.inplace:
 		for file in args.inplace:
 			with open(file, "r+") as fh:
-				obj = Object.from_iterable(fh)
+				try:
+					obj = Object.from_iterable(fh)
+				except:
+					warnings.warn("Format of {} is invalid".format(file))
+					continue
 				fh.seek(0)
 				fh.write(obj.pretty_print(kv_padding=args.padding))
 				fh.truncate()
