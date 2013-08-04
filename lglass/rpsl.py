@@ -253,9 +253,18 @@ if __name__ == '__main__':
 	
 	argparser = argparse.ArgumentParser(description="Simple tool for RPSL formatting")
 	argparser.add_argument("--padding", "-p", default=8, type=int)
+	argparser.add_argument("--inplace", "-i", nargs="+")
 
 	args = argparser.parse_args()
 
-	obj = Object.from_iterable(sys.stdin)
-	sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
+	if args.inplace:
+		for file in args.inplace:
+			with open(file, "r+") as fh:
+				obj = Object.from_iterable(fh)
+				fh.seek(0)
+				fh.write(obj.pretty_print(kv_padding=args.padding))
+				fh.truncate()
+	else:
+		obj = Object.from_iterable(sys.stdin)
+		sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
 
