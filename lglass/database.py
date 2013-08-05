@@ -75,7 +75,7 @@ class FileDatabase(Database):
 	def __init__(self, root_dir='.'):
 		self.root_dir = root_dir
 
-	def _path_for(self, type, primary_key):
+	def __path_for(self, type, primary_key):
 		return os.path.join(self.root_dir, type, primary_key.replace("/", "_"))
 
 	def get(self, type, primary_key):
