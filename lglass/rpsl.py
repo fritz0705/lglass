@@ -197,23 +197,110 @@ class Object(object):
 	def from_iterable(cls, iterable):
 		return cls(parse_rpsl(iterable))
 
-def parse_rpsl(lines):
-	""" Simple RPSL "parser", which expects a list of lines as input """
+def parse_rpsl(lines, pragmas={}):
+	''' This is a simple RPSL parser which expects an iterable which yields lines.
+	This parser processes the object format, not the policy format. The object
+	format used by this parser is similar to the format described by the RFC:
+	Each line consists of key and value, which are separated by a double-colon ':'.
+	The ':' can be surrounded by whitespace characters including line breaks,
+	because this parser doesn't split the input into lines; it's newline unaware.
+	The format also supports line continuations by beginning a new line of input
+	with a whitespace character. This whitespace character is stripped, but the
+	parser will produce a '\n' in the resulting value. Line continuations are
+	only possible for the value part, which means, that the key and ':' must be
+	on the same line of input.
+
+	We also support an extended format using pragmas, which can define the
+	processing rules like line-break type, and whitespace preservation. Pragmas
+	are on their own line, which must begin with "%!", followed by any
+	amount of whitespace, "pragma", at least one whitespace, followed by the
+	pragma-specific part.
+	
+	The following pragmas are supported:
+
+		%! pragma whitespace-preserve [on|off]
+				Preserve any whitespace of input in keys and values and don't strip
+				whitespace.
+
+		%! pragma newline-type [cr|lf|crlf|none]
+				Define type of newline by choosing between cr "Mac OS 9", lf "Unix",
+				crlf "Windows" and none.
+
+		%! pragma rfc
+				Reset all pragmas to the RFC-conform values.
+
+		%! pragma stop-at-empty-line [on|off]
+				Enforces the parser to stop at an empty line
+	'''
 	result = []
+	_pragmas = {
+		"whitespace-preserve": False,
+		"newline-type": "lf",
+		"stop-at-empty-line": False
+	}
+	_pragmas.update(pragmas)
+	pragmas = _pragmas
 
 	for line in lines:
+		if line.startswith("%!"):
+			# this line defines a parser instruction, which should be a pragma
+			values = line[2:].strip().split()
+			if len(values) <= 1:
+				raise ValueError("Syntax error: Expected pragma type after 'pragma'")
+			if values[0] != "pragma":
+				raise ValueError("Syntax error: Only pragmas are allowed as parser instructions")
+			if values[1] == "rfc":
+				pragmas.update({
+					"whitespace-preserve": False,
+					"newline-type": "lf",
+					"stop-at-empty-line": False
+				})
+			elif values[1] == "whitespace-preserve":
+				try:
+					if values[2] not in ["on", "off"]:
+						raise ValueError("Syntax error: Expected 'on' or 'off' as value for 'whitespace-preserve' pragma")
+					pragmas["whitespace-preserve"] = True if values[2] == "on" else False
+				except IndexError:
+					raise ValueError("Syntax error: Expected value after 'whitespace-preserve'")
+			elif values[1] == "newline-type":
+				try:
+					if values[2] not in ["cr", "lf", "crlf", "none"]:
+						raise ValueError("Syntax error: Expected 'cr', 'lf', 'crlf' or 'none' as value for 'newline-type' pragma")
+					pragmas["newline-type"] = values[2]
+				except IndexError:
+					raise ValueError("Syntax error: Expected value after 'newline-type'")
+			elif values[1] == "stop-at-empty-line":
+				try:
+					if values[2] not in ["on", "off"]:
+						raise ValueError("Syntax error: Expected 'on' or 'off' as value for 'stop-at-empty-line' pragma")
+					pragmas["stop-at-empty-line"] = True if values[2] == "on" else False
+				except IndexError:
+					raise ValueError("Syntax error: Expected value after 'stop-at-empty-line'")
+			else:
+				raise ValueError("Syntax error: Unknown pragma: {}".format(values))
+			continue
+
 		# remove any comments (text after % and #)
 		line = line.split("%")[0]
 		line = line.split("#")[0]
 
 		# continue if line is empty
 		if not line.strip():
+			if pragmas["stop-at-empty-line"]:
+				break
 			continue
 
 		# check for line continuations
 		if line[0] == ' ':
+			if not pragmas["whitespace-preserve"]:
+				line = line.strip()
 			entry = result.pop()
-			value = "\n".join([entry[1], line.strip()])
+			value = ({
+				"cr": "\r",
+				"lf": "\n",
+				"crlf": "\r\n",
+				"none": ""
+			}[pragmas["newline-type"]]).join([entry[1], line])
 			result.append((entry[0], value))
 			continue
 
@@ -222,7 +309,11 @@ def parse_rpsl(lines):
 		except ValueError:
 			raise ValueError("Syntax error: Missing value")
 
-		result.append((key.strip(), value.strip()))
+		if not pragmas["whitespace-preserve"]:
+			key = key.strip()
+			value = value.strip()
+
+		result.append((key, value))
 
 	return result
 
