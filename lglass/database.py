@@ -284,6 +284,36 @@ class CIDRDatabase(Database):
 	def __hash__(self):
 		return hash(self.database)
 
+class DictDatabase(Database):
+	""" This database backend operates completely in memory by using a Python
+	dictionary to organize the information. It uses only builtin Python data types
+	like list, tuple, and dict. """
+
+	def __init__(self):
+		self.backend = dict()
+
+	def save(self, object):
+		self.backend[object.spec] = object
+	
+	def delete(self, type, primary_key):
+		del self.backend[type, primary_key]
+	
+	def get(self, type, primary_key):
+		return self.backend[type, primary_key]
+	
+	def list(self):
+		return list(self.backend.keys())
+
+	def find(self, primary_key, types=None):
+		objects = []
+		for type, pkey in self.backend.keys():
+			if pkey != primary_key:
+				continue
+			if types is not None and type not in types:
+				continue
+			objects.append((type, pkey))
+		return [self.get(*spec) for spec in objects]
+
 import sqlite3
 
 class SQLite3Database(Database):
