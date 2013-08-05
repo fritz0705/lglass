@@ -3,53 +3,84 @@
 import lglass.database
 import asyncore
 import traceback
+import argparse
+
+DEFAULT_HELP = (
+"""NAME
+    whois query server
+
+DESCRIPTION
+    The following options are available:
+    
+    -x, --exact
+          Performs an exact search
+
+    -T (comma separated list of object types with no white space)
+          Returns only objects with a given type
+""")
 
 class WhoisHandler(object):
-	def __init__(self, database, preamble=None, keys=[]):
+	preamble = None
+	help_message = DEFAULT_HELP
+
+	def __init__(self, database, keys=[], **kwargs):
 		self.database = database
-		self.preamble = preamble
-		self.keys = set(keys)
+		self.keys = frozenset(keys)
+
+		self.__dict__.update(kwargs)
 	
 	def handle(self, request):
 		""" This method handles a simple WHOIS request and returns a plain response.
 		The request is given as string and will be tokenzied for further
 		processing. """
 
-		request = request.split(" ")
+		request = request.split()
 
-		requested = []
 		flags = set()
-		for req in request:
-			if req[0] == '-':
-				flags.update(set(req[1]))
-				continue
+		arguments = {}
+		requested = []
 
-			requested.append(req)
+		req_iter = iter(request)
+		for req in req_iter:
+			if req in ["-T", "-t"]:
+				arguments[req] = next(req_iter)
+			elif req in ["-x"]:
+				flags.add(req[1:])
+			else:
+				requested.append(req)
 
 		response = []
 		if self.preamble is not None:
 			response.append("% {}\n\n".format(self.preamble))
 
 		for req in requested:
-			response.append("% Query {} [{}]\n\n".format(req, "".join(flags)))
+			response.append("% Query {}\n\n".format(req))
 
-			if "a" in flags:
-				# whois database transfer
-				# don't use it!
-				if req not in self.keys:
-					response.append("% Access not authorized\n\n")
-					continue
+			if req == "help":
+				help = "% " + self.help_message.replace("\n", "\n% ")
+				response.append(help)
+				response.append("\n\n")
+				continue
 
-				objects = [self.database.get(*ls) for ls in self.database.list()]
-			elif "x" in flags:
-				req = req.split("+", 1)
-				if len(req) == 2:
-					objects = [self.database.get(*req)]
-				else:
-					req = req[0]
-					objects = [self.database.get(*ls) for ls in self.database.list() if ls[1] == req]
+			filters = []
+			post_filters = []
+
+			if "-T" in arguments:
+				types = arguments["-T"].split(",")
+				post_filters.append(lambda obj: obj.type in types)
+			if "x" in flags:
+				filters.append(lambda spec: spec[1] == req)
+
+			if filters:
+				objects = self.database.list()
+				for _filter in filters:
+					objects = filter(_filter, objects)
+				objects = [self.database.get(*spec) for spec in objects]
 			else:
 				objects = self.database.find(req)
+
+			for post_filter in post_filters:
+				objects = filter(post_filter, objects)
 
 			for obj in objects:
 				response.append("% Object {}\n\n".format(obj.spec))
@@ -134,13 +165,15 @@ if __name__ == '__main__':
 		os.setuid(uid)
 
 	argparser = argparse.ArgumentParser(description="Simple whois server")
-	argparser.add_argument("--host", "-H", type=str, default="0.0.0.0",
+	argparser.add_argument("--config", "-c",
+		help="Path to configuration file")
+	argparser.add_argument("--host", "-H", type=str,
 		help="Address to bind")
-	argparser.add_argument("--port", "-P", type=int, default=4343,
+	argparser.add_argument("--port", "-P", type=int,
 		help="Port to bind")
-	argparser.add_argument("--db", "-D", type=str, default=".",
+	argparser.add_argument("--db", "-D", type=str,
 		help="Path to Whois database")
-	argparser.add_argument("--no-cache", action="store_true", default=False,
+	argparser.add_argument("--no-cache", action="store_false", dest="cache",
 		help="Disable caching layer and serve requests directly from database")
 	argparser.add_argument("--user", "-u",
 		help="Drop priviliges after start and set uid")
@@ -159,35 +192,74 @@ if __name__ == '__main__':
 
 	args = argparser.parse_args()
 
-	db = lglass.database.FileDatabase(args.db)
-	db = lglass.database.CIDRDatabase(db)
-	if not args.no_cache:
+	config = {
+		"listen.host": "::",
+		"listen.port": 4343,
+		"listen.protocol": 6,
+
+		"database.path": ".",
+		"database.caching": True,
+		"database.cidr": True,
+
+		"messages.preamble": "This is a generic whois query service.",
+		"messages.help": DEFAULT_HELP,
+
+		"process.user": None,
+		"process.group": None,
+		"process.pidfile": None,
+	}
+
+	if args.config:
+		with open(args.config) as fh:
+			config.update(json.load(fh))
+	
+	for value, destination in [
+			(args.host,     "listen.host"),
+			(args.port,     "listen.port"),
+			(args.protocol, "listen.protocol"),
+			(args.db,       "database.path"),
+			(args.cache,    "database.caching"),
+			(args.preamble, "messages.preamble"),
+			(args.user,     "process.user"),
+			(args.group,		"process.group"),
+			(args.pidfile,	"process.pidfile")
+		]:
+		if value is not None:
+			config[destination] = value
+
+	db = lglass.database.FileDatabase(config["database.path"])
+	if config["database.cidr"]:
+		db = lglass.database.CIDRDatabase(db)
+	if config["database.caching"]:
 		db = lglass.database.CachedDatabase(db)
 
-	handler = WhoisHandler(db, preamble=args.preamble, keys=(args.key or []))
+	handler = WhoisHandler(db,
+		preamble=config["messages.preamble"],
+		help_message=config["messages.help"],
+		keys=[])
 
 	def sighup(sig, frame):
-		if not args.no_cache:
+		if config["database.caching"]:
 			print("Flush query cache", file=sys.stderr)
 			db.flush()
 	
 	for sig in [signal.SIGHUP, signal.SIGUSR1]:
 		signal.signal(sig, sighup)
 
-	if args.pidfile:
-		with open(args.pidfile, "w") as f:
-			f.write(str(os.getpid()))
+	if config["process.pidfile"]:
+		with open(config["process.pidfile"]) as f:
+			f.write(str(os.getpid()) + "\n")
 
-	if args.protocol == 4 or args.protocol is None:
+	if config["listen.protocol"] == 4:
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	elif args.protocol == 6:
+	elif config["listen.protocol"] == 6:
 		sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	sock.bind((args.host, args.port))
+	sock.bind((config["listen.host"], config["listen.port"]))
 	sock.listen(5)
 
-	if args.user:
-		drop_priv(args.user, args.group)
+	if config["process.user"]:
+		drop_priv(config["process.user"], config["process.group"])
 
 	WhoisdServer(sock, handler)
 	asyncore.loop()
