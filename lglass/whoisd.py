@@ -56,9 +56,13 @@ class WhoisHandler(object):
 		for req in requested:
 			response.append("% Query {}\n\n".format(req))
 
-			if req == "help":
+			if req in ["help", "--help"]:
 				help = "% " + self.help_message.replace("\n", "\n% ")
 				response.append(help)
+				response.append("\n\n")
+				continue
+			elif req == "--types":
+				response.append("\n".join(self.database.object_types))
 				response.append("\n\n")
 				continue
 
