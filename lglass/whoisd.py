@@ -144,6 +144,7 @@ if __name__ == '__main__':
 	import sys
 	import os
 	import pwd
+	import json
 
 	def drop_priv(user, group):
 		try:
