@@ -190,12 +190,12 @@ class Object(object):
 		return (self.type, self.primary_key)
 
 	@classmethod
-	def from_string(cls, string):
-		return cls(parse_rpsl(string.split("\n")))
+	def from_string(cls, string, *args, **kwargs):
+		return cls(parse_rpsl(string.splitlines(), *args, **kwargs))
 
 	@classmethod
-	def from_iterable(cls, iterable):
-		return cls(parse_rpsl(iterable))
+	def from_iterable(cls, *args, **kwargs):
+		return cls(parse_rpsl(*args, **kwargs))
 
 def parse_rpsl(lines, pragmas={}):
 	''' This is a simple RPSL parser which expects an iterable which yields lines.
@@ -231,13 +231,18 @@ def parse_rpsl(lines, pragmas={}):
 
 		%! pragma stop-at-empty-line [on|off]
 				Enforces the parser to stop at an empty line
+
+		%! pragma condense-whitespace [on|off]
+				Remove any sequence of whitespace characters with Space (' ')
 	'''
 	result = []
-	_pragmas = {
+	default_pragmas = {
 		"whitespace-preserve": False,
 		"newline-type": "lf",
-		"stop-at-empty-line": False
+		"stop-at-empty-line": False,
+		"condense-whitespace": False
 	}
+	_pragmas = dict(default_pragmas)
 	_pragmas.update(pragmas)
 	pragmas = _pragmas
 
@@ -250,11 +255,7 @@ def parse_rpsl(lines, pragmas={}):
 			if values[0] != "pragma":
 				raise ValueError("Syntax error: Only pragmas are allowed as parser instructions")
 			if values[1] == "rfc":
-				pragmas.update({
-					"whitespace-preserve": False,
-					"newline-type": "lf",
-					"stop-at-empty-line": False
-				})
+				pragmas.update(default_pragmas)
 			elif values[1] == "whitespace-preserve":
 				try:
 					if values[2] not in ["on", "off"]:
@@ -276,6 +277,13 @@ def parse_rpsl(lines, pragmas={}):
 					pragmas["stop-at-empty-line"] = True if values[2] == "on" else False
 				except IndexError:
 					raise ValueError("Syntax error: Expected value after 'stop-at-empty-line'")
+			elif values[1] == "condense-whitespace":
+				try:
+					if values[2] not in ["on", "off"]:
+						raise ValueError("Syntax error: Expected 'on' or 'off' as value for 'condense-whitespace' pragma")
+					pragmas["condense-whitespace"] = True if values[2] == "on" else False
+				except IndexError:
+					raise ValueError("Syntax error: Expected value after 'condense-whitespace'")
 			else:
 				raise ValueError("Syntax error: Unknown pragma: {}".format(values))
 			continue
@@ -286,7 +294,7 @@ def parse_rpsl(lines, pragmas={}):
 
 		# continue if line is empty
 		if not line.strip():
-			if pragmas["stop-at-empty-line"]:
+			if pragmas["stop-at-empty-line"] and len(result) != 0:
 				break
 			continue
 
@@ -312,6 +320,10 @@ def parse_rpsl(lines, pragmas={}):
 		if not pragmas["whitespace-preserve"]:
 			key = key.strip()
 			value = value.strip()
+
+		if pragmas["condense-whitespace"]:
+			import re
+			value = re.sub(r"[\s]+", " ", value, flags=re.M|re.S)
 
 		result.append((key, value))
 
@@ -347,16 +359,30 @@ if __name__ == '__main__':
 	import warnings
 	
 	argparser = argparse.ArgumentParser(description="Simple tool for RPSL formatting")
-	argparser.add_argument("--padding", "-p", default=8, type=int)
-	argparser.add_argument("--inplace", "-i", nargs="+")
+	argparser.add_argument("--padding", "-p", default=8, type=int,
+			help="Define whitespace padding between key and value")
+	argparser.add_argument("--inplace", "-i", nargs="+",
+			help="Change the RPSL files in-place")
+	argparser.add_argument("--whitespace-preserve", action="store_true", default=False,
+			help="Turn the whitespace-preserve pragma on")
+	argparser.add_argument("--stop-at-empty-line", action="store_true", default=False,
+			help="Turn the stop-at-empty-line pragma on")
+	argparser.add_argument("--condense-whitespace", action="store_true", default=False,
+			help="Turn the condense-whitespace pragma on")
 
 	args = argparser.parse_args()
+
+	pragmas = {
+		"whitespace-preserve": args.whitespace_preserve,
+		"stop-at-empty-line": args.stop_at_empty_line,
+		"condense-whitespace": args.condense_whitespace
+	}
 
 	if args.inplace:
 		for file in args.inplace:
 			with open(file, "r+") as fh:
 				try:
-					obj = Object.from_iterable(fh)
+					obj = Object.from_iterable(fh, pragmas=pragmas)
 				except:
 					warnings.warn("Format of {} is invalid".format(file))
 					continue
@@ -364,6 +390,6 @@ if __name__ == '__main__':
 				fh.write(obj.pretty_print(kv_padding=args.padding))
 				fh.truncate()
 	else:
-		obj = Object.from_iterable(sys.stdin)
+		obj = Object.from_iterable(sys.stdin, pragmas=pragmas)
 		sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
 
