@@ -248,7 +248,7 @@ if __name__ == '__main__':
 		signal.signal(sig, sighup)
 
 	if config["process.pidfile"]:
-		with open(config["process.pidfile"]) as f:
+		with open(config["process.pidfile"], "w") as f:
 			f.write(str(os.getpid()) + "\n")
 
 	if config["listen.protocol"] == 4:
