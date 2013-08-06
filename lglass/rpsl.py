@@ -243,7 +243,7 @@ class SchemaObject(Object):
 			self.validate_self()
 
 	def validate_self(self):
-		return self.validate(self.SCHEMA_SCHEMA)
+		return self.SCHEMA_SCHEMA.validate(self)
 
 	def validate(self, obj):
 		validator = SchemaValidator(self)
@@ -276,7 +276,7 @@ class SchemaObject(Object):
 				elif token == "lookup":
 					constraint.lookup = True
 				elif token == "inverse":
-					constraint.inverse = next(token)
+					constraint.inverse = next(tokens_iter)
 				elif token == "primary":
 					constraint.primary = True
 			constraints.append(constraint)
@@ -303,15 +303,13 @@ class SchemaKeyConstraint(object):
 
 	def validate(self, obj):
 		if self.key_name not in obj:
-			return False
+			return (False, self.key_name, "no_key")
 		kvpairs = obj.get(self.key_name)
 		if self.multiple == False and len(kvpairs) > 1:
-			return False
+			return (False, self.key_name, "too_much")
 		if self.mandatory == True and len(kvpairs) == 0:
-			return False
-		if self.primary and obj[0][0] != self.key_name:
-			return False
-		return True
+			return (False, self.key_name, "not_enough")
+		return (True, self.key_name, None)
 
 class SchemaValidator(object):
 	def __init__(self, schema):
@@ -323,15 +321,16 @@ class SchemaValidator(object):
 
 	def validate(self, obj):
 		for constraint in self.schema.constraints:
-			if not constraint.validate(obj):
-				return False
-		return True
+			res = constraint.validate(obj)
+			if not res[0]:
+				return res
+		return (True, None, None)
 
 def parse_rpsl(lines, pragmas={}):
 	''' This is a simple RPSL parser which expects an iterable which yields lines.
 	This parser processes the object format, not the policy format. The object
 	format used by this parser is similar to the format described by the RFC:
-	Each line consists of key and value, which are separated by a double-colon ':'.
+	Each line consists of key and value, which are separated by a colon ':'.
 	The ':' can be surrounded by whitespace characters including line breaks,
 	because this parser doesn't split the input into lines; it's newline unaware.
 	The format also supports line continuations by beginning a new line of input
@@ -364,13 +363,18 @@ def parse_rpsl(lines, pragmas={}):
 
 		%! pragma condense-whitespace [on|off]
 				Replace any sequence of whitespace characters with simple space (' ')
+
+		%! pragma strict-ripe [on|off]
+				Do completely RIPE database compilant parsing, e.g. don't allow any
+				space between key and the colon.
 	'''
 	result = []
 	default_pragmas = {
 		"whitespace-preserve": False,
 		"newline-type": "lf",
 		"stop-at-empty-line": False,
-		"condense-whitespace": False
+		"condense-whitespace": False,
+		"strict-ripe": False
 	}
 	_pragmas = dict(default_pragmas)
 	_pragmas.update(pragmas)
@@ -386,13 +390,14 @@ def parse_rpsl(lines, pragmas={}):
 				raise ValueError("Syntax error: Only pragmas are allowed as parser instructions")
 			if values[1] == "rfc":
 				pragmas.update(default_pragmas)
-			elif values[1] == "whitespace-preserve":
+			elif values[1] in {"whitespace-preserve", "stop-at-empty-line",
+				"condense-whitespace", "strict-ripe"}:
 				try:
-					if values[2] not in ["on", "off"]:
-						raise ValueError("Syntax error: Expected 'on' or 'off' as value for 'whitespace-preserve' pragma")
-					pragmas["whitespace-preserve"] = True if values[2] == "on" else False
+					if values[2] not in {"on", "off"}:
+						raise ValueError("Syntax error: Expected 'on' or 'off' as value for '{}' pragma".format(values[1]))
+					pragmas[values[1]] = True if values[2] == "on" else False
 				except IndexError:
-					raise ValueError("Syntax error: Expected value after 'whitespace-preserve'")
+					raise ValueError("Syntax error: Expected value after '{}'".format(values[1]))
 			elif values[1] == "newline-type":
 				try:
 					if values[2] not in ["cr", "lf", "crlf", "none"]:
@@ -400,20 +405,6 @@ def parse_rpsl(lines, pragmas={}):
 					pragmas["newline-type"] = values[2]
 				except IndexError:
 					raise ValueError("Syntax error: Expected value after 'newline-type'")
-			elif values[1] == "stop-at-empty-line":
-				try:
-					if values[2] not in ["on", "off"]:
-						raise ValueError("Syntax error: Expected 'on' or 'off' as value for 'stop-at-empty-line' pragma")
-					pragmas["stop-at-empty-line"] = True if values[2] == "on" else False
-				except IndexError:
-					raise ValueError("Syntax error: Expected value after 'stop-at-empty-line'")
-			elif values[1] == "condense-whitespace":
-				try:
-					if values[2] not in ["on", "off"]:
-						raise ValueError("Syntax error: Expected 'on' or 'off' as value for 'condense-whitespace' pragma")
-					pragmas["condense-whitespace"] = True if values[2] == "on" else False
-				except IndexError:
-					raise ValueError("Syntax error: Expected value after 'condense-whitespace'")
 			else:
 				raise ValueError("Syntax error: Unknown pragma: {}".format(values))
 			continue
@@ -429,7 +420,8 @@ def parse_rpsl(lines, pragmas={}):
 			continue
 
 		# check for line continuations
-		if line[0] == ' ':
+		if line[0] in [' ', '\t', "+"]:
+			line = line[1:]
 			if not pragmas["whitespace-preserve"]:
 				line = line.strip()
 			entry = result.pop()
@@ -446,6 +438,10 @@ def parse_rpsl(lines, pragmas={}):
 			key, value = line.split(":", 1)
 		except ValueError:
 			raise ValueError("Syntax error: Missing value")
+
+		if pragmas["strict-ripe"]:
+			if not re.match("^[a-zA-Z0-9-]+$", key):
+				raise ValueError("Syntax error: Key doesn't match RIPE database requirements")
 
 		if not pragmas["whitespace-preserve"]:
 			key = key.strip()
