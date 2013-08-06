@@ -179,15 +179,52 @@ class Object(object):
 
 	@property
 	def type(self):
-		return self.data[0][0]
+		try:
+			return self.data[0][0]
+		except IndexError:
+			return None
+
+	@type.setter
+	def type(self, new_value):
+		if not isinstance(new_value, str):
+			raise ValueError("Expected new value for 'type' to be a str, got {}".format(type(new_value)))
+		try:
+			self.data[0] = (new_value, self.data[0][1])
+		except IndexError:
+			self.add((new_value, None))
 
 	@property
 	def primary_key(self):
-		return self.data[0][1]
+		try:
+			return self.data[0][1]
+		except IndexError:
+			return None
+
+	@primary_key.setter
+	def primary_key(self, new_value):
+		if not isinstance(new_value, str):
+			raise ValueError("Expected new value for 'primary_key' to be a str, got {}".format(type(new_value)))
+		try:
+			self.data[0] = (self.data[0][0], new_value)
+		except IndexError:
+			self.add((None, new_value))
 
 	@property
 	def spec(self):
 		return (self.type, self.primary_key)
+
+	@spec.setter
+	def spec(self, new_value):
+		if not isinstance(new_value, tuple):
+			raise ValueError("Expected tuple as new value for 'spec', got {}".format(type(new_value)))
+		elif len(new_value) != 2:
+			raise ValueError("Expected new value for 'spec' to have two values, got {}".format(type(new_value)))
+		elif not isinstance(new_value[0], str) or not isinstance(new_value[1], str):
+			raise ValueError("Expected new value for 'spec' to have two strings as value, got {}".format(new_value))
+		try:
+			self.data[0] = tuple(new_value)
+		except IndexError:
+			self.add(*new_value)
 
 	@classmethod
 	def from_string(cls, string, *args, **kwargs):
@@ -233,7 +270,7 @@ def parse_rpsl(lines, pragmas={}):
 				Enforces the parser to stop at an empty line
 
 		%! pragma condense-whitespace [on|off]
-				Remove any sequence of whitespace characters with Space (' ')
+				Replace any sequence of whitespace characters with simple space (' ')
 	'''
 	result = []
 	default_pragmas = {
