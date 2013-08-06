@@ -127,7 +127,7 @@ class FileDatabase(Database):
 		return objects
 
 	def save(self, object):
-		path = self._path_for(object.type, object.primary_key)
+		path = self.__path_for(object.type, object.primary_key)
 		try:
 			os.makedirs(os.path.dirname(path))
 		except FileExistsError:
@@ -137,7 +137,7 @@ class FileDatabase(Database):
 
 	def delete(self, type, primary_key):
 		try:
-			os.unlink(self._path_for(type, primary_key))
+			os.unlink(self.__path_for(type, primary_key))
 		except FileNotFoundError:
 			raise KeyError(repr((type, primary_key)))
 
