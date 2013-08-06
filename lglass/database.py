@@ -40,6 +40,21 @@ class Database(object):
 		"rtr-set"
 	}
 
+	def schema(self, type):
+		name = type.upper() + "-SCHEMA"
+		specs = [("schema", name), ("schemas", name), ("schema", type),
+			("schemas", type)]
+		obj = None
+		for spec in specs:
+			try:
+				obj = self.get(*spec)
+			except KeyError:
+				continue
+			break
+		if obj is None:
+			raise KeyError("schema({})".format(type))
+		return lglass.rpsl.SchemaObject(obj)
+
 	def __len__(self):
 		return len(self.list())
 
@@ -368,7 +383,7 @@ PRAGMA foreign_keys = ON;
 
 			col = cur.fetchone()
 			if col is None:
-				return None
+				raise KeyError(repr((type, primary_key)))
 
 			obj = lglass.rpsl.Object()
 			cur.execute("SELECT key, value FROM 'kvpairs' WHERE \"object_id\" = ? ORDER BY \"order\"", (col[0], ))
