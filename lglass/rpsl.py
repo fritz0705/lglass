@@ -235,6 +235,21 @@ class Object(object):
 		return cls(parse_rpsl(*args, **kwargs))
 
 class SchemaObject(Object):
+	SCHEMA_SCHEMA = None
+
+	def __init__(self, ex=None):
+		Object.__init__(self, ex)
+		if ex is not None and self.SCHEMA_SCHEMA is not None:
+			self.validate_self()
+
+	def validate_self(self):
+		validator = SchemaValidator(self.SCHEMA_SCHEMA)
+		return validator.validate(self)
+
+	@property
+	def type_name(self):
+		return self["type-name"][0]
+
 	@property
 	def constraints(self):
 		constraints = []
@@ -259,6 +274,14 @@ class SchemaObject(Object):
 					constraint.primary = True
 			constraints.append(constraint)
 		return constraints
+
+SchemaObject.SCHEMA_SCHEMA = SchemaObject([
+	("schema", "SCHEMA-SCHEMA"),
+	("type-name", "schema"),
+	("key", "schema mandatory single primary lookup"),
+	("key", "type-name mandatory single lookup"),
+	("key", "key mandatory multiple")
+])
 
 class SchemaKeyConstraint(object):
 	multiple = True
