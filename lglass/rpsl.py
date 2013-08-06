@@ -129,7 +129,7 @@ class Object(object):
 		return self.data.append((k, v))
 
 	def remove(self, k):
-		return self.data.remove(k)
+		self.data = [kvpair for kvpair in self.data if kvpair[0] != k]
 
 	def index(self, key):
 		""" Return index of first entry for key. """
@@ -233,6 +233,69 @@ class Object(object):
 	@classmethod
 	def from_iterable(cls, *args, **kwargs):
 		return cls(parse_rpsl(*args, **kwargs))
+
+class SchemaObject(Object):
+	@property
+	def constraints(self):
+		constraints = []
+		for _, value in self.get("key"):
+			key, *tokens = value.split()
+			constraint = SchemaKeyConstraint(key)
+			tokens_iter = iter(tokens)
+			for token in tokens_iter:
+				if token == "single":
+					constraint.multiple = False
+				elif token == "multiple":
+					constraint.multiple = True
+				elif token == "mandatory":
+					constraint.mandatory = True
+				elif token == "optional":
+					constraint.mandatory = False
+				elif token == "lookup":
+					constraint.lookup = True
+				elif token == "inverse":
+					constraint.inverse = next(token)
+				elif token == "primary":
+					constraint.primary = True
+			constraints.append(constraint)
+		return constraints
+
+class SchemaKeyConstraint(object):
+	multiple = True
+	mandatory = False
+	lookup = False
+	inverse = None
+	primary = False
+
+	def __init__(self, key_name, **kwargs):
+		self.key_name = key_name
+		self.__dict__.update(kwargs)
+
+	def validate(self, obj):
+		if self.key_name not in obj:
+			return False
+		kvpairs = obj.get(self.key_name)
+		if self.multiple == False and len(kvpairs) > 1:
+			return False
+		if self.mandatory == True and len(kvpairs) == 0:
+			return False
+		if self.primary and obj[0][0] != self.key_name:
+			return False
+		return True
+
+class SchemaValidator(object):
+	def __init__(self, schema):
+		if not isinstance(schema, Object):
+			schema = SchemaObject(schema)
+		if not isinstance(schema, SchemaObject):
+			schema = SchemaObject(schema)
+		self.schema = schema
+
+	def validate(self, obj):
+		for constraint in self.schema.constraints:
+			if not constraint.validate(obj):
+				return False
+		return True
 
 def parse_rpsl(lines, pragmas={}):
 	''' This is a simple RPSL parser which expects an iterable which yields lines.
