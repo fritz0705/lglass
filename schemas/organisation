@@ -1,0 +1,24 @@
+schema:          ORGANISATION-SCHEMA
+type-name:       organisation
+key:             organisation mandatory single primary lookup
+key:             org-name mandatory single lookup
+key:             org-type mandatory single
+key:             descr optional multiple
+key:             remarks optional multiple
+key:             address mandatory multiple
+key:             phone optional multiple
+key:             fax-no optional multiple
+key:             e-mail mandatory multiple lookup
+key:             geoloc optional single
+key:             language optional multiple
+key:             org optional multiple inverse organisation
+key:             admin-c optional multiple inverse person
+key:             tech-c optional multiple inverse person
+key:             abuse-c optional single inverse person
+key:             ref-nfy optional multiple inverse person
+key:             mnt-ref mandatory multiple inverse person
+key:             notify optional multiple inverse person
+key:             abuse-mailbox optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

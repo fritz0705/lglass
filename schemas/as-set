@@ -1,0 +1,15 @@
+schema:          AS-SET-SCHEMA
+type-name:       as-set
+key:             as-set mandatory single primary lookup
+key:             descr mandatory multiple
+key:             members optional multiple
+key:             mbrs-by-ref optional multiple inverse mntner
+key:             remarks optional multiple
+key:             org optional multiple inverse organisation
+key:             tech-c mandatory multiple inverse person
+key:             admin-c mandatory multiple inverse person
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             mnt-lower optional multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

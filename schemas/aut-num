@@ -1,0 +1,22 @@
+schema:          AUT-NUM-SCHEMA
+type-name:       aut-num
+key:             aut-num mandatory single primary lookup
+key:             as-name mandatory single
+key:             descr mandatory multiple
+key:             member-of optional multiple inverse as-set
+key:             import optional multiple
+key:             mp-import optional multiple
+key:             export optional multiple
+key:             mp-export optional multiple
+key:             default optional multiple
+key:             mp-default optional multiple
+key:             remarks optional multiple
+key:             org optional single inverse organisation
+key:             admin-c mandatory multiple inverse person
+key:             tech-c mandatory multiple inverse person
+key:             notify optional multiple inverse person
+key:             mnt-lower optional multiple inverse mntner
+key:             mnt-routes optional multiple inverse mntner
+key:             mnt-by mandatory multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

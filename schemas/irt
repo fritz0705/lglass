@@ -1,0 +1,20 @@
+schema:          IRT-SCHEMA
+type-name:       irt
+key:             irt mandatory single primary lookup
+key:             address mandatory multiple
+key:             phone optional multiple
+key:             fax-no optional multiple
+key:             e-mail mandatory multiple lookup
+key:             abuse-mailbox optional multiple
+key:             signature optional multiple
+key:             encryption optional multiple
+key:             org optional multiple inverse organisation
+key:             admin-c mandatory multiple inverse person
+key:             tech-c mandatory multiple inverse person
+key:             auth mandatory multiple inverse mntner
+key:             remarks optional multiple
+key:             irt-nfy optional multiple
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

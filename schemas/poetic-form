@@ -1,0 +1,10 @@
+schema:          POETIC-FORM-SCHEMA
+type-name:       poetic-form
+key:             poetic-form mandatory single primary lookup
+key:             descr optional multiple
+key:             admin-c mandatory multiple inverse person
+key:             remarks optional multiple
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

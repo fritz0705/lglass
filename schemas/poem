@@ -1,0 +1,12 @@
+schema:          POEM-SCHEMA
+type-name:       poem
+key:             poem mandatory single primary lookup
+key:             descr optional multiple
+key:             form mandatory single inverse poetic-form
+key:             text mandatory multiple
+key:             author optional multiple inverse person
+key:             remarks optional multiple
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory single inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

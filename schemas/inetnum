@@ -1,0 +1,20 @@
+schema:          inetnum
+type-name:       inetnum
+key:             inetnum single mandatory primary lookup
+key:             netname single mandatory lookup
+key:             descr multiple mandatory
+key:             country multiple mandatory
+key:             geoloc single optional
+key:             language multiple optional
+key:             org single optional inverse organisation
+key:             admin-c multiple mandatory inverse person
+key:             tech-c multiple mandatory inverse person
+key:             status single mandatory
+key:             remarks multiple optional
+key:             mnt-by multiple mandatory inverse mntner
+key:             mnt-lower multiple optional inverse mntner
+key:             mnt-domains multiple optional inverse mntner
+key:             mnt-routes multiple optional inverse mntner
+key:             mnt-irt multiple optional inverse mntner
+key:             changed multiple mandatory
+key:             source single mandatory

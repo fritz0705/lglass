@@ -1,0 +1,19 @@
+schema:          INET-RTR-SCHEMA
+type-name:       inet-rtr
+key:             inet-rtr mandatory single primary lookup
+key:             descr mandatory multiple
+key:             alias optional multiple
+key:             local-as mandatory single inverse aut-num
+key:             ifaddr mandatory multiple
+key:             interface optional multiple
+key:             peer optional multiple
+key:             mp-peer optional multiple
+key:             member-of optional multiple inverse rtr-set
+key:             remarks optional multiple
+key:             org optional multiple inverse organisation
+key:             admin-c mandatory multiple inverse person
+key:             tech-c mandatory multiple inverse person
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory multiple inverse person
+key:             changed mandatory multiple
+key:             source mandatory single

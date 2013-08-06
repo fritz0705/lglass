@@ -1,0 +1,15 @@
+schema:          DOMAIN-SCHEMA
+type-name:       domain
+key:             domain mandatory single primary lookup
+key:             descr mandatory multiple
+key:             org optional multiple inverse organisation
+key:             admin-c mandatory multiple inverse person
+key:             tech-c mandatory multiple inverse person
+key:             zone-c mandatory multiple inverse person
+key:             nserver mandatory multiple
+key:             ds-rdata optional multiple
+key:             remarks optional multiple
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

@@ -1,0 +1,17 @@
+schema:          ROLE-SCHEMA
+type-name:       role
+key:             role mandatory single lookup
+key:             address mandatory multiple
+key:             phone optional multiple
+key:             fax-no optional multiple
+key:             e-mail mandatory multiple lookup
+key:             org optional multiple inverse organisation
+key:             admin-c optional multiple inverse person
+key:             tech-c optional multiple inverse person
+key:             nic-hdl mandatory single primary lookup
+key:             remarks optional multiple
+key:             notify optional multiple inverse person
+key:             abuse-mailbox optional single inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

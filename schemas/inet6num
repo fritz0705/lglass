@@ -1,0 +1,22 @@
+schema:          INET6NUM-SCHEMA
+type-name:       inet6num
+key:             inet6num mandatory single primary lookup
+key:             netname mandatory single lookup
+key:             descr mandatory multiple
+key:             country mandatory multiple
+key:             geoloc optional single
+key:             language optional multiple
+key:             org optional single inverse organisation
+key:             admin-c mandatory multiple inverse person
+key:             tech-c mandatory multiple inverse person
+key:             status mandatory single
+key:             assignment-size optional single
+key:             remarks optional multiple
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             mnt-lower optional multiple inverse mntner
+key:             mnt-routes optional multiple inverse mntner
+key:             mnt-domains optional multiple inverse mntner
+key:             mnt-irt optional multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

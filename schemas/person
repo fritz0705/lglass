@@ -1,0 +1,15 @@
+schema:          PERSON-SCHEMA
+type-name:       person
+key:             person mandatory single lookup
+key:             address mandatory multiple
+key:             phone mandatory multiple
+key:             fax-no optional multiple
+key:             e-mail optional multiple lookup
+key:             org optional multiple inverse organisation
+key:             nic-hdl mandatory single primary lookup key
+key:             remarks optional multiple
+key:             notify optional multiple inverse person
+key:             abuse-mailbox optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single

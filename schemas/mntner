@@ -1,0 +1,17 @@
+schema:          MNTNER-SCHEMA
+type-name:       mntner
+key:             mntner mandatory single primary lookup
+key:             descr mandatory multiple
+key:             org optional multiple inverse organisation
+key:             admin-c mandatory multiple inverse person
+key:             tech-c optional multiple inverse person
+key:             upd-to mandatory multiple inverse person
+key:             mnt-nfy optional multiple inverse person
+key:             auth mandatory multiple inverse mntner
+key:             remarks optional multiple
+key:             notify optional multiple inverse person
+key:             abuse-mailbox optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
+key:             referral-by mandatory single
+key:             changed mandatory multiple
+key:             source mandatory single

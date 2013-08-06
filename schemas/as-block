@@ -1,0 +1,11 @@
+schema:          AS-BLOCK-SCHEMA
+type-name:       as-block
+key:             as-block mandatory single primary lookup
+key:             descr optional multiple
+key:             remarks optional multiple
+key:             org optional multiple inverse organisation
+key:             notify optional multiple inverse person
+key:             mnt-by mandatory single inverse mntner
+key:             mnt-lower optional multiple inverse mntner
+key:             changed mandatory multiple
+key:             source mandatory single
