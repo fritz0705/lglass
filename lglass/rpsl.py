@@ -243,12 +243,19 @@ class SchemaObject(Object):
 			self.validate_self()
 
 	def validate_self(self):
-		validator = SchemaValidator(self.SCHEMA_SCHEMA)
-		return validator.validate(self)
+		return self.validate(self.SCHEMA_SCHEMA)
+
+	def validate(self, obj):
+		validator = SchemaValidator(self)
+		return validator.validate(obj)
 
 	@property
 	def type_name(self):
 		return self["type-name"][0]
+
+	def constraint_for(self, key):
+		return [constraint for constraint in self.constraints if
+			constraint.key_name == key]
 
 	@property
 	def constraints(self):
