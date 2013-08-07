@@ -234,13 +234,18 @@ class Object(object):
 	def from_iterable(cls, *args, **kwargs):
 		return cls(parse_rpsl(*args, **kwargs))
 
+class SchemaValidationError(Exception):
+	pass
+
 class SchemaObject(Object):
 	SCHEMA_SCHEMA = None
 
 	def __init__(self, ex=None):
 		Object.__init__(self, ex)
 		if ex is not None and self.SCHEMA_SCHEMA is not None:
-			self.validate_self()
+			val_res = self.validate_self()
+			if val_res[0] is False:
+				raise SchemaValidationError("Schema for {} is not valid: Key {}: {}".format(self.primary_key, val_res[1], val_res[2]))
 
 	def validate_self(self):
 		return self.SCHEMA_SCHEMA.validate(self)
