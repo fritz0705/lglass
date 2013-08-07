@@ -368,7 +368,7 @@ PRAGMA foreign_keys = ON;
 		elif isinstance(sql, tuple):
 			self.connection = sqlite3.connect(*sql)
 		else:
-			raise ValueError("Expected sql to be tuple, str or sqlite3.Connection, got {}".format(type(sql)))
+			raise TypeError("Expected sql to be tuple, str or sqlite3.Connection, got {}".format(type(sql)))
 		self.install_schema()
 
 	def install_schema(self):

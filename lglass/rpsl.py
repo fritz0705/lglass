@@ -27,7 +27,7 @@ class Object(object):
 			# error, we will raise an exception, so we are never in undefined state
 			for off, kvpair in enumerate(ex):
 				if not isinstance(kvpair, tuple):
-					raise ValueError("offset {}: expected entry to be tuple, got {}".format(off, type(kvpair)))
+					raise TypeError("offset {}: expected entry to be tuple, got {}".format(off, type(kvpair)))
 				if len(kvpair) != 2:
 					raise ValueError("offset {}: expected tuple to have two values, got {}".format(off, len(kvpair)))
 				if not isinstance(kvpair[0], str):
@@ -41,9 +41,9 @@ class Object(object):
 			# add the values to the structure
 			for key, value in ex.items():
 				if not isinstance(key, str):
-					raise ValueError("expected key to be str, got {}: {}".format(type(key), key))
+					raise TypeError("expected key to be str, got {}: {}".format(type(key), key))
 				if not isinstance(value, str) and not isinstance(value, list):
-					raise ValueError("key {}: expected value to be str or list, got {}".format(key, type(value)))
+					raise TypeError("key {}: expected value to be str or list, got {}".format(key, type(value)))
 
 			for key, value in ex.items():
 				if isinstance(value, list):
@@ -187,7 +187,7 @@ class Object(object):
 	@type.setter
 	def type(self, new_value):
 		if not isinstance(new_value, str):
-			raise ValueError("Expected new value for 'type' to be a str, got {}".format(type(new_value)))
+			raise TypeError("Expected new value for 'type' to be a str, got {}".format(type(new_value)))
 		try:
 			self.data[0] = (new_value, self.data[0][1])
 		except IndexError:
@@ -203,7 +203,7 @@ class Object(object):
 	@primary_key.setter
 	def primary_key(self, new_value):
 		if not isinstance(new_value, str):
-			raise ValueError("Expected new value for 'primary_key' to be a str, got {}".format(type(new_value)))
+			raise TypeError("Expected new value for 'primary_key' to be a str, got {}".format(type(new_value)))
 		try:
 			self.data[0] = (self.data[0][0], new_value)
 		except IndexError:
@@ -216,7 +216,7 @@ class Object(object):
 	@spec.setter
 	def spec(self, new_value):
 		if not isinstance(new_value, tuple):
-			raise ValueError("Expected tuple as new value for 'spec', got {}".format(type(new_value)))
+			raise TypeError("Expected tuple as new value for 'spec', got {}".format(type(new_value)))
 		elif len(new_value) != 2:
 			raise ValueError("Expected new value for 'spec' to have two values, got {}".format(type(new_value)))
 		elif not isinstance(new_value[0], str) or not isinstance(new_value[1], str):
