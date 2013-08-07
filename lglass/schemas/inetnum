@@ -1,4 +1,4 @@
-schema:          inetnum
+schema:          INETNUM-SCHEMA
 type-name:       inetnum
 key:             inetnum single mandatory primary lookup
 key:             netname single mandatory lookup
