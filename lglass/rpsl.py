@@ -235,7 +235,16 @@ class Object(object):
 		return cls(parse_rpsl(*args, **kwargs))
 
 class SchemaValidationError(Exception):
-	pass
+	def __init__(self, key, message):
+		Exception.__init__(self, key, message)
+	
+	@property
+	def key(self):
+		return self.args[0]
+
+	@property
+	def message(self):
+		return self.args[1]
 
 class SchemaObject(Object):
 	SCHEMA_SCHEMA = None
@@ -243,9 +252,7 @@ class SchemaObject(Object):
 	def __init__(self, ex=None):
 		Object.__init__(self, ex)
 		if ex is not None and self.SCHEMA_SCHEMA is not None:
-			val_res = self.validate_self()
-			if val_res[0] is False:
-				raise SchemaValidationError("Schema for {} is not valid: Key {}: {}".format(self.primary_key, val_res[1], val_res[2]))
+			self.validate_self()
 
 	def validate_self(self):
 		return self.SCHEMA_SCHEMA.validate(self)
@@ -309,10 +316,10 @@ class SchemaKeyConstraint(object):
 	def validate(self, obj):
 		kvpairs = obj.get(self.key_name)
 		if self.multiple == False and len(kvpairs) > 1:
-			return (False, self.key_name, "too_much")
+			raise SchemaValidationError(self.key_name, "Too much occurrences")
 		if self.mandatory == True and len(kvpairs) == 0:
-			return (False, self.key_name, "not_enough")
-		return (True, self.key_name, None)
+			raise SchemaValidationError(self.key_name, "Key is mandatory but doesn't occur")
+		return True
 
 class SchemaValidator(object):
 	def __init__(self, schema):
@@ -322,12 +329,17 @@ class SchemaValidator(object):
 			schema = SchemaObject(schema)
 		self.schema = schema
 
+	def is_valid(self, obj):
+		try:
+			self.validate(obj)
+		except SchemaValidationError:
+			return False
+		return True
+
 	def validate(self, obj):
 		for constraint in self.schema.constraints:
-			res = constraint.validate(obj)
-			if not res[0]:
-				return res
-		return (True, None, None)
+			constraint.validate(obj)
+		return True
 
 def parse_rpsl(lines, pragmas={}):
 	''' This is a simple RPSL parser which expects an iterable which yields lines.

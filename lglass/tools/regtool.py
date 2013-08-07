@@ -41,12 +41,15 @@ def main_validate_object(args, config, database):
 	obj = database.get(args.type, args.primary_key)
 
 	validation_result = schema.validate(obj)
-	if validation_result[0] is True:
+	try:
+		schema.validate(obj)
 		print("Validation passed")
 		exit(0)
-	else:
-		print("Validation failed: Key {}: {}".format(validation_result[1], validation_result[2]))
+	except lglass.rpsl.SchemaValidationError as exc:
+		print("Validation failed: Key {}: {}".format(exc.key, exc.message))
 		exit(1)
+	finally:
+		exit(111)
 
 def main_show_object(args, config, database):
 	obj = database.get(args.type, args.primary_key)
