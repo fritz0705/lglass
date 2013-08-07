@@ -302,8 +302,6 @@ class SchemaKeyConstraint(object):
 		self.__dict__.update(kwargs)
 
 	def validate(self, obj):
-		if self.key_name not in obj:
-			return (False, self.key_name, "no_key")
 		kvpairs = obj.get(self.key_name)
 		if self.multiple == False and len(kvpairs) > 1:
 			return (False, self.key_name, "too_much")
