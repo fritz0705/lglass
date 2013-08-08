@@ -331,7 +331,7 @@ class DictDatabase(Database):
 
 try:
 	import sqlite3
-except LoadError:
+except ImportError:
 	pass
 
 class SQLite3Database(Database):
