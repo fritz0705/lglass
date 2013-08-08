@@ -329,7 +329,10 @@ class DictDatabase(Database):
 			objects.append((type, pkey))
 		return [self.get(*spec) for spec in objects]
 
-import sqlite3
+try:
+	import sqlite3
+except LoadError:
+	pass
 
 class SQLite3Database(Database):
 	""" This database backend operates on a SQLite3 database and supports generic
