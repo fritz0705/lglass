@@ -169,6 +169,9 @@ class Object(object):
 	def __hash__(self):
 		return hash((self.type, self.primary_key))
 
+	def __bool__(self):
+		return bool(self.data)
+
 	def to_dict(self):
 		new_dict = dict()
 		for key, value in self:
