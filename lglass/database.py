@@ -2,6 +2,7 @@
 
 import os.path
 import time
+import socket
 
 import netaddr
 
@@ -450,4 +451,30 @@ PRAGMA foreign_keys = ON;
 			cur.close()
 
 		return [self.get(*spec) for spec in specs]
+
+class WhoisClientDatabase(Database):
+	def __init__(self, hostspec):
+		self.hostspec = hostspec
+	
+	def get(self, type, primary_key):
+		send_buffer = b""
+		recv_buffer = b""
+
+		send_buffer += "-T {type} {key}\n".format(type=type, key=primary_key).encode()
+		with socket.create_connection(self.hostspec) as sock:
+			while len(send_buffer):
+				sent = sock.send(send_buffer)
+				send_buffer = send_buffer[sent:]
+			while True:
+				recvd = sock.recv(1024)
+				if not len(recvd):
+					break
+				recv_buffer += recvd
+
+		obj = lglass.rpsl.Object.from_string(recv_buffer.decode(), pragmas={
+			"stop-at-empty-line": True
+		})
+		if not obj:
+			raise KeyError(type, primary_key)
+		return obj
 
