@@ -457,10 +457,20 @@ class WhoisClientDatabase(Database):
 		self.hostspec = hostspec
 	
 	def get(self, type, primary_key):
+		try:
+			return self.find(primary_key, types=[type])[-1]
+		except IndexError:
+			raise KeyError(type, primary_key)
+
+	def find(self, primary_key, types=None):
 		send_buffer = b""
 		recv_buffer = b""
 
-		send_buffer += "-T {type} {key}\n".format(type=type, key=primary_key).encode()
+		if types is not None:
+			send_buffer += "-T {types} ".format(types=",".join(types)).encode()
+		send_buffer += "{key}".format(key=primary_key).encode()
+		send_buffer += b"\r\n"
+
 		with socket.create_connection(self.hostspec) as sock:
 			while len(send_buffer):
 				sent = sock.send(send_buffer)
@@ -471,10 +481,27 @@ class WhoisClientDatabase(Database):
 					break
 				recv_buffer += recvd
 
-		obj = lglass.rpsl.Object.from_string(recv_buffer.decode(), pragmas={
-			"stop-at-empty-line": True
-		})
-		if not obj:
-			raise KeyError(type, primary_key)
-		return obj
+		lines = recv_buffer.decode().splitlines()
+		lines_iter = iter(lines)
+
+		objs = []
+
+		while True:
+			obj = lglass.rpsl.Object.from_iterable(lines_iter, pragmas={
+				"stop-at-empty-line": True
+			})
+			if not obj:
+				break
+			objs.append(obj)
+
+		return objs
+
+	def list(self):
+		raise NotImplementedError("list() is not supported for WhoisClientDatabase")
+
+	def save(self):
+		raise NotImplementedError("save() is not supported for WhoisClientDatabase")
+
+	def delete(self):
+		raise NotImplementedError("delete() is not supported for WhoisClientDatabase")
 
