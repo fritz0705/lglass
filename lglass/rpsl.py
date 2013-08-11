@@ -501,6 +501,8 @@ if __name__ == '__main__':
 	import sys
 	import traceback
 	import warnings
+	import pkg_resources
+	import lglass.database
 	
 	argparser = argparse.ArgumentParser(description="Simple tool for RPSL formatting")
 	argparser.add_argument("--padding", "-p", default=8, type=int,
@@ -513,8 +515,15 @@ if __name__ == '__main__':
 			help="Turn the stop-at-empty-line pragma on")
 	argparser.add_argument("--condense-whitespace", action="store_true", default=False,
 			help="Turn the condense-whitespace pragma on")
+	argparser.add_argument("--validate", "-V", action="store_true",
+			help="Validate RPSL against schema")
+	argparser.add_argument("--database", "-D",
+			default=pkg_resources.resource_filename("lglass", "."),
+			help="Database for schema files")
 
 	args = argparser.parse_args()
+
+	database = lglass.database.FileDatabase(args.database)
 
 	pragmas = {
 		"whitespace-preserve": args.whitespace_preserve,
@@ -530,10 +539,24 @@ if __name__ == '__main__':
 				except:
 					warnings.warn("Format of {} is invalid".format(file))
 					continue
+				if args.validate:
+					try:
+						schema = database.schema(obj.type)
+						schema.validate(obj)
+					except lglass.rpsl.SchemaValidationError as e:
+						warnings.warn("Validation of {} failed: Key {}: {}".format(file, e.args[0], e.args[1]))
+						continue
 				fh.seek(0)
 				fh.write(obj.pretty_print(kv_padding=args.padding))
 				fh.truncate()
 	else:
 		obj = Object.from_iterable(sys.stdin, pragmas=pragmas)
+		if args.validate:
+			try:
+				schema = database.schema(obj.type)
+				schema.validate(obj)
+			except lglass.rpsl.SchemaValidationError as e:
+				print("Validation of {obj.spec} failed: Key {key}: {message}".format(
+					obj=obj, key=e.args[0], message=e.args[1]), file=sys.stderr)
 		sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
 
