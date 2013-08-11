@@ -496,7 +496,7 @@ try:
 except LoadError:
 	pass
 
-if __name__ == '__main__':
+def main():
 	import argparse
 	import sys
 	import traceback
@@ -559,4 +559,7 @@ if __name__ == '__main__':
 				print("Validation of {obj.spec} failed: Key {key}: {message}".format(
 					obj=obj, key=e.args[0], message=e.args[1]), file=sys.stderr)
 		sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
+
+if __name__ == '__main__':
+	main()
 
