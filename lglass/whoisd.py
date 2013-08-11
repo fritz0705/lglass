@@ -17,6 +17,9 @@ DESCRIPTION
 
     -T (comma separated list of object types with no white space)
           Returns only objects with a given type
+
+    -t
+          Performs a search for schemas
 """)
 
 class WhoisHandler(object):
@@ -28,6 +31,37 @@ class WhoisHandler(object):
 		self.keys = frozenset(keys)
 
 		self.__dict__.update(kwargs)
+
+	def _schema_lookup(self, request, arguments, flags):
+		try:
+			schema = self.database.schema(request)
+			return [schema]
+		except KeyError:
+			return []
+
+	def _objs_lookup(self, request, arguments, flags):
+		filters = []
+		post_filters = []
+		objects = []
+
+		if "-T" in arguments:
+			types = arguments["-T"].split(",")
+			post_filters.append(lambda obj: obj.type in types)
+		if "x" in flags:
+			filters.append(lambda spec: spec[1] == request)
+
+		if filters:
+			objects = self.database.list()
+			for _filter in filters:
+				objects = filter(_filter, objects)
+			objects = [self.database.get(*spec) for spec in objects]
+		else:
+			objects = self.database.find(request)
+
+		for post_filter in post_filters:
+			objects = filter(post_filter, objects)
+
+		return objects
 	
 	def handle(self, request):
 		""" This method handles a simple WHOIS request and returns a plain response.
@@ -42,9 +76,9 @@ class WhoisHandler(object):
 
 		req_iter = iter(request)
 		for req in req_iter:
-			if req in ["-T", "-t"]:
+			if req in ["-T", "-k"]:
 				arguments[req] = next(req_iter)
-			elif req in ["-x"]:
+			elif req in ["-x", "-t"]:
 				flags.add(req[1:])
 			else:
 				requested.append(req)
@@ -56,6 +90,8 @@ class WhoisHandler(object):
 		for req in requested:
 			response.append("% Query {}\n\n".format(req))
 
+			objects = []
+
 			if req in ["help", "--help"]:
 				help = "% " + self.help_message.replace("\n", "\n% ")
 				response.append(help)
@@ -66,25 +102,10 @@ class WhoisHandler(object):
 				response.append("\n\n")
 				continue
 
-			filters = []
-			post_filters = []
-
-			if "-T" in arguments:
-				types = arguments["-T"].split(",")
-				post_filters.append(lambda obj: obj.type in types)
-			if "x" in flags:
-				filters.append(lambda spec: spec[1] == req)
-
-			if filters:
-				objects = self.database.list()
-				for _filter in filters:
-					objects = filter(_filter, objects)
-				objects = [self.database.get(*spec) for spec in objects]
+			if "t" in flags:
+				objects = self._schema_lookup(req, arguments, flags)
 			else:
-				objects = self.database.find(req)
-
-			for post_filter in post_filters:
-				objects = filter(post_filter, objects)
+				objects = self._objs_lookup(req, arguments, flags)
 
 			for obj in objects:
 				response.append("% Object {}\n\n".format(obj.spec))
