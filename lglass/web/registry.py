@@ -13,12 +13,17 @@ from lglass.web.helpers import render_template, with_config
 def get_database(config):
 	db = lglass.database.FileDatabase(config["registry"]["database"])
 	db = lglass.database.CIDRDatabase(db)
+	db = lglass.database.CachedDatabase(db)
 	return db
 
 def with_db(func):
 	@functools.wraps(func)
 	def wrapper(*args, **kwargs):
-		return func(db=get_database(), *args, **kwargs)
+		db = bottle.request.app.config.get("lglass.database")
+		if db is None:
+			db = get_database()
+			bottle.request.app.config["lglass.database"] = db
+		return func(db=db, *args, **kwargs)
 	return wrapper
 
 @with_db
@@ -43,4 +48,9 @@ def show_object(type, primary_key, db):
 	except KeyError:
 		bottle.abort(404, "Object not found")
 	return render_template("registry/show_object.html", object=obj)
+
+@with_db
+def flush_cache(db):
+	if getattr(db, "flush") and callable(db.flush):
+		db.flush()
 

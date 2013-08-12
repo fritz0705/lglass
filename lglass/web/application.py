@@ -20,4 +20,5 @@ import lglass.web.registry
 app.route("/obj/<type>/<primary_key>", "GET", lglass.web.registry.show_object)
 app.route("/whois/<query>", "GET", lglass.web.registry.whois_query)
 app.route("/whois", "POST", lglass.web.registry.whois_query)
+app.route("/flush", "POST", lglass.web.registry.flush_cache)
 
