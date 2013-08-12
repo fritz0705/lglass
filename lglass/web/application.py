@@ -12,15 +12,12 @@ def static_handler(path):
 def index_handler():
 	return render_template("index.html")
 
-app.route("/static/<path:path>", "GET", static_handler)
 
 app.route("/", "GET", index_handler)
 
 import lglass.web.registry
 
-app.route("/registry", "GET", lglass.web.registry.show_object_types)
-app.route("/registry/<obj>", "GET", lglass.web.registry.show_objects)
-app.route("/registry/find/<spec>", "GET", lglass.web.registry.find_objects)
-app.route("/registry/<obj>/<key>", "GET", lglass.web.registry.show_object)
-app.route("/registry/<obj>/<key>/raw", "GET", lglass.web.registry.show_raw_object)
+app.route("/obj/<type>/<primary_key>", "GET", lglass.web.registry.show_object)
+app.route("/whois/<query>", "GET", lglass.web.registry.whois_query)
+app.route("/whois", "POST", lglass.web.registry.whois_query)
 

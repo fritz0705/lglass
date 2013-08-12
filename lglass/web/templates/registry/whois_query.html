@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block title %}
+lglass » registry » whois
+{% endblock %}
+
+{% block content %}
+<ul>
+	{% for obj in objects %}
+	<li><a href="/obj/{{ obj.type|e }}/{{ obj.real_primary_key|obj_urlize|e }}">{{ obj.primary_key|e }} ({{ obj.type|e }})</a></li>
+	{% endfor %}
+</ul>
+{% endblock %}

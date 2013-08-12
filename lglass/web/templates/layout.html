@@ -4,10 +4,21 @@
 		<meta charset="utf-8" />
 		<title>{% block title %}{% endblock title %}</title>
 		<meta name="generator" content="lglass utils" />
+
+		<style type="text/css">
+			header form.search {
+				float: right;
+			}
+		</style>
 	</head>
 	<body>
 		<header>
-			<h1>lglass</h1>
+			<form method="POST" action="/whois" class="search">
+				<input type="search" name="query" />
+				<input type="submit" name="submit" value="Search" />
+			</form>
+
+			<h1><a href="/">lglass</a></h1>
 		</header>
 
 		<article>
