@@ -129,7 +129,7 @@ class FileDatabase(Database):
 		return objects
 
 	def save(self, object):
-		path = self.__path_for(object.type, object.primary_key)
+		path = self.__path_for(*object.real_spec)
 		try:
 			os.makedirs(os.path.dirname(path))
 		except FileExistsError:
@@ -199,7 +199,7 @@ class CachedDatabase(Database):
 
 	def save(self, object):
 		self.database.save(object)
-		cache_key = (object.type, object.primary_key)
+		cache_key = object.real_spec
 		self.cache[cache_key] = object
 
 	def delete(self, type, primary_key):
@@ -310,7 +310,7 @@ class DictDatabase(Database):
 		self.backend = dict()
 
 	def save(self, object):
-		self.backend[object.spec] = object
+		self.backend[object.real_spec] = object
 	
 	def delete(self, type, primary_key):
 		del self.backend[type, primary_key]
@@ -384,7 +384,7 @@ PRAGMA foreign_keys = ON;
 	def get(self, type, primary_key):
 		with self.connection:
 			cur = self.connection.cursor()
-			cur.execute("SELECT id FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (type, primary_key))
+			cur.execute("SELECT id, primary_key FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (type, primary_key))
 
 			col = cur.fetchone()
 			if col is None:
@@ -394,6 +394,8 @@ PRAGMA foreign_keys = ON;
 			cur.execute("SELECT key, value FROM 'kvpairs' WHERE \"object_id\" = ? ORDER BY \"order\"", (col[0], ))
 			
 			obj.add(type, primary_key)
+			if col[1] != primary_key:
+				obj.real_primary_key = col[1]
 
 			for row in cur.fetchall():
 				obj.add(row[0], row[1])
@@ -421,12 +423,12 @@ PRAGMA foreign_keys = ON;
 	def save(self, object):
 		with self.connection:
 			cur = self.connection.cursor()
-			cur.execute("SELECT id FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (object.type, object.primary_key))
+			cur.execute("SELECT id FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (object.type, object.real_primary_key))
 			f = cur.fetchone()
 			if f is not None:
 				cur.execute("DELETE FROM 'objects' WHERE \"id\" = ?", (f[0], ))
 
-			cur.execute("INSERT INTO 'objects' ('type', 'primary_key') VALUES (?, ?)", (object.type, object.primary_key))
+			cur.execute("INSERT INTO 'objects' ('type', 'primary_key') VALUES (?, ?)", (object.type, object.real_primary_key))
 			new_id = cur.lastrowid
 
 			for offset, (key, value) in enumerate(object[1:]):

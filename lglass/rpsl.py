@@ -251,6 +251,12 @@ class Object(object):
 	def real_primary_key(self, new_value):
 		self._real_primary_key = new_value
 
+	@property
+	def real_spec(self):
+		""" The real_spec is the spec which can be used on databases, if they are
+		broken and use a real_primary_key. """
+		return (self.type, self.real_primary_key)
+
 class SchemaValidationError(Exception):
 	def __init__(self, key, message):
 		Exception.__init__(self, key, message)
