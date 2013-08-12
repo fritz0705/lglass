@@ -12,7 +12,7 @@ def load_config(filename):
 		return json.load(fh)
 	return None
 
-if __name__ == '__main__':
+def main():
 	argparser = argparse.ArgumentParser(description="Simple HTTP sevrer for lglass web interface")
 
 	argparser.add_argument("--host", "-H", help="Bind to host", default="127.0.0.1")
@@ -40,3 +40,6 @@ if __name__ == '__main__':
 
 	httpd.serve_forever()
 	
+if __name__ == '__main__':
+	main()
+
