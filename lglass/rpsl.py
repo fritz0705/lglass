@@ -9,6 +9,8 @@ class Object(object):
 	searches. If you have time, implement is as tree. And don't implement it as
 	dict. """
 
+	_real_primary_key = None
+
 	def __init__(self, data=None):
 		""" Initialize empty RPSL object and fill it with data by passing its value
 		to extend """
@@ -214,6 +216,7 @@ class Object(object):
 
 	@property
 	def spec(self):
+		""" The spec of an object is a tuple consisting of the type and primary_key. """
 		return (self.type, self.primary_key)
 
 	@spec.setter
@@ -236,6 +239,17 @@ class Object(object):
 	@classmethod
 	def from_iterable(cls, *args, **kwargs):
 		return cls(parse_rpsl(*args, **kwargs))
+
+	@property
+	def real_primary_key(self):
+		""" The real primary key is a database-dependent primary key which was used
+		to lookup the object in the database. This is useful in broken databases,
+		which don't use the primary_key as file name. """
+		return self._real_primary_key if self._real_primary_key else self.primary_key
+
+	@real_primary_key.setter
+	def real_primary_key(self, new_value):
+		self._real_primary_key = new_value
 
 class SchemaValidationError(Exception):
 	def __init__(self, key, message):

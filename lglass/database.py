@@ -99,6 +99,7 @@ class FileDatabase(Database):
 		try:
 			with open(self.__path_for(type, primary_key)) as f:
 				obj = lglass.rpsl.Object.from_string(f.read())
+				obj.real_primary_key = primary_key
 		except FileNotFoundError:
 			raise KeyError(repr((type, primary_key)))
 		return obj
