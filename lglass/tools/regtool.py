@@ -97,6 +97,12 @@ def main(args=sys.argv[1:]):
 		with open(args.config) as fh:
 			config.update(json.load(fh))
 	
+	for key, value in {
+		"database.path": args.database
+	}.items():
+		if value is not None:
+			config[key] = value
+	
 	database = {
 		"file": lglass.database.FileDatabase,
 		"sqlite3": lglass.database.SQLite3Database
