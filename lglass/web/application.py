@@ -2,18 +2,21 @@
 
 import bottle
 
-from lglass.web.helpers import render_template
+from lglass.web.helpers import render_template, with_config
 
 app = bottle.Bottle()
-
-def static_handler(path):
-	return ""
 
 def index_handler():
 	return render_template("index.html")
 
+@with_config
+def robots_txt_handler(config):
+	if config["robots.txt"] is not None:
+		return bottle.static_file(config["robots.txt"])
+	bottle.abort(404, "File not found")
 
 app.route("/", "GET", index_handler)
+app.route("/robots.txt", "GET", robots_txt_handler)
 
 import lglass.web.registry
 

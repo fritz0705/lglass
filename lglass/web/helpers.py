@@ -26,7 +26,8 @@ DEFAULT_CONFIG = {
 		"database": ".",
 		"caching": True,
 		"cidr": True
-	}
+	},
+	"robots.txt": None
 }
 
 def get_config():
