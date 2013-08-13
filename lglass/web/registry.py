@@ -12,8 +12,10 @@ from lglass.web.helpers import render_template, with_config
 @with_config
 def get_database(config):
 	db = lglass.database.FileDatabase(config["registry"]["database"])
-	db = lglass.database.CIDRDatabase(db)
-	db = lglass.database.CachedDatabase(db)
+	if config["registry"]["cidr"]:
+		db = lglass.database.CIDRDatabase(db)
+	if config["registry"]["caching"]:
+		db = lglass.database.CachedDatabase(db)
 	return db
 
 def with_db(func):

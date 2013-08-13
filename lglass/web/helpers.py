@@ -23,7 +23,9 @@ def render_template(tpl, **kwargs):
 
 DEFAULT_CONFIG = {
 	"registry": {
-		"database": "."
+		"database": ".",
+		"caching": True,
+		"cidr": True
 	}
 }
 
