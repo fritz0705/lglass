@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block title %}
+lglass » registry
+{% endblock %}
+
+{% block content %}
+<ul>
+	{% for type in types %}
+	<li><a href="/obj/{{ type|e }}">{{ type|e }}</a></li>
+	{% endfor %}
+</ul>
+{% endblock %}

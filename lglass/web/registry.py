@@ -16,6 +16,8 @@ def get_database(config):
 		db = lglass.database.CIDRDatabase(db)
 	if config["registry"]["caching"]:
 		db = lglass.database.CachedDatabase(db)
+	if "types" in config["registry"]:
+		db.object_types = set(config["registry"]["types"])
 	return db
 
 def with_db(func):
@@ -51,6 +53,16 @@ def show_object(type, primary_key, db):
 	except KeyError:
 		bottle.abort(404, "Object not found")
 	return render_template("registry/show_object.html", object=obj)
+
+@with_db
+def show_objects(type, db):
+	objs = [db.get(*spec) for spec in sorted(db.list()) if spec[0] == type]
+	return render_template("registry/show_objects.html", objects=objs, type=type)
+
+@with_db
+def show_object_types(db):
+	types = sorted(db.object_types)
+	return render_template("registry/show_object_types.html", types=types)
 
 @with_db
 def flush_cache(db):
