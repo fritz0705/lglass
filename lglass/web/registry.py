@@ -37,7 +37,8 @@ def whois_query(db, query=None):
 			return render_template("registry/whois_query.html", objects=objs)
 		else:
 			obj = objs.pop()
-			bottle.redirect("/obj/{type}/{key}".format(type=obj.type, key=obj.primary_key))
+			bottle.redirect("/obj/{type}/{key}".format(type=obj.type,
+				key=lglass.web.helpers.obj_urlize(obj.real_primary_key)))
 	else:
 		bottle.abort(404, "Nothing found")
 
