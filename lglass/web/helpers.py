@@ -49,6 +49,6 @@ def with_config(func):
 		if config is None:
 			config = get_config()
 			bottle.request.app.config["lglass.config"] = config
-		return func(config=config), *args, **kwargs)
+		return func(config=config, *args, **kwargs)
 	return wrapper
 	
