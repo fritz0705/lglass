@@ -11,13 +11,15 @@ from lglass.web.helpers import render_template, with_config
 
 @with_config
 def get_database(config):
-	db = lglass.database.FileDatabase(config["registry"]["database"])
-	if config["registry"]["cidr"]:
+	db = lglass.database.FileDatabase(config["registry.database"])
+	if config["registry.cidr"]:
 		db = lglass.database.CIDRDatabase(db)
-	if config["registry"]["caching"]:
+	if config["registry.caching"]:
 		db = lglass.database.CachedDatabase(db)
-	if "types" in config["registry"]:
-		db.object_types = set(config["registry"]["types"])
+	if config["registry.inverse"]:
+		db = lglass.database.InverseDatabase(db)
+	if "registry.types" in config:
+		db.object_types = set(config["registry.types"])
 	return db
 
 def with_db(func):
