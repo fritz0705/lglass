@@ -7,7 +7,7 @@ lglass » registry » whois
 {% block content %}
 <ul>
 	{% for obj in objects %}
-	<li><a href="/obj/{{ obj.type|e }}/{{ obj.real_primary_key|obj_urlize|e }}">{{ obj.primary_key|e }} ({{ obj.type|e }})</a></li>
+	<li><a href="/obj/{{ obj.real_type|e }}/{{ obj.real_primary_key|obj_urlize|e }}">{{ obj.primary_key|e }} ({{ obj.type|e }})</a></li>
 	{% endfor %}
 </ul>
 {% endblock %}

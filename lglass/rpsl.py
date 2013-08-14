@@ -10,6 +10,7 @@ class Object(object):
 	dict. """
 
 	_real_primary_key = None
+	_real_type = None
 
 	def __init__(self, data=None):
 		""" Initialize empty RPSL object and fill it with data by passing its value
@@ -241,6 +242,16 @@ class Object(object):
 		return cls(parse_rpsl(*args, **kwargs))
 
 	@property
+	def real_type(self):
+		""" The real type is a database-dependent type which addresses the object
+		type in the database, due to inconsistence. """
+		return self._real_type if self._real_type else self.type
+
+	@real_type.setter
+	def real_type(self, new_value):
+		self._real_type = new_value
+
+	@property
 	def real_primary_key(self):
 		""" The real primary key is a database-dependent primary key which was used
 		to lookup the object in the database. This is useful in broken databases,
@@ -255,7 +266,7 @@ class Object(object):
 	def real_spec(self):
 		""" The real_spec is the spec which can be used on databases, if they are
 		broken and use a real_primary_key. """
-		return (self.type, self.real_primary_key)
+		return (self.real_type, self.real_primary_key)
 
 class SchemaValidationError(Exception):
 	def __init__(self, key, message):

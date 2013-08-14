@@ -99,7 +99,10 @@ class FileDatabase(Database):
 		try:
 			with open(self.__path_for(type, primary_key)) as f:
 				obj = lglass.rpsl.Object.from_string(f.read())
-				obj.real_primary_key = primary_key
+				if primary_key != obj.primary_key:
+					obj.real_primary_key = primary_key
+				if type != obj.type:
+					obj.real_type = type
 		except FileNotFoundError:
 			raise KeyError(repr((type, primary_key)))
 		return obj
@@ -384,7 +387,7 @@ PRAGMA foreign_keys = ON;
 	def get(self, type, primary_key):
 		with self.connection:
 			cur = self.connection.cursor()
-			cur.execute("SELECT id, primary_key FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (type, primary_key))
+			cur.execute("SELECT id, primary_key, type FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (type, primary_key))
 
 			col = cur.fetchone()
 			if col is None:
@@ -396,6 +399,8 @@ PRAGMA foreign_keys = ON;
 			obj.add(type, primary_key)
 			if col[1] != primary_key:
 				obj.real_primary_key = col[1]
+			if col[2] != type:
+				obj.real_type = col[2]
 
 			for row in cur.fetchall():
 				obj.add(row[0], row[1])
@@ -423,12 +428,12 @@ PRAGMA foreign_keys = ON;
 	def save(self, object):
 		with self.connection:
 			cur = self.connection.cursor()
-			cur.execute("SELECT id FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (object.type, object.real_primary_key))
+			cur.execute("SELECT id FROM 'objects' WHERE \"type\" = ? AND \"primary_key\" = ?", (object.real_type, object.real_primary_key))
 			f = cur.fetchone()
 			if f is not None:
 				cur.execute("DELETE FROM 'objects' WHERE \"id\" = ?", (f[0], ))
 
-			cur.execute("INSERT INTO 'objects' ('type', 'primary_key') VALUES (?, ?)", (object.type, object.real_primary_key))
+			cur.execute("INSERT INTO 'objects' ('type', 'primary_key') VALUES (?, ?)", (object.real_type, object.real_primary_key))
 			new_id = cur.lastrowid
 
 			for offset, (key, value) in enumerate(object[1:]):
