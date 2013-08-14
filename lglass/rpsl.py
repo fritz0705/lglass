@@ -322,7 +322,7 @@ class SchemaObject(Object):
 				elif token == "lookup":
 					constraint.lookup = True
 				elif token == "inverse":
-					constraint.inverse = next(tokens_iter)
+					constraint.inverse = next(tokens_iter).split(",")
 				elif token == "primary":
 					constraint.primary = True
 			constraints.append(constraint)

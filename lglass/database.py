@@ -224,6 +224,9 @@ class CIDRDatabase(Database):
 	range_types = {"as-block"}
 	cidr_types = {"inetnum", "inet6num", "route", "route6"}
 
+	perform_range = True
+	perform_cidr = True
+
 	def __init__(self, db, **kwargs):
 		self.database = db
 		self.__dict__.update(kwargs)
@@ -235,13 +238,15 @@ class CIDRDatabase(Database):
 		objects = []
 		found_objects = set([])
 
-		objects.extend([o for o in self.find_by_cidr(primary_key, types)
-			if o.spec not in found_objects])
-		found_objects = set([obj.spec for obj in objects])
+		if perform_cidr:
+			objects.extend([o for o in self.find_by_cidr(primary_key, types)
+				if o.spec not in found_objects])
+			found_objects = set([obj.spec for obj in objects])
 
-		objects.extend([o for o in self.find_by_range(primary_key, types)
-			if o.spec not in found_objects])
-		found_objects = set([obj.spec for obj in objects])
+		if perform_range:
+			objects.extend([o for o in self.find_by_range(primary_key, types)
+				if o.spec not in found_objects])
+			found_objects = set([obj.spec for obj in objects])
 
 		objects.extend([o for o in self.database.find(primary_key, types=types)
 			if o.spec not in found_objects])
@@ -291,6 +296,62 @@ class CIDRDatabase(Database):
 				matches.append(((obj_range[1] - obj_range[0]), obj))
 
 		return [self.get(*m[1]) for m in sorted(matches, key=lambda o: o[0])]
+
+	def save(self, object):
+		self.database.save(object)
+
+	def delete(self, type, primary_key):
+		self.database.delete(type, primary_key)
+
+	def list(self):
+		return self.database.list()
+
+	def __hash__(self):
+		return hash(self.database)
+
+class InverseDatabase(Database):
+	schema_validation_field = "x-schema-valid"
+
+	def __init__(self, db, **kwargs):
+		self.database = db
+		self.__dict__.update(kwargs)
+
+	def get(self, type, primary_key):
+		return self.database.get(type, primary_key)
+
+	def find(self, primary_key, types=None):
+		objs = self.database.find(primary_key, types)
+		inverse_objs = []
+		seen_objs = set(obj.spec for obj in objs)
+
+		for obj in objs:
+			try:
+				schema = self.schema(obj.type)
+			except KeyError:
+				continue
+			for constraint in schema.constraints:
+				if constraint.inverse is None:
+					continue
+				for key, value in obj.get(constraint.key_name):
+					for inverse in constraint.inverse:
+						try:
+							inv_obj = self.database.get(inverse, value)
+							if inv_obj.spec not in seen_objs:
+								seen_objs.add(inv_obj.spec)
+								inverse_objs.append(inv_obj)
+						except KeyError:
+							pass
+			if self.schema_validation_field:
+				try:
+					obj.add(self.schema_validation_field, schema.validate(obj))
+				except lglass.rpsl.SchemaValidationError as e:
+					obj[self.schema_validation_field] = "INVALID {} {}".format(e.args[0], e.args[1])
+				else:
+					obj[self.schema_validation_field] = "VALID"
+
+		objs.extend(inverse_objs)
+
+		return objs
 
 	def save(self, object):
 		self.database.save(object)
