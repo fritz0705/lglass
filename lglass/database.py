@@ -42,6 +42,8 @@ class Database(object):
 	}
 
 	def schema(self, type):
+		if type == "schema":
+			return lglass.rpsl.SchemaObject.SCHEMA_SCHEMA
 		name = type.upper() + "-SCHEMA"
 		specs = [("schema", name), ("schemas", name), ("schema", type),
 			("schemas", type)]
