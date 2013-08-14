@@ -22,9 +22,17 @@ DESCRIPTION
           Performs a search for schemas
 """)
 
+DEFAULT_VERSION = (
+"""lglass - Registry service package
+(c) 2013 Fritz Conrad Grimpen
+
+http://github.com/fritz0705/lglass
+""")
+
 class WhoisHandler(object):
 	preamble = None
 	help_message = DEFAULT_HELP
+	version_message = DEFAULT_VERSION
 
 	def __init__(self, database, keys=[], **kwargs):
 		self.database = database
@@ -76,7 +84,7 @@ class WhoisHandler(object):
 
 		req_iter = iter(request)
 		for req in req_iter:
-			if req in ["-T", "-k"]:
+			if req in ["-T", "-k", "-q"]:
 				arguments[req] = next(req_iter)
 			elif req in ["-x", "-t"]:
 				flags.add(req[1:])
@@ -86,6 +94,11 @@ class WhoisHandler(object):
 		response = []
 		if self.preamble is not None:
 			response.append("% {}\n\n".format(self.preamble))
+
+		if arguments.get("-q") == "version":
+			requested.append("--version")
+		elif arguments.get("-q") == "types":
+			requested.append("--types")
 
 		for req in requested:
 			response.append("% Query {}\n\n".format(req))
@@ -99,6 +112,11 @@ class WhoisHandler(object):
 				continue
 			elif req == "--types":
 				response.append("\n".join(self.database.object_types))
+				response.append("\n\n")
+				continue
+			elif req == "--version":
+				version_msg = "% " + self.version_message.replace("\n", "\n% ")
+				response.append(version_msg)
 				response.append("\n\n")
 				continue
 
