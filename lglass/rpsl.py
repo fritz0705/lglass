@@ -142,8 +142,20 @@ class Object(object):
 		raise ValueError("{} not found".format(key))
 
 	def keys(self):
-		""" Return list of all keys. """
-		return list(set([kvpair[0] for kvpair in self.data]))
+		""" Return iterator which yields all keys. """
+		seen = set()
+		for key, _ in self.data:
+			if key not in seen:
+				yield key
+				seen.add(key)
+
+	def items(self):
+		""" Return iterator which yields all items """
+		return iter(self.data)
+
+	def values(self):
+		""" Return iterator which yields all values """
+		return (kvpair[1] for kvpair in self.data)
 
 	def pretty_print(self, kv_padding=8):
 		try:
