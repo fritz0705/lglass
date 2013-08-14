@@ -14,10 +14,10 @@ def get_database(config):
 	db = lglass.database.FileDatabase(config["registry.database"])
 	if config["registry.cidr"]:
 		db = lglass.database.CIDRDatabase(db)
-	if config["registry.caching"]:
-		db = lglass.database.CachedDatabase(db)
 	if config["registry.inverse"]:
 		db = lglass.database.InverseDatabase(db)
+	if config["registry.caching"]:
+		db = lglass.database.CachedDatabase(db)
 	if "registry.types" in config:
 		db.object_types = set(config["registry.types"])
 	return db
