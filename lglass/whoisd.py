@@ -229,6 +229,7 @@ def main():
 		"database.path": ".",
 		"database.caching": True,
 		"database.cidr": True,
+		"database.inverse": True,
 
 		"messages.preamble": "This is a generic whois query service.",
 		"messages.help": DEFAULT_HELP,
@@ -259,6 +260,8 @@ def main():
 	db = lglass.database.FileDatabase(config["database.path"])
 	if config["database.cidr"]:
 		db = lglass.database.CIDRDatabase(db)
+	if config["database.inverse"]:
+		db = lglass.database.InverseDatabase(db)
 	if config["database.caching"]:
 		db = lglass.database.CachedDatabase(db)
 
