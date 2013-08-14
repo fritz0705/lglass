@@ -12,7 +12,7 @@ def index_handler():
 @with_config
 def robots_txt_handler(config):
 	if config["robots.txt"] is not None:
-		return bottle.static_file(config["robots.txt"])
+		return open(config["robots.txt"])
 	bottle.abort(404, "File not found")
 
 app.route("/", "GET", index_handler)
