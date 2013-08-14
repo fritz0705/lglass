@@ -7,7 +7,7 @@ key:             admin-c mandatory multiple inverse person
 key:             tech-c optional multiple inverse person
 key:             upd-to mandatory multiple inverse person
 key:             mnt-nfy optional multiple inverse person
-key:             auth mandatory multiple inverse mntner
+key:             auth mandatory multiple inverse key-cert
 key:             remarks optional multiple
 key:             notify optional multiple inverse person
 key:             abuse-mailbox optional multiple inverse person
