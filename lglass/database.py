@@ -238,12 +238,12 @@ class CIDRDatabase(Database):
 		objects = []
 		found_objects = set([])
 
-		if perform_cidr:
+		if self.perform_cidr:
 			objects.extend([o for o in self.find_by_cidr(primary_key, types)
 				if o.spec not in found_objects])
 			found_objects = set([obj.spec for obj in objects])
 
-		if perform_range:
+		if self.perform_range:
 			objects.extend([o for o in self.find_by_range(primary_key, types)
 				if o.spec not in found_objects])
 			found_objects = set([obj.spec for obj in objects])
@@ -310,6 +310,9 @@ class CIDRDatabase(Database):
 		return hash(self.database)
 
 class InverseDatabase(Database):
+	""" The inverse databases resolves inverse relationships on find() and also
+	validates the schema of objects. """
+
 	schema_validation_field = "x-schema-valid"
 
 	def __init__(self, db, **kwargs):
@@ -317,7 +320,10 @@ class InverseDatabase(Database):
 		self.__dict__.update(kwargs)
 
 	def get(self, type, primary_key):
-		return self.database.get(type, primary_key)
+		obj = self.database.get(type, primary_key)
+		if self.schema_validation_field:
+			self._validate_schema(obj)
+		return obj
 
 	def find(self, primary_key, types=None):
 		objs = self.database.find(primary_key, types)
@@ -335,19 +341,14 @@ class InverseDatabase(Database):
 				for key, value in obj.get(constraint.key_name):
 					for inverse in constraint.inverse:
 						try:
-							inv_obj = self.database.get(inverse, value)
+							inv_obj = self.get(inverse, value)
 							if inv_obj.spec not in seen_objs:
 								seen_objs.add(inv_obj.spec)
 								inverse_objs.append(inv_obj)
 						except KeyError:
 							pass
 			if self.schema_validation_field:
-				try:
-					obj.add(self.schema_validation_field, schema.validate(obj))
-				except lglass.rpsl.SchemaValidationError as e:
-					obj[self.schema_validation_field] = "INVALID {} {}".format(e.args[0], e.args[1])
-				else:
-					obj[self.schema_validation_field] = "VALID"
+				self._validate_schema(obj)
 
 		objs.extend(inverse_objs)
 
@@ -364,6 +365,19 @@ class InverseDatabase(Database):
 
 	def __hash__(self):
 		return hash(self.database)
+	
+	def _validate_schema(self, obj):
+		if self.schema_validation_field in obj:
+			return
+		try:
+			schema = self.schema(obj.type)
+			schema.validate(obj)
+		except lglass.rpsl.SchemaValidationError as e:
+			obj.add(self.schema_validation_field, "INVALID {} {}".format(e.args[0], e.args[1]))
+		except KeyError:
+			obj.add(self.schema_validation_field, "UNKNOWN")
+		else:
+			obj.add(self.schema_validation_field, "VALID")
 
 class DictDatabase(Database):
 	""" This database backend operates completely in memory by using a Python
