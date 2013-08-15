@@ -439,6 +439,9 @@ def parse_rpsl(lines, pragmas={}):
 		%! pragma strict-ripe [on|off]
 				Do completely RIPE database compilant parsing, e.g. don't allow any
 				space between key and the colon.
+
+		%! pragma hash-comment [on|off]
+				Recognize hash '#' as beginning of comment
 	'''
 	result = []
 	default_pragmas = {
@@ -446,7 +449,8 @@ def parse_rpsl(lines, pragmas={}):
 		"newline-type": "lf",
 		"stop-at-empty-line": False,
 		"condense-whitespace": False,
-		"strict-ripe": False
+		"strict-ripe": False,
+		"hash-comment": False
 	}
 	_pragmas = dict(default_pragmas)
 	_pragmas.update(pragmas)
@@ -463,7 +467,7 @@ def parse_rpsl(lines, pragmas={}):
 			if values[1] == "rfc":
 				pragmas.update(default_pragmas)
 			elif values[1] in {"whitespace-preserve", "stop-at-empty-line",
-				"condense-whitespace", "strict-ripe"}:
+				"condense-whitespace", "strict-ripe", "hash-comment"}:
 				try:
 					if values[2] not in {"on", "off"}:
 						raise ValueError("Syntax error: Expected 'on' or 'off' as value for '{}' pragma".format(values[1]))
@@ -483,7 +487,8 @@ def parse_rpsl(lines, pragmas={}):
 
 		# remove any comments (text after % and #)
 		line = line.split("%")[0]
-		line = line.split("#")[0]
+		if pragmas["hash-comment"]:
+			line = line.split("#")[0]
 
 		# continue if line is empty
 		if not line.strip():
