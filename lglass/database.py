@@ -402,7 +402,7 @@ class InverseDatabase(Database):
 				del obj[constraint.key_name]
 
 		if self.hidden_attr_field and hidden:
-			obj[self.hidden_attr_field] = " ".join(hidden)
+			obj[self.hidden_attr_field] = " ".join(sorted(hidden))
 
 class DictDatabase(Database):
 	""" This database backend operates completely in memory by using a Python
