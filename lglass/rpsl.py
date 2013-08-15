@@ -596,15 +596,18 @@ def main():
 				try:
 					obj = Object.from_iterable(fh, pragmas=pragmas)
 				except:
-					warnings.warn("Format of {} is invalid".format(file))
+					print("{spec}: Format invalid".format(spec=file), file=sys.stderr)
 					continue
 				if args.validate:
 					try:
 						schema = database.schema(obj.type)
 						schema.validate(obj)
 					except lglass.rpsl.SchemaValidationError as e:
-						warnings.warn("Validation of {} failed: Key {}: {}".format(file, e.args[0], e.args[1]))
+						print("{spec}: Validation failed: Key {key}: {message}".format(
+							spec=obj.real_spec, key=e.args[0], message=e.args[1]), file=sys.stderr)
 						continue
+					except KeyError:
+						print("{spec}: Schema not found".format(spec=obj.real_spec), file=sys.stderr)
 				fh.seek(0)
 				fh.write(obj.pretty_print(kv_padding=args.padding))
 				fh.truncate()
@@ -615,8 +618,10 @@ def main():
 				schema = database.schema(obj.type)
 				schema.validate(obj)
 			except lglass.rpsl.SchemaValidationError as e:
-				print("Validation of {obj.spec} failed: Key {key}: {message}".format(
-					obj=obj, key=e.args[0], message=e.args[1]), file=sys.stderr)
+				print("{spec}: Validation failed: Key {key}: {message}".format(
+					spec=obj.real_spec, key=e.args[0], message=e.args[1]), file=sys.stderr)
+			except KeyError:
+				print("{spec}: Schema not found".format(spec=obj.real_spec), file=sys.stderr)
 		sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
 
 if __name__ == '__main__':
