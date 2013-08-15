@@ -316,6 +316,8 @@ class InverseDatabase(Database):
 	validates the schema of objects. """
 
 	schema_validation_field = "x-schema-valid"
+	hidden_attr_field = "x-hidden"
+	hide_attributes = False
 
 	def __init__(self, db, **kwargs):
 		self.database = db
@@ -329,30 +331,13 @@ class InverseDatabase(Database):
 
 	def find(self, primary_key, types=None):
 		objs = self.database.find(primary_key, types)
-		inverse_objs = []
-		seen_objs = set(obj.spec for obj in objs)
+		objs.extend(self.find_inverse_objects(objs))
 
 		for obj in objs:
-			try:
-				schema = self.schema(obj.type)
-			except KeyError:
-				continue
-			for constraint in schema.constraints:
-				if constraint.inverse is None:
-					continue
-				for key, value in obj.get(constraint.key_name):
-					for inverse in constraint.inverse:
-						try:
-							inv_obj = self.get(inverse, value)
-							if inv_obj.spec not in seen_objs:
-								seen_objs.add(inv_obj.spec)
-								inverse_objs.append(inv_obj)
-						except KeyError:
-							pass
-			if self.schema_validation_field:
-				self._validate_schema(obj)
-
-		objs.extend(inverse_objs)
+			self._validate_schema(obj)
+		if self.hide_attributes:
+			for obj in objs:
+				self._hide_attributes(obj)
 
 		return objs
 
@@ -367,6 +352,28 @@ class InverseDatabase(Database):
 
 	def __hash__(self):
 		return hash(self.database)
+
+	def find_inverse_objects(self, objs):
+		seen = set(obj.spec for obj in objs)
+		inverse_objs = []
+		for obj in objs:
+			try:
+				schema = self.schema(obj.type)
+			except KeyError:
+				continue
+			for constraint in schema.constraints:
+				if constraint.inverse is None:
+					continue
+				for inverse in constraint.inverse:
+					for key, value in obj.get(constraint.key_name):
+						try:
+							inv_obj = self.get(inverse, value)
+							if inv_obj.spec not in seen:
+								seen.add(inv_obj.spec)
+								inverse_objs.append(inv_obj)
+						except KeyError:
+							pass
+		return inverse_objs
 	
 	def _validate_schema(self, obj):
 		if self.schema_validation_field in obj:
@@ -380,6 +387,22 @@ class InverseDatabase(Database):
 			obj.add(self.schema_validation_field, "UNKNOWN")
 		else:
 			obj.add(self.schema_validation_field, "VALID")
+	
+	def _hide_attributes(self, obj):
+		try:
+			schema = self.schema(obj.type)
+		except KeyError:
+			return
+
+		hidden = set()
+
+		for constraint in schema.constraints:
+			if constraint.hidden:
+				hidden.add(constraint.key_name)
+				del obj[constraint.key_name]
+
+		if self.hidden_attr_field and hidden:
+			obj[self.hidden_attr_field] = " ".join(hidden)
 
 class DictDatabase(Database):
 	""" This database backend operates completely in memory by using a Python

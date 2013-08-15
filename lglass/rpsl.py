@@ -319,25 +319,7 @@ class SchemaObject(Object):
 	def constraints(self):
 		constraints = []
 		for _, value in self.get("key"):
-			key, *tokens = value.split()
-			constraint = SchemaKeyConstraint(key)
-			tokens_iter = iter(tokens)
-			for token in tokens_iter:
-				if token == "single":
-					constraint.multiple = False
-				elif token == "multiple":
-					constraint.multiple = True
-				elif token == "mandatory":
-					constraint.mandatory = True
-				elif token == "optional":
-					constraint.mandatory = False
-				elif token == "lookup":
-					constraint.lookup = True
-				elif token == "inverse":
-					constraint.inverse = next(tokens_iter).split(",")
-				elif token == "primary":
-					constraint.primary = True
-			constraints.append(constraint)
+			constraints.append(SchemaKeyConstraint.from_string(value))
 		return constraints
 
 SchemaObject.SCHEMA_SCHEMA = SchemaObject([
@@ -354,6 +336,7 @@ class SchemaKeyConstraint(object):
 	lookup = False
 	inverse = None
 	primary = False
+	hidden = False
 
 	def __init__(self, key_name, **kwargs):
 		self.key_name = key_name
@@ -366,6 +349,34 @@ class SchemaKeyConstraint(object):
 		if self.mandatory == True and len(kvpairs) == 0:
 			raise SchemaValidationError(self.key_name, "Key is mandatory but doesn't occur")
 		return True
+
+	@classmethod
+	def from_string(cls, value):
+		key_name, *tokens = value.split()
+		tokens_iter = iter(tokens)
+
+		obj = cls(key_name)
+
+		for token in tokens_iter:
+			if token == "single":
+				obj.multiple = False
+			elif token == "multiple":
+				obj.multiple = True
+			elif token == "mandatory":
+				obj.mandatory = True
+			elif token == "optional":
+				obj.mandatory = False
+			elif token == "lookup":
+				obj.lookup = True
+			elif token == "inverse":
+				obj.inverse = next(tokens_iter).split(",")
+			elif token == "primary":
+				obj.primary = True
+			elif token == "hidden":
+				obj.hidden = True
+			elif token == "visible":
+				obj.hidden = False
+		return obj
 
 class SchemaValidator(object):
 	def __init__(self, schema):
