@@ -68,6 +68,13 @@ class Database(object):
 		"rtr-set"
 	}
 
+	def save_all(self, objs):
+		for obj in objs:
+			self.save(obj)
+
+	def get_all(self):
+		return (self.get(*spec) for spec in self.list())
+
 	def schema(self, type):
 		""" Return schema for type. Raises a KeyError if schema was not found.  """
 		if type == "schema":
