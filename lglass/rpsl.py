@@ -312,8 +312,10 @@ class SchemaObject(Object):
 		return self["type-name"][0]
 
 	def constraint_for(self, key):
-		return (constraint for constraint in self.constraints() if
-			constraint.key_name == key)
+		for constraint in self.constraints():
+			if constraint.key_name == key:
+				return constraint
+		return None
 
 	def constraints(self):
 		for _, value in self.get("key"):
