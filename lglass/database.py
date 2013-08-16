@@ -761,3 +761,64 @@ class RedisDatabase(Database):
 		return "{prefix}{type}+{primary_key}".format(prefix=self.prefix,
 			type=type, primary_key=primary_key)
 
+def database_factory(config={}):
+	""" Complex function to build a stack of databases for simple usage. It supports
+	two database types: sqlite3 and file. You can specify the database type in
+	config["type"]. It also supports caching in redis and in memory by providing
+	config["caching.type"] """
+	_config = {
+		"type": config.get("type", "file"),
+		"caching": config.get("caching", False),
+		"caching.type": config.get("caching.type", "memory"),
+		"caching.timeout": config.get("caching.timeout", 600),
+		"cidr": config.get("cidr", False),
+		"cidr.range_types": config.get("cidr.range_types", None),
+		"cidr.cidr_types": config.get("cidr.cidr_types", None),
+		"cidr.range": config.get("cidr.range", True),
+		"cidr.cidr": config.get("cidr.cidr", True),
+		"schema": config.get("schema", True),
+		"schema.inverse.types": config.get("schema.inverse.types", { "aut-num", "person" }),
+		"schema.inverse": config.get("schema.inverse", True),
+		"schema.hide": config.get("schema.hide", True),
+		"schema.validate": config.get("schema.validate", False)
+	}
+	if _config["type"] == "file":
+		_config["path"] = config.get("path", ".")
+		db = FileDatabase(_config["path"])
+	elif _config["type"] == "sqlite3":
+		_config["path"] = config.get("path", ":memory:")
+		db = SQLite3Database(_config["path"])
+	else:
+		db = DictDatabase()
+	
+	if _config["caching"]:
+		if _config["caching.type"] == "memory":
+			db = CachedDatabase(db)
+		elif _config["caching.type"] == "redis":
+			_config["caching.url"] = config.get("caching.url", "redis://localhost:6379/0")
+			db = RedisDatabase(db,
+				redis.StrictRedis.from_url(_config["caching.url"]),
+				timeout=_config["caching.timeout"])
+	
+	if _config["cidr"]:
+		db = CIDRDatabase(db)
+		if _config["cidr.range_types"] is not None:
+			db.range_types = set(_config["cidr.range_types"])
+		if _config["cidr.cidr_types"] is not None:
+			db.range_types = set(_config["cidr.cidr_types"])
+		if _config["range"] is False:
+			db.perform_range = False
+		if _config["cidr"] is False:
+			db.perform_cidr = False
+	
+	if _config["schema"]:
+		db = SchemaDatabase(db)
+		db.resolve_inverse = _config["schema.inverse"]
+		if _config["schema.inverse.types"] is not None:
+			db.inverse_type_filter = lambda key: key in _config["schema.inverse.types"]
+		db.hide_attributes = _config["schema.hide"]
+		if _config["schema.validate"] is False:
+			db.schema_validation_field = None
+	
+	return db
+	
