@@ -5,5 +5,14 @@ lglass » registry » {{ object.type }} » {{ object.primary_key|e }}
 {% endblock %}
 
 {% block content %}
-<pre>{{ object.pretty_print()|e }}</pre>
+<dl class="rpsl">
+	{% for item in items %}
+	<dt>{{ item[0]|e }}</dt>
+	{% if item[2] != None %}
+	<dd><a href="/obj/{{ item[2]|e }}/{{ item[1]|e }}">{{ item[1] }}</a></dd>
+	{% else %}
+	<dd>{{ item[1]|e }}</dd>
+	{% endif %}
+	{% endfor %}
+</dd>
 {% endblock %}

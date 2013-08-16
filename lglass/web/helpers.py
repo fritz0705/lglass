@@ -26,6 +26,7 @@ DEFAULT_CONFIG = {
 	"registry.caching": True,
 	"registry.cidr": True,
 	"registry.inverse": True,
+	"registry.inverse.types": None,
 	"robots.txt": None
 }
 

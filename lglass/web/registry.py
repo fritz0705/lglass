@@ -16,6 +16,8 @@ def get_database(config):
 		db = lglass.database.CIDRDatabase(db)
 	if config["registry.inverse"]:
 		db = lglass.database.InverseDatabase(db)
+		if config["registry.inverse.types"]:
+			db.inverse_type_filter = lambda key: key in config["registry.inverse.types"]
 	if config["registry.caching"]:
 		db = lglass.database.CachedDatabase(db)
 	if "registry.types" in config:
@@ -54,7 +56,23 @@ def show_object(type, primary_key, db):
 		obj = db.get(type, primary_key)
 	except KeyError:
 		bottle.abort(404, "Object not found")
-	return render_template("registry/show_object.html", object=obj)
+
+	try:
+		schema = db.schema(obj.type)
+	except KeyError:
+		pass
+
+	# (key, value, reference) => ("origin", "AS64712", "aut-num")
+	items = []
+	for key, value in obj:
+		inverse = None
+		if schema is not None:
+			constraint = schema.constraint_for(key)
+			if constraint and constraint.inverse:
+				inverse = constraint.inverse[0]
+		items.append((key, value, inverse))
+
+	return render_template("registry/show_object.html", items=items, object=obj)
 
 @with_db
 def show_objects(type, db):
