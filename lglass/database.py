@@ -615,6 +615,8 @@ PRAGMA foreign_keys = ON;
 		return [self.get(*spec) for spec in specs]
 
 class WhoisClientDatabase(Database):
+	""" Simple blocking whois client database """
+
 	def __init__(self, hostspec):
 		self.hostspec = hostspec
 	
@@ -673,6 +675,9 @@ except ImportError:
 	redis = None
 
 class RedisDatabase(Database):
+	""" Caching database layer which uses redis to cache the objects and search
+	results, but without redundant caching like CachedDatabase """
+
 	def __init__(self, db, _redis, timeout=600, prefix="lglass:"):
 		if isinstance(_redis, redis.Redis):
 			self.redis = _redis
@@ -769,10 +774,59 @@ class RedisDatabase(Database):
 			type=type, primary_key=primary_key)
 
 def database_factory(config={}):
-	""" Complex function to build a stack of databases for simple usage. It supports
-	two database types: sqlite3 and file. You can specify the database type in
-	config["type"]. It also supports caching in redis and in memory by providing
-	config["caching.type"] """
+	""" Factory method to build a database without mentioning any specific class
+	names. Useful for command line utils which are bloated. Supports several
+	configuration options in config dict:
+
+		config["type"]
+				Type of the database (file or sqlite3)
+
+		config["path"]
+				Path/URL to database
+
+		config["caching"]
+				Turns caching on or off
+
+		config["caching.type"]
+				Defines the caching backend
+
+		config["caching.timeout"]
+				Defines the timeout for cached objects
+
+		config["caching.url"]
+				Defines the URL for caching backend
+
+		config["cidr"]
+				Turns cidr search on or off
+
+		config["cidr.range_types"]
+				Defines range types for CIDR search (aut-num, as-block)
+
+		config["cidr.cidr_types"]
+				Defines CIDR types for CIDR search (inet[6]num, route[6])
+
+		config["cidr.range"]
+				Turns range search on or off
+
+		config["cidr.cidr"]
+				Turns CIDR search on or off
+
+		config["schema"]
+				Turns schema layer on or off
+
+		config["schema.inverse.types"]
+				List of acceptable inverse types, if None, then no filtering will happen
+
+		config["schema.inverse"]
+				Turns inverse resolver on or off
+
+		config["hide"]
+				Turns attribute hiding on or off
+
+		config["validate"]
+				Turns validation on or off
+	
+	"""
 	_config = {
 		"type": config.get("type", "file"),
 		"caching": config.get("caching", False),
