@@ -9,13 +9,39 @@ import netaddr
 import lglass.rpsl
 
 class Database(object):
-	__init__ = None
+	""" Database is an abstract class which defines some constants and setter/getter
+	for subscripts. You have to extend from it by creating a new class and
+	overriding __init__, get, list, find, save and delete to conform to the
+	database protocol. """
 
-	get = None
-	list = None
-	find = None
-	save = None
-	delete = None
+	def __init__(self):
+		raise NotImplementedError("Instances of Database are not permitted")
+
+	def get(self, type, primary_key):
+		""" Get specific object addressed by type and primary_key from database. Returns
+		lglass.rpsl.Object. This method shall raise a KeyError if the object was not
+		found. """
+		raise NotImplementedError("get() is not implemented")
+
+	def list(self, filter=None, limit=None):
+		""" Return list of matching RPSL object specs, filter can be a callable taking
+		two arguments (type, primary_key), and limit can be a int. RPSL object specs
+		are tuples consisting of two str instances. """
+		raise NotImplementedError("list() is not implemented")
+
+	def find(self, key, types=None, limit=None):
+		""" Finds an object by searching the whole database for key. It's possible
+		to supply a list of acceptable object types and to provide a limit of objects.
+		This method returns a list of lglass.rpsl.Object. """
+		raise NotImplementedError("find() is not implemented")
+
+	def save(self, obj):
+		""" Save object in database. """
+		raise NotImplementedError("save() is not implemented")
+
+	def delete(self, type, primary_key):
+		""" Delete object in database. """
+		raise NotImplementedError("delete() is not implemented")
 
 	object_types = {
 		"as-block",
@@ -42,6 +68,7 @@ class Database(object):
 	}
 
 	def schema(self, type):
+		""" Return schema for type. Raises a KeyError if schema was not found.  """
 		if type == "schema":
 			return lglass.rpsl.SchemaObject.SCHEMA_SCHEMA
 		name = type.upper() + "-SCHEMA"
@@ -240,6 +267,10 @@ class CIDRDatabase(Database):
 		objects = []
 		found_objects = set([])
 
+		objects.extend([o for o in self.database.find(primary_key, types=types)
+			if o.spec not in found_objects])
+		found_objects = set([obj.spec for obj in objects])
+
 		if self.perform_cidr:
 			objects.extend([o for o in self.find_by_cidr(primary_key, types)
 				if o.spec not in found_objects])
@@ -249,10 +280,6 @@ class CIDRDatabase(Database):
 			objects.extend([o for o in self.find_by_range(primary_key, types)
 				if o.spec not in found_objects])
 			found_objects = set([obj.spec for obj in objects])
-
-		objects.extend([o for o in self.database.find(primary_key, types=types)
-			if o.spec not in found_objects])
-		found_objects = set([obj.spec for obj in objects])
 
 		return objects
 
@@ -298,7 +325,8 @@ class CIDRDatabase(Database):
 			if primary_key >= obj_range[0] and primary_key <= obj_range[1]:
 				matches.append(((obj_range[1] - obj_range[0]), obj))
 
-		return [self.get(*m[1]) for m in sorted(matches, key=lambda o: o[0])]
+		matches = sorted(matches, key=lambda o: o[0], reverse=True)
+		return [self.get(*m[1]) for m in matches]
 
 	def save(self, object):
 		self.database.save(object)
@@ -455,7 +483,7 @@ class DictDatabase(Database):
 try:
 	import sqlite3
 except ImportError:
-	pass
+	sqlite3 = None
 
 class SQLite3Database(Database):
 	""" This database backend operates on a SQLite3 database and supports generic
