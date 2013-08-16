@@ -29,16 +29,16 @@ class Object(object):
 			# at first we will check the whole struture of ex, if we encounter any
 			# error, we will raise an exception, so we are never in undefined state
 			for off, kvpair in enumerate(ex):
-				if not isinstance(kvpair, tuple):
+				if isinstance(kvpair, tuple) or isinstance(kvpair, list):
+					if len(kvpair) != 2:
+						raise ValueError("offset {}: expected tuple to have two values, got {}".format(off, len(kvpair)))
+					elif not isinstance(kvpair[0], str):
+						raise ValueError("offset {}: expected key to be str, got {}".format(off, type(kvpair[0])))
+					elif not isinstance(kvpair[1], str):
+						raise ValueError("offset {}: expected value to be str, got {}".format(off, type(kvpair[0])))
+					self.data.append((kvpair[0], kvpair[1]))
+				else:
 					raise TypeError("offset {}: expected entry to be tuple, got {}".format(off, type(kvpair)))
-				if len(kvpair) != 2:
-					raise ValueError("offset {}: expected tuple to have two values, got {}".format(off, len(kvpair)))
-				if not isinstance(kvpair[0], str):
-					raise ValueError("offset {}: expected key to be str, got {}".format(off, type(kvpair[0])))
-				if not isinstance(kvpair[1], str):
-					raise ValueError("offset {}: expected value to be str, got {}".format(off, type(kvpair[0])))
-
-			self.data.extend(ex)
 		elif isinstance(ex, dict):
 			# the same for dicts, we will check the given dict and then we will
 			# add the values to the structure
@@ -194,6 +194,12 @@ class Object(object):
 				new_dict[key] = []
 			new_dict[key].append(value)
 		return new_dict
+
+	def to_json_form(self):
+		items = []
+		for item in self.items():
+			items.append([item[0], item[1]])
+		return items
 
 	@property
 	def type(self):
