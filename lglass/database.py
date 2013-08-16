@@ -274,7 +274,8 @@ class CIDRDatabase(Database):
 			if primary_key in obj_addr:
 				matches.append((obj_addr.prefixlen, obj))
 
-		return [self.get(*m[1]) for m in sorted(matches, key=lambda o: o[0])]
+		matches = sorted(matches, key=lambda o: o[0], reverse=True)
+		return [self.get(*m[1]) for m in matches]
 
 	def find_by_range(self, primary_key, types=None):
 		range_types = self.range_types
