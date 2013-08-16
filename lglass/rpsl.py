@@ -312,15 +312,12 @@ class SchemaObject(Object):
 		return self["type-name"][0]
 
 	def constraint_for(self, key):
-		return [constraint for constraint in self.constraints if
-			constraint.key_name == key]
+		return (constraint for constraint in self.constraints() if
+			constraint.key_name == key)
 
-	@property
 	def constraints(self):
-		constraints = []
 		for _, value in self.get("key"):
-			constraints.append(SchemaKeyConstraint.from_string(value))
-		return constraints
+			yield SchemaKeyConstraint.from_string(value)
 
 SchemaObject.SCHEMA_SCHEMA = SchemaObject([
 	("schema", "SCHEMA-SCHEMA"),
@@ -394,7 +391,7 @@ class SchemaValidator(object):
 		return True
 
 	def validate(self, obj):
-		for constraint in self.schema.constraints:
+		for constraint in self.schema.constraints():
 			constraint.validate(obj)
 		return True
 

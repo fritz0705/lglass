@@ -401,7 +401,7 @@ class SchemaDatabase(Database):
 				schema = self.schema(obj.type)
 			except KeyError:
 				continue
-			for constraint in schema.constraints:
+			for constraint in schema.constraints():
 				if constraint.inverse is None:
 					continue
 
@@ -440,7 +440,7 @@ class SchemaDatabase(Database):
 
 		hidden = set()
 
-		for constraint in schema.constraints:
+		for constraint in schema.constraints():
 			if constraint.hidden:
 				hidden.add(constraint.key_name)
 				del obj[constraint.key_name]

@@ -29,7 +29,7 @@ def main_create_object(args, config, database):
 		obj.extend(input_obj)
 	if args.fill:
 		schema = database.schema(args.type)
-		for constraint in schema.constraints:
+		for constraint in schema.constraints():
 			if constraint.mandatory and constraint.key_name not in obj:
 				obj.add(constraint.key_name, "# Insert value for {} here".format(constraint.key_name))
 	obj[0] = (args.type, args.primary_key)
