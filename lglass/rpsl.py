@@ -158,10 +158,11 @@ class Object(object):
 		return (kvpair[1] for kvpair in self.data)
 
 	def pretty_print(self, kv_padding=8):
-		try:
-			left_padding = sorted([len(k) for k in self.keys()], reverse=True)[0] + kv_padding
-		except IndexError:
+		if len(self) == 0:
 			return ""
+
+		left_padding = sorted([len(k) for k in self.keys()], reverse=True)[0] + kv_padding
+
 		result = []
 
 		for key, value in self:
