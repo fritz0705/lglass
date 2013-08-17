@@ -420,7 +420,7 @@ class SchemaDatabase(Database):
 						if (inverse, value) not in seen:
 							try:
 								inv_obj = self.get(inverse, value)
-							except KeyEror:
+							except KeyError:
 								pass
 							else:
 								seen.add((inverse, value))

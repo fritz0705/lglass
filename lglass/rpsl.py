@@ -558,7 +558,7 @@ try:
 				return inetnum_range(inetnum).cidrs()
 			else:
 				raise
-except LoadError:
+except ImportError:
 	pass
 
 def main():
