@@ -685,6 +685,8 @@ class RedisDatabase(Database):
 			self.redis = redis.Redis(**_redis)
 		elif isinstance(_redis, tuple):
 			self.redis = redis.Redis(*_redis)
+		elif isinstance(_redis, str):
+			self.redis = redis.Redis.from_url(_redis)
 		else:
 			raise TypeError("Expected redis.Redis, dict or tuple as redis instance, got {}".format(type(_redis)))
 
