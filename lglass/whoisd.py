@@ -246,6 +246,10 @@ def main():
 
 		"database.path": ".",
 		"database.caching": True,
+		"database.caching.type": "memory",
+		"database.caching.url": "redis://localhost:6379/0",
+		"database.caching.timeout": 600,
+		"database.caching.prefix": "lglass:",
 		"database.cidr": True,
 		"database.inverse": True,
 		"database.inverse.types": None,
@@ -284,7 +288,13 @@ def main():
 		if config["database.inverse.types"]:
 			db.inverse_type_filter = lambda key: key in config["database.inverse.types"]
 	if config["database.caching"]:
-		db = lglass.database.CachedDatabase(db)
+		if config["database.caching.type"] == "redis":
+			db = lglass.database.RedisDatabase(db,
+				config["database.caching.url"],
+				timeout=config["database.caching.timeout"],
+				prefix=config["database.caching.prefix"])
+		else:
+			db = lglass.database.CachedDatabase(db)
 
 	handler = WhoisHandler(db,
 		preamble=config["messages.preamble"],
