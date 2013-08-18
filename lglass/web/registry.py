@@ -4,22 +4,25 @@ import functools
 
 import bottle
 
-import lglass.database
+import lglass.database.file
+import lglass.database.cache
+import lglass.database.schema
+import lglass.database.cidr
 import lglass.rpsl
 
 from lglass.web.helpers import render_template, with_config
 
 @with_config
 def get_database(config):
-	db = lglass.database.FileDatabase(config["registry.database"])
+	db = lglass.database.file.FileDatabase(config["registry.database"])
 	if config["registry.cidr"]:
-		db = lglass.database.CIDRDatabase(db)
+		db = lglass.database.cidr.CIDRDatabase(db)
 	if config["registry.inverse"]:
-		db = lglass.database.InverseDatabase(db)
+		db = lglass.database.schema.InverseDatabase(db)
 		if config["registry.inverse.types"]:
 			db.inverse_type_filter = lambda key: key in config["registry.inverse.types"]
 	if config["registry.caching"]:
-		db = lglass.database.CachedDatabase(db)
+		db = lglass.database.cache.CachedDatabase(db)
 	if "registry.types" in config:
 		db.object_types = set(config["registry.types"])
 	return db

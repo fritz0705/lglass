@@ -1,6 +1,10 @@
 # coding: utf-8
 
-import lglass.database
+import lglass.database.file
+import lglass.database.cidr
+import lglass.database.cache
+import lglass.database.redis
+import lglass.database.schema
 import asyncore
 import traceback
 import argparse
@@ -280,21 +284,21 @@ def main():
 		if value is not None:
 			config[destination] = value
 
-	db = lglass.database.FileDatabase(config["database.path"])
+	db = lglass.database.file.FileDatabase(config["database.path"])
 	if config["database.cidr"]:
-		db = lglass.database.CIDRDatabase(db)
+		db = lglass.database.cidr.CIDRDatabase(db)
 	if config["database.inverse"]:
-		db = lglass.database.InverseDatabase(db)
+		db = lglass.database.schema.InverseDatabase(db)
 		if config["database.inverse.types"]:
 			db.inverse_type_filter = lambda key: key in config["database.inverse.types"]
 	if config["database.caching"]:
 		if config["database.caching.type"] == "redis":
-			db = lglass.database.RedisDatabase(db,
+			db = lglass.database.redis.RedisDatabase(db,
 				config["database.caching.url"],
 				timeout=config["database.caching.timeout"],
 				prefix=config["database.caching.prefix"])
 		else:
-			db = lglass.database.CachedDatabase(db)
+			db = lglass.database.cache.CachedDatabase(db)
 
 	handler = WhoisHandler(db,
 		preamble=config["messages.preamble"],

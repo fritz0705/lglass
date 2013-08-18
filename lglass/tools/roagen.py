@@ -4,7 +4,7 @@ import sys
 import argparse
 
 import lglass.generators.roa
-import lglass.database
+import lglass.database.file
 
 def build_argparser():
 	argparser = argparse.ArgumentParser(description="Generator for ROA tables")
@@ -25,7 +25,7 @@ def main(argv=sys.argv[1:]):
 	argparser = build_argparser()
 	args = argparser.parse_args(argv)
 
-	db = lglass.database.FileDatabase(args.database)
+	db = lglass.database.file.FileDatabase(args.database)
 
 	if args.protocol == 4 or args.protocol is None:
 		routes = (db.get(*spec) for spec in db.list() if spec[0] == "route")

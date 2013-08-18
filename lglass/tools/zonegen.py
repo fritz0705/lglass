@@ -6,7 +6,7 @@ import argparse
 import netaddr
 
 import lglass.generators.dns
-import lglass.database
+import lglass.database.file
 
 def build_argparser():
 	argparser = argparse.ArgumentParser(description="Generator for delegating zones")
@@ -36,7 +36,7 @@ def main(argv=sys.argv[1:]):
 	argparser = build_argparser()
 	args = argparser.parse_args(argv)
 
-	db = lglass.database.FileDatabase(args.database)
+	db = lglass.database.file.FileDatabase(args.database)
 	master_nameserver = args.master
 	if master_nameserver is None:
 		if args.nameservers:

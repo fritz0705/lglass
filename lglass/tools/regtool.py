@@ -7,7 +7,8 @@ import pkg_resources
 import os
 import os.path
 
-import lglass.database
+import lglass.database.file
+import lglass.database.sqlite3
 import lglass.rpsl
 
 def main_create_db(args, config, database):
@@ -104,8 +105,8 @@ def main(args=sys.argv[1:]):
 			config[key] = value
 	
 	database = {
-		"file": lglass.database.FileDatabase,
-		"sqlite3": lglass.database.SQLite3Database
+		"file": lglass.database.file.FileDatabase,
+		"sqlite3": lglass.database.sqlite3.SQLite3Database
 	}[config["database.type"]](config["database.path"])
 
 	{

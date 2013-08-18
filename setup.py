@@ -10,6 +10,7 @@ setuptools.setup(
 	version="1.0dev",
 	packages=[
 		"lglass",
+		"lglass.database",
 		"lglass.generators",
 		"lglass.tools",
 		"lglass.web",
