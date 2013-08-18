@@ -4,6 +4,7 @@ import os.path
 import time
 import socket
 import json
+import hashlib
 
 import netaddr
 
@@ -622,16 +623,19 @@ class WhoisClientDatabase(Database):
 	
 	def get(self, type, primary_key):
 		try:
-			return self.find(primary_key, types=[type])[-1]
+			return self.find(primary_key, types=[type], flags="-r")[-1]
 		except IndexError:
 			raise KeyError(type, primary_key)
 
-	def find(self, primary_key, types=None):
+	def find(self, primary_key, types=None, flags=None):
 		send_buffer = b""
 		recv_buffer = b""
 
 		if types is not None:
 			send_buffer += "-T {types} ".format(types=",".join(types)).encode()
+		if flags is not None:
+			send_buffer += flags.encode()
+			send_buffer += b" "
 		send_buffer += "{key}".format(key=primary_key).encode()
 		send_buffer += b"\r\n"
 
@@ -677,6 +681,9 @@ except ImportError:
 class RedisDatabase(Database):
 	""" Caching database layer which uses redis to cache the objects and search
 	results, but without redundant caching like CachedDatabase """
+
+	hash_algorithm = "sha1"
+	key_format = None
 
 	def __init__(self, db, _redis, timeout=600, prefix="lglass:"):
 		if isinstance(_redis, redis.Redis):
@@ -764,14 +771,22 @@ class RedisDatabase(Database):
 			result.append(self.get(*spec))
 		return result
 
+	def _key_hash(self, key):
+		h = hashlib.new(self.hash_algorithm)
+		h.update(key.encode())
+		if self.key_format:
+			return self.key_format.format(h.hexdigest())
+		else:
+			return self.prefix + h.hexdigest()
+
 	def _key_for_find(self, key, types):
-		return "{prefix}find+{key}+{types}".format(prefix=self.prefix,
-			key=key, types=",".join(types))
+		return self._key_hash("find+{key}+{types}".format(
+			key=key, types=",".join(types)))
 	
 	def _key_for_list(self):
-		return "{prefix}list".format(prefix=self.prefix)
+		return self._key_hash("list")
 
 	def _key_for(self, type, primary_key):
-		return "{prefix}{type}+{primary_key}".format(prefix=self.prefix,
-			type=type, primary_key=primary_key)
+		return self._key_hash("{type}+{primary_key}".format(prefix=self.prefix,
+			type=type, primary_key=primary_key))
 
