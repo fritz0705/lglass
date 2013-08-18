@@ -18,7 +18,7 @@ setuptools.setup(
 	author_email="fritz@grimpen.net",
 	url="https://github.com/fritz0705/lglass.git",
 	license="http://opensource.org/licenses/MIT",
-	description="lglass is a library which provides simple tools for working with RPSL databases",
+	description="provides tools for registry maintenance",
 	classifiers=[
 		"Development Status :: 4 - Beta",
 		"Operating System :: POSIX",
@@ -28,7 +28,7 @@ setuptools.setup(
 		"Topic :: System :: Networking",
 		"Topic :: System :: Systems Administration"
 	],
-	long_description=long_description,
+	long_description=__doc__,
 	install_requires=[
 		"netaddr>=0.7.10",
 		"bottle>=0.11.6",
@@ -44,6 +44,10 @@ setuptools.setup(
 			"lglass-whoisd = lglass.whoisd:main",
 			"lglass-zonegen = lglass.tools.zonegen:main"
 		]
+	},
+	package_data={
+		"lglass": ["schemas/*"],
+		"lglass.web": ["templates/*.html", "templates/**/*.html"]
 	}
 )
 
