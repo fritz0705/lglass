@@ -1,15 +1,15 @@
 schema:          KEY-CERT-SCHEMA
 type-name:       key-cert
-key:             key-cert mandatory single primary/lookup key
+key:             key-cert mandatory single primary lookup
 key:             method generated single
 key:             owner generated multiple
-key:             fingerpr generated single inverse key
+key:             fingerpr generated single
 key:             certif mandatory multiple
-key:             org optional multiple inverse key
+key:             org optional multiple inverse organisation
 key:             remarks optional multiple
-key:             notify optional multiple inverse key
-key:             admin-c optional multiple inverse key
-key:             tech-c optional multiple inverse key
-key:             mnt-by mandatory multiple inverse key
+key:             notify optional multiple inverse person
+key:             admin-c optional multiple inverse person
+key:             tech-c optional multiple inverse person
+key:             mnt-by mandatory multiple inverse mntner
 key:             changed mandatory multiple
 key:             source mandatory single
