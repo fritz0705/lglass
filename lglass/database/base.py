@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import urllib.parse
+
 import lglass.rpsl
 
 class Database(object):
