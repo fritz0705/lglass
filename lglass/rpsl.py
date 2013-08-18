@@ -336,6 +336,76 @@ SchemaObject.SCHEMA_SCHEMA = SchemaObject([
 	("key", "key mandatory multiple")
 ])
 
+class RIPESchemaObject(SchemaObject):
+	def __init__(self, ex=None):
+		Object.__init__(self, ex)
+
+	@property
+	def type_name(self):
+		return self[0][0]
+
+	@property
+	def type(self):
+		return "schema"
+
+	@property
+	def primary_key(self):
+		return self.type_name
+
+	def _guess_inverse(self, key):
+		lookup = {
+			"abuse-mailbox": ["person"],
+			"admin-c": ["person"],
+			"auth": ["key-cert"],
+			"author": ["person"],
+			"form": ["poetic-form"],
+			"local-as": ["aut-num"],
+			"mbrs-by-ref": ["mntner", "route", "inet-rtr"],
+			"member-of": ["as-set", "rtr-set", "route-set"],
+			"mnt-by": ["mntner"],
+			"mnt-domains": ["mntner"],
+			"mnt-irt": ["mntner"],
+			"mnt-lower": ["mntner"],
+			"mnt-nfy": ["person"],
+			"mnt-routes": ["mntner"],
+			"notify": ["person"],
+			"org": ["organisation"],
+			"origin": ["aut-num"],
+			"ref-nfy": ["person"],
+			"tech-c": ["person"],
+			"upd-to": ["person"],
+			"zone-c": ["person"],
+		}
+
+	def constraints(self):
+		import re
+
+		for key, value in self.data:
+			match = re.match(r"\[([^\]]*)\][\s]+\[([^\]]*)\][\s]+\[([^\]]*)\]", value)
+			constraint = SchemaKeyConstraint(key)
+
+			if match.group(1) == "mandatory":
+				constraint.mandatory = True
+			elif match.group(1) == "optional":
+				constraint.mandatory = False
+			if match.group(2) == "multiple":
+				constraint.multiple = True
+			elif match.group(2) == "single":
+				constraint.multiple = False
+
+			key_constrs = match.group(3).replace("key", "").strip().split("/")
+			for key_constr in key_constrs:
+				if key_constr == "inverse":
+					constraint.inverse = self._guess_inverse(key)
+				elif key_constr == "primary":
+					constraint.primary = True
+				elif key_constr == "lookup":
+					constraint.lookup = True
+				elif key_constr == "hidden":
+					constraint.hidden = True
+			
+			yield constraint
+
 class SchemaKeyConstraint(object):
 	multiple = True
 	mandatory = False
@@ -355,6 +425,21 @@ class SchemaKeyConstraint(object):
 		if self.mandatory == True and len(kvpairs) == 0:
 			raise SchemaValidationError(self.key_name, "Key is mandatory but doesn't occur")
 		return True
+
+	def __repr__(self):
+		keywords = [
+			"multiple" if self.multiple else "single",
+			"mandatory" if self.mandatory else "optional"
+		]
+		if self.hidden:
+			keywords.append("hidden")
+		if self.inverse:
+			keywords.append("inverse({0})".format(",".join(self.inverse)))
+		if self.primary:
+			keywords.append("primary")
+		if self.lookup:
+			keywords.append("lookup")
+		return "SchemaKeyConstraint({1}, {0})".format(" ".join(keywords), self.key_name)
 
 	@classmethod
 	def from_string(cls, value):
