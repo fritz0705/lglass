@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import urllib.parse
+import functools
 
 import lglass.rpsl
 
@@ -116,12 +117,20 @@ class Database(object):
 	
 url_schemes = {}
 
-def register(name):
+def register(scheme_or_cls):
+	""" This decorator adds the supplied class to the url_schemes dict with
+	the schema specified in `name` """
 	def decorator(cls):
 		if hasattr(cls, "from_url") and callable(cls.from_url):
-			url_schemes[name] = cls
+			url_schemes[name.lower()] = cls
 		return cls
-	return decorator
+
+	if isinstance(scheme_or_cls, type):
+		name = scheme_or_cls.__module__ + "." + scheme_or_cls.__name__
+		return decorator(scheme_or_cls)
+	else:
+		name = scheme_or_cls
+		return functools.wraps(scheme_or_cls)(decorator)
 
 def from_url(url):
 	if isinstance(url, str):
@@ -130,6 +139,15 @@ def from_url(url):
 	if "+" in scheme:
 		scheme = scheme.split("+")[-1]
 	return url_schemes[scheme].from_url(url)
+
+def build_chain(urls):
+	db = None
+	for url in urls:
+		new_db = from_url(url)
+		if db is not None:
+			new_db.database = db
+		db = new_db
+	return db
 
 @register("dict")
 class DictDatabase(Database):

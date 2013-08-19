@@ -3,6 +3,7 @@
 import lglass.rpsl
 import lglass.database.base
 
+@lglass.database.base.register("schema")
 class SchemaDatabase(lglass.database.base.Database):
 	""" The inverse databases resolves inverse relationships on find() and also
 	validates the schema of objects. """
@@ -110,5 +111,9 @@ class SchemaDatabase(lglass.database.base.Database):
 
 		if self.hidden_attr_field and hidden:
 			obj[self.hidden_attr_field] = " ".join(sorted(hidden))
+	
+	@classmethod
+	def from_url(cls, self):
+		return cls(None)
 
 InverseDatabase = SchemaDatabase

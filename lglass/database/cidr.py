@@ -5,6 +5,7 @@ import lglass.database.base
 
 import netaddr
 
+@lglass.database.base.register("cidr")
 class CIDRDatabase(lglass.database.base.Database):
 	""" Extended database type which is a layer between the user and another
 	database. It performs CIDR matching and AS range matching on find calls. """
@@ -99,3 +100,8 @@ class CIDRDatabase(lglass.database.base.Database):
 
 	def __hash__(self):
 		return hash(self.database)
+
+	@classmethod
+	def from_url(cls, url):
+		return cls(None)
+

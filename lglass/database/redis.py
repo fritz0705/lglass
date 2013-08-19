@@ -123,8 +123,15 @@ class RedisDatabase(lglass.database.base.Database):
 	
 	@classmethod
 	def from_url(cls, url):
-		url = list(url)
-		url[0] = "redis"
-		url = urllib.parse.urlunparse(url)
-		return cls(redis.Redis.from_url(rurl))
+		""" Create instance from URL which has the form
+			
+			whois+redis://{host}:{port}/{database}?{format}
+		"""
+		rurl = list(url)
+		rurl[0] = "redis"
+		rurl = urllib.parse.urlunparse(rurl)
+		self = cls(None, redis.Redis.from_url(rurl))
+		if url.query:
+			self.key_format = url.query
+		return self
 

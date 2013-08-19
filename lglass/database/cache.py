@@ -5,6 +5,7 @@ import time
 import lglass.database.base
 import lglass.rpsl
 
+@lglass.database.base.register("cached")
 class CachedDatabase(lglass.database.base.Database):
 	""" Simple in-memory cache for any database type. Will cache any object and
 	flush it on request. """
@@ -71,4 +72,8 @@ class CachedDatabase(lglass.database.base.Database):
 
 	def __hash__(self):
 		return hash(self.database)
+
+	@classmethod
+	def from_url(cls, url):
+		return cls(None)
 
