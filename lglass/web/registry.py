@@ -5,6 +5,7 @@ import functools
 import bottle
 
 import lglass.database.file
+import lglass.database.redis
 import lglass.database.cache
 import lglass.database.schema
 import lglass.database.cidr
@@ -22,7 +23,13 @@ def get_database(config):
 		if config["registry.inverse.types"]:
 			db.inverse_type_filter = lambda key: key in config["registry.inverse.types"]
 	if config["registry.caching"]:
-		db = lglass.database.cache.CachedDatabase(db)
+		if config["registry.caching.type"] == "redis":
+			db = lglass.database.redis.RedisDatabase(db,
+				config["registry.caching.url"],
+				timeout=config["registry.caching.timeout"],
+				prefix=config["registry.caching.prefix"])
+		else:
+			db = lglass.database.cache.CachedDatabase(db)
 	if "registry.types" in config:
 		db.object_types = set(config["registry.types"])
 	return db

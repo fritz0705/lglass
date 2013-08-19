@@ -27,6 +27,9 @@ DEFAULT_CONFIG = {
 	"registry.cidr": True,
 	"registry.inverse": True,
 	"registry.inverse.types": None,
+	"registry.caching.type": "caching",
+	"registry.caching.url": "redis://localhost:6379/0",
+	"registry.caching.prefix": "lglass:",
 	"robots.txt": None
 }
 
