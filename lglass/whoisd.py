@@ -248,6 +248,8 @@ def main():
 		"listen.port": 4343,
 		"listen.protocol": 6,
 
+		"database": ["file:.", "cidr:", "schema:", "cached:"],
+
 		"database.path": ".",
 		"database.caching": True,
 		"database.caching.type": "memory",
@@ -284,21 +286,24 @@ def main():
 		if value is not None:
 			config[destination] = value
 
-	db = lglass.database.file.FileDatabase(config["database.path"])
-	if config["database.cidr"]:
-		db = lglass.database.cidr.CIDRDatabase(db)
-	if config["database.inverse"]:
-		db = lglass.database.schema.InverseDatabase(db)
-		if config["database.inverse.types"]:
-			db.inverse_type_filter = lambda key: key in config["database.inverse.types"]
-	if config["database.caching"]:
-		if config["database.caching.type"] == "redis":
-			db = lglass.database.redis.RedisDatabase(db,
-				config["database.caching.url"],
-				timeout=config["database.caching.timeout"],
-				prefix=config["database.caching.prefix"])
-		else:
-			db = lglass.database.cache.CachedDatabase(db)
+	if isinstance(config["database"], list):
+		db = lglass.database.base.build_chain(config["database"])
+	else:
+		db = lglass.database.file.FileDatabase(config["database.path"])
+		if config["database.cidr"]:
+			db = lglass.database.cidr.CIDRDatabase(db)
+		if config["database.inverse"]:
+			db = lglass.database.schema.InverseDatabase(db)
+			if config["database.inverse.types"]:
+				db.inverse_type_filter = lambda key: key in config["database.inverse.types"]
+		if config["database.caching"]:
+			if config["database.caching.type"] == "redis":
+				db = lglass.database.redis.RedisDatabase(db,
+					config["database.caching.url"],
+					timeout=config["database.caching.timeout"],
+					prefix=config["database.caching.prefix"])
+			else:
+				db = lglass.database.cache.CachedDatabase(db)
 
 	handler = WhoisHandler(db,
 		preamble=config["messages.preamble"],

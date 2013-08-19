@@ -131,7 +131,13 @@ class RedisDatabase(lglass.database.base.Database):
 		rurl[0] = "redis"
 		rurl = urllib.parse.urlunparse(rurl)
 		self = cls(None, redis.Redis.from_url(rurl))
+
 		if url.query:
-			self.key_format = url.query
+			query = urllib.parse.parse_qs(url.query)
+			if "timeout" in query:
+				self.timeout = int(query["timeout"])
+			if "format" in query:
+				self.key_format = query["format"]
+
 		return self
 

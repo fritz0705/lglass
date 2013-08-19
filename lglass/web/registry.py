@@ -15,6 +15,9 @@ from lglass.web.helpers import render_template, with_config
 
 @with_config
 def get_database(config):
+	if isinstance(config["registry"], list):
+		db = lglass.database.base.build_chain(config["registry"])
+		return db
 	db = lglass.database.file.FileDatabase(config["registry.database"])
 	if config["registry.cidr"]:
 		db = lglass.database.cidr.CIDRDatabase(db)

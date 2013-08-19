@@ -22,6 +22,7 @@ def render_template(tpl, **kwargs):
 	return env.get_template(tpl).render(kwargs)
 
 DEFAULT_CONFIG = {
+	"registry": ["file:.", "cidr:", "schema:", "cached:"],
 	"registry.database": ".",
 	"registry.caching": True,
 	"registry.cidr": True,
