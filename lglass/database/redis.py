@@ -135,9 +135,9 @@ class RedisDatabase(lglass.database.base.Database):
 		if url.query:
 			query = urllib.parse.parse_qs(url.query)
 			if "timeout" in query:
-				self.timeout = int(query["timeout"])
+				self.timeout = int(query["timeout"][-1])
 			if "format" in query:
-				self.key_format = query["format"]
+				self.key_format = query["format"][-1]
 
 		return self
 

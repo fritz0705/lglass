@@ -121,10 +121,10 @@ class SchemaDatabase(lglass.database.base.Database):
 		if url.query:
 			query = urllib.parse.parse_qs(url.query)
 			if "types-include" in query:
-				types = query["types-include"].split(",")
+				types = query["types-include"][-1].split(",")
 				self.inverse_type_filter = lambda t: t in types
 			if "types-exclude" in query:
-				types = query["types-exclude"].split(",")
+				types = query["types-exclude"][-1].split(",")
 				self.inverse_type_filter = lambda t: t not in types
 
 		return self
