@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import urllib.parse
+
 import lglass.rpsl
 import lglass.database.base
 
@@ -113,7 +115,18 @@ class SchemaDatabase(lglass.database.base.Database):
 			obj[self.hidden_attr_field] = " ".join(sorted(hidden))
 	
 	@classmethod
-	def from_url(cls, self):
-		return cls(None)
+	def from_url(cls, url):
+		self = cls(None)
+
+		if url.query:
+			query = urllib.parse.parse_qs(url.query)
+			if "types-include" in query:
+				types = query["types-include"].split(",")
+				self.inverse_type_filter = lambda t: t in types
+			if "types-exclude" in query:
+				types = query["types-exclude"].split(",")
+				self.inverse_type_filter = lambda t: t not in types
+
+		return self
 
 InverseDatabase = SchemaDatabase
