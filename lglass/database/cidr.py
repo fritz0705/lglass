@@ -2,6 +2,7 @@
 
 import lglass.rpsl
 import lglass.database.base
+import urllib.parse
 
 import netaddr
 
@@ -103,5 +104,12 @@ class CIDRDatabase(lglass.database.base.Database):
 
 	@classmethod
 	def from_url(cls, url):
-		return cls(None)
+		self = cls(None)
+		if url.query:
+			query = urllib.parse.parse_qs(url.query)
+			if "range-types" in query:
+				self.range_types = set(query["range-types"][-1].split(","))
+			if "cidr-types" in query:
+				self.cidr_types = set(query["cidr-types"][-1].split(","))
+		return self
 
