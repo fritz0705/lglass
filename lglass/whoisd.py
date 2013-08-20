@@ -5,6 +5,7 @@ import lglass.database.cidr
 import lglass.database.cache
 import lglass.database.redis
 import lglass.database.schema
+import lglass.database.sqlite3
 import asyncore
 import traceback
 import argparse
