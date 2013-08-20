@@ -5,6 +5,7 @@ import sqlite3
 import lglass.database.base
 import lglass.rpsl
 
+@lglass.database.base.register("sqlite3")
 class SQLite3Database(lglass.database.base.Database):
 	""" This database backend operates on a SQLite3 database and supports generic
 	RPSL types. Additional, it provides fast access support for the standard RPSL
@@ -125,4 +126,8 @@ PRAGMA foreign_keys = ON;
 			cur.close()
 
 		return [self.get(*spec) for spec in specs]
+	
+	@classmethod
+	def from_url(cls, url):
+		return cls(url.path)
 
