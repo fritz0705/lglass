@@ -126,6 +126,8 @@ class SchemaDatabase(lglass.database.base.Database):
 			if "types-exclude" in query:
 				types = query["types-exclude"][-1].split(",")
 				self.inverse_type_filter = lambda t: t not in types
+			if "schema-validation-field" in query:
+				self.schema_validation_field = query["schema-validation-field"][-1]
 
 		return self
 
