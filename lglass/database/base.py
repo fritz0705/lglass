@@ -61,7 +61,8 @@ class Database(object):
 		"route",
 		"route6",
 		"route-set",
-		"rtr-set"
+		"rtr-set",
+		"schema"
 	}
 
 	def save_all(self, objs):
