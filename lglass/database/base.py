@@ -140,14 +140,28 @@ def register(scheme_or_cls):
 		return functools.wraps(scheme_or_cls)(decorator)
 
 def from_url(url):
+	""" Create database from URL. This function accepts a str or an URL tuple.
+	The URL schema may have multiple formats:
+
+		1. {db_name}
+		2. whois+{db_name}
+		3. whois+{module}+{db_name}
+	"""
+	import importlib
 	if isinstance(url, str):
 		url = urllib.parse.urlparse(url)
-	scheme = url.scheme
-	if "+" in scheme:
-		scheme = scheme.split("+")[-1]
-	if "." in scheme:
-		import importlib
-		importlib.import_module(scheme.rsplit(".", 1)[0])
+	scheme = url.scheme.split("+", 2)
+	if len(scheme) == 1:
+		scheme = scheme[0]
+		if "." in scheme:
+			importlib.import_module(scheme.rsplit(".", 1)[0])
+	elif len(scheme) == 2:
+		assert scheme[0] == "whois"
+		scheme = scheme[1]
+	elif len(scheme) == 3:
+		assert scheme[0] == "whois"
+		importlib.import_module(scheme[1])
+		scheme = scheme[2]
 	return url_schemes[scheme].from_url(url)
 
 def build_chain(urls):
