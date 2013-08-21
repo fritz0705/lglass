@@ -39,9 +39,9 @@ class CachedDatabase(lglass.database.base.Database):
 			return self.cache[cache_key]
 
 		ls = self.database.list()
-		self.cache[cache_key] = ls
+		self.cache[cache_key] = list(ls)
 
-		return ls
+		return self.cache[cache_key]
 
 	def find(self, primary_key, types=None):
 		cache_key = (types, primary_key)
@@ -53,9 +53,9 @@ class CachedDatabase(lglass.database.base.Database):
 		if self.version_field:
 			for obj in objs:
 				obj.add(self.version_field, str(int(time.time())))
-		self.cache[cache_key] = objs
+		self.cache[cache_key] = list(objs)
 
-		return objs
+		return self.cache[cache_key]
 
 	def save(self, object):
 		self.database.save(object)
