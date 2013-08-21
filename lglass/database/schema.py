@@ -128,6 +128,12 @@ class SchemaDatabase(lglass.database.base.Database):
 				self.inverse_type_filter = lambda t: t not in types
 			if "schema-validation-field" in query:
 				self.schema_validation_field = query["schema-validation-field"][-1]
+			if "hidden-attr-field" in query:
+				self.hidden_attr_field = query["hidden-attr-field"][-1]
+			if "hide-attributes" in query:
+				self.hide_attributes = True if query["hide-attributes"][-1] == "true" else False
+			if "resolve-inverse" in query:
+				self.resolve_inverse = True if query["resolve-inverse"][-1] == "true" else False
 
 		return self
 
