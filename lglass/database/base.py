@@ -147,7 +147,7 @@ def from_url(url):
 		scheme = scheme.split("+")[-1]
 	if "." in scheme:
 		import importlib
-		print(importlib.import_module(scheme.rsplit(".", 1)[0]))
+		importlib.import_module(scheme.rsplit(".", 1)[0])
 	return url_schemes[scheme].from_url(url)
 
 def build_chain(urls):
