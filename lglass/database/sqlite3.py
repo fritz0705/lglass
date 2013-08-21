@@ -1,6 +1,9 @@
 # coding: utf-8
 
-import sqlite3
+try:
+	import sqlite3
+except ImportError:
+	sqlite3 = None
 
 import lglass.database.base
 import lglass.rpsl
