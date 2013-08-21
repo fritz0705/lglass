@@ -31,10 +31,10 @@ setuptools.setup(
 	],
 	long_description=__doc__,
 	install_requires=[
-		"netaddr>=0.7.10",
-		"bottle>=0.11.6",
 		"Jinja2>=2.7",
-		"MarkupSafe>=0.18"
+		"bottle>=0.11.6",
+		"netaddr>=0.7.10",
+		"redis>=2.7.6"
 	],
 	entry_points={
 		"console_scripts": [
