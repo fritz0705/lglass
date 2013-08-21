@@ -125,7 +125,7 @@ class RedisDatabase(lglass.database.base.Database):
 	def from_url(cls, url):
 		""" Create instance from URL which has the form
 			
-			whois+redis://{host}:{port}/{database}?{format}
+			whois+redis://{host}:{port}/{database}?timeout={n}&format={format}
 		"""
 		rurl = list(url)
 		rurl[0] = "redis"
