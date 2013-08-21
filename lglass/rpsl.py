@@ -36,7 +36,13 @@ class Object(object):
 						raise ValueError("offset {}: expected key to be str, got {}".format(off, type(kvpair[0])))
 					elif not isinstance(kvpair[1], str):
 						raise ValueError("offset {}: expected value to be str, got {}".format(off, type(kvpair[0])))
-					self.data.append((kvpair[0], kvpair[1]))
+
+					if kvpair[0] == ":json-real-type":
+						self.real_type = kvpair[1]
+					elif kvpair[0] == ":json-real-primary-key":
+						self.real_primary_key = kvpair[1]
+					else:
+						self.data.append((kvpair[0], kvpair[1]))
 				else:
 					raise TypeError("offset {}: expected entry to be tuple, got {}".format(off, type(kvpair)))
 		elif isinstance(ex, dict):
@@ -200,6 +206,10 @@ class Object(object):
 		items = []
 		for item in self.items():
 			items.append([item[0], item[1]])
+		if self._real_type is not None:
+			items.append((":json-real-type", self.real_type))
+		if self._real_primary_key is not None:
+			items.append((":json-real-primary-key", self.real_primary_key))
 		return items
 
 	@property
