@@ -33,17 +33,13 @@ class FileDatabase(lglass.database.base.Database):
 		return obj
 
 	def list(self):
-		objects = []
-
 		for type in os.listdir(self.root_dir):
 			if type not in self.object_types:
 				continue
 
 			for primary_key in os.listdir(os.path.join(self.root_dir, type)):
 				if primary_key[0] == '.': continue
-				objects.append((type, primary_key.replace("_", "/")))
-		
-		return objects
+				yield (type, primary_key.replace("_", "/"))
 
 	def find(self, primary_key, types=None):
 		if types is None:
