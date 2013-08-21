@@ -80,11 +80,9 @@ PRAGMA foreign_keys = ON;
 			cur = self.connection.cursor()
 			cur.execute("SELECT type, primary_key FROM 'objects'")
 
-			objects = []
 			for obj in cur.fetchall():
-				objects.append((obj[0], obj[1]))
+				yield (obj[0], obj[1])
 			cur.close()
-			return objects
 
 	def delete(self, type, primary_key):
 		with self.connection:
