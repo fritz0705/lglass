@@ -40,6 +40,10 @@ class Database(object):
 		""" Delete object in database. """
 		raise NotImplementedError("delete() is not implemented")
 
+	def flush(self):
+		""" Flush database cache """
+		raise NotImplementedError("flush() is not implemented")
+
 	object_types = {
 		"as-block",
 		"as-set",
@@ -123,11 +127,13 @@ def register(scheme_or_cls):
 	the schema specified in `name` """
 	def decorator(cls):
 		if hasattr(cls, "from_url") and callable(cls.from_url):
-			url_schemes[name.lower()] = cls
+			url_schemes[(cls.__module__ + "." + cls.__name__).lower()] = cls
+			if name is not None:
+				url_schemes[name.lower()] = cls
 		return cls
 
+	name = None
 	if isinstance(scheme_or_cls, type):
-		name = scheme_or_cls.__module__ + "." + scheme_or_cls.__name__
 		return decorator(scheme_or_cls)
 	else:
 		name = scheme_or_cls
@@ -139,6 +145,9 @@ def from_url(url):
 	scheme = url.scheme
 	if "+" in scheme:
 		scheme = scheme.split("+")[-1]
+	if "." in scheme:
+		import importlib
+		print(importlib.import_module(scheme.rsplit(".", 1)[0]))
 	return url_schemes[scheme].from_url(url)
 
 def build_chain(urls):
