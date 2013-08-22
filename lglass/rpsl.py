@@ -674,7 +674,7 @@ def main():
 	import traceback
 	import warnings
 	import pkg_resources
-	import lglass.database
+	import lglass.database.file
 	
 	argparser = argparse.ArgumentParser(description="Simple tool for RPSL formatting")
 	argparser.add_argument("--padding", "-p", default=8, type=int,
@@ -695,7 +695,7 @@ def main():
 
 	args = argparser.parse_args()
 
-	database = lglass.database.FileDatabase(args.database)
+	database = lglass.database.file.FileDatabase(args.database)
 
 	pragmas = {
 		"whitespace-preserve": args.whitespace_preserve,
