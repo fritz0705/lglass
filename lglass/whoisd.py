@@ -215,28 +215,6 @@ def main():
 	argparser = argparse.ArgumentParser(description="Simple whois server")
 	argparser.add_argument("--config", "-c",
 		help="Path to configuration file")
-	argparser.add_argument("--host", "-H", type=str,
-		help="Address to bind")
-	argparser.add_argument("--port", "-P", type=int,
-		help="Port to bind")
-	argparser.add_argument("--db", "-D", type=str,
-		help="Path to Whois database")
-	argparser.add_argument("--no-cache", action="store_false", dest="cache",
-		help="Disable caching layer and serve requests directly from database")
-	argparser.add_argument("--user", "-u",
-		help="Drop priviliges after start and set uid")
-	argparser.add_argument("--group", "-g",
-		help="Set group")
-	argparser.add_argument("--pidfile", "-p", type=str,
-		help="Write PID to file after startup")
-	argparser.add_argument("--preamble",
-		help="Preamble for any whois response")
-	argparser.add_argument("--key", "-k", action='append',
-		help="Add key to transfer keys")
-	argparser.add_argument("-4", dest="protocol", action='store_const', const=4,
-		help="Operate in IPv4 mode")
-	argparser.add_argument("-6", dest="protocol", action='store_const', const=6,
-		help="Operate in IPv6 mode")
 
 	args = argparser.parse_args()
 
@@ -245,17 +223,13 @@ def main():
 		"listen.port": 4343,
 		"listen.protocol": 6,
 
-		"database": ["file:.", "cidr:", "schema:", "cached:"],
-
-		"database.path": ".",
-		"database.caching": True,
-		"database.caching.type": "memory",
-		"database.caching.url": "redis://localhost:6379/0",
-		"database.caching.timeout": 600,
-		"database.caching.prefix": "lglass:",
-		"database.cidr": True,
-		"database.inverse": True,
-		"database.inverse.types": None,
+		"database": [
+			"whois+lglass.database.file+file:.",
+			"whois+lglass.database.cidr+cidr:",
+			"whois+lglass.database.schema+schema:",
+			"whois+lglass.database.cache+cached:"
+		],
+		"database.types": None,
 
 		"messages.preamble": "This is a generic whois query service.",
 		"messages.help": DEFAULT_HELP,
@@ -268,39 +242,14 @@ def main():
 	if args.config:
 		with open(args.config) as fh:
 			config.update(json.load(fh))
-	
-	for value, destination in [
-			(args.host,     "listen.host"),
-			(args.port,     "listen.port"),
-			(args.protocol, "listen.protocol"),
-			(args.db,       "database.path"),
-			(args.cache,    "database.caching"),
-			(args.preamble, "messages.preamble"),
-			(args.user,     "process.user"),
-			(args.group,		"process.group"),
-			(args.pidfile,	"process.pidfile")
-		]:
-		if value is not None:
-			config[destination] = value
 
 	if isinstance(config["database"], list):
 		db = lglass.database.base.build_chain(config["database"])
-	else:
-		db = lglass.database.file.FileDatabase(config["database.path"])
-		if config["database.cidr"]:
-			db = lglass.database.cidr.CIDRDatabase(db)
-		if config["database.inverse"]:
-			db = lglass.database.schema.InverseDatabase(db)
-			if config["database.inverse.types"]:
-				db.inverse_type_filter = lambda key: key in config["database.inverse.types"]
-		if config["database.caching"]:
-			if config["database.caching.type"] == "redis":
-				db = lglass.database.redis.RedisDatabase(db,
-					config["database.caching.url"],
-					timeout=config["database.caching.timeout"],
-					prefix=config["database.caching.prefix"])
-			else:
-				db = lglass.database.cache.CachedDatabase(db)
+	elif isinstance(config["database"], str):
+		db = lglass.database.base.from_url(config["database"])
+	
+	if config["database.types"] is not None:
+		db.object_types = set(config["database.types"])
 
 	handler = WhoisHandler(db,
 		preamble=config["messages.preamble"],
@@ -310,7 +259,10 @@ def main():
 	def sighup(sig, frame):
 		if config["database.caching"]:
 			print("Flush query cache", file=sys.stderr)
-			db.flush()
+			try:
+				db.flush()
+			except NotImplementedError:
+				pass
 	
 	for sig in [signal.SIGHUP, signal.SIGUSR1]:
 		signal.signal(sig, sighup)
