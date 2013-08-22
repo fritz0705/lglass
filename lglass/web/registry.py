@@ -78,11 +78,11 @@ def show_object(type, primary_key, db):
 	# (key, value, reference) => ("origin", "AS64712", "aut-num")
 	items = []
 	for key, value in obj:
-		inverse = None
-		if schema is not None:
-			constraint = schema.constraint_for(key)
-			if constraint and constraint.inverse:
-				inverse = constraint.inverse[0]
+		inverse = list(schema.find_inverse(db, key, value))
+		if inverse:
+			inverse = inverse[0]
+		else:
+			inverse = None
 		items.append((key, value, inverse))
 
 	return render_template("registry/show_object.html", items=items, object=obj)

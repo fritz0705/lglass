@@ -324,6 +324,18 @@ class SchemaObject(Object):
 		validator = SchemaValidator(self)
 		return validator.validate(obj)
 
+	def find_inverse(self, db, key, value):
+		constraint = self.constraint_for(key)
+		if constraint is None or constraint.inverse is None:
+			return
+		for inverse in constraint.inverse:
+			try:
+				db.get(inverse, value)
+			except KeyError:
+				pass
+			else:
+				yield inverse
+
 	@property
 	def type_name(self):
 		return self["type-name"][0]
