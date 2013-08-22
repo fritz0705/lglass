@@ -17,6 +17,8 @@ from lglass.web.helpers import render_template, with_config
 def get_database(config):
 	if isinstance(config["registry"], list):
 		db = lglass.database.base.build_chain(config["registry"])
+		if "registry.types" in config:
+			db.object_types = set(config["registry.types"])
 		return db
 	db = lglass.database.file.FileDatabase(config["registry.database"])
 	if config["registry.cidr"]:
