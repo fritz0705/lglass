@@ -41,6 +41,23 @@ class Route(object):
 	def lpm_sort_key(self):
 		return (self.prefix.prefixlen, self.metric)
 
+	def to_dict(self):
+		return {
+			"prefix": str(self.prefix),
+			"nexthop": [str(p) for p in self.nexthop] if self.nexthop else None,
+			"metric": self.metric,
+			"annotations": self.annotations
+		}
+	
+	@classmethod
+	def from_dict(cls, d):
+		self = cls(d["prefix"])
+		if d["nexthop"]:
+			self.nexthop = (netaddr.IPAddress(d["nexthop"][0]), d["nexthop"][1])
+		self.annotations = d["annotations"].copy()
+		self.metric = d["metric"]
+		return self
+
 class RoutingTable(object):
 	""" Simple collection type, which holds routes and supports longest prefix
 	match """
@@ -91,4 +108,4 @@ class RoutingTable(object):
 
 	def __len__(self):
 		return len(self.routes)
-
+	
