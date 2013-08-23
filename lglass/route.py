@@ -38,6 +38,9 @@ class Route(object):
 	def __repr__(self):
 		return "Route({self.prefix!r}, nexthop={self.nexthop!r})".format(self=self)
 
+	def lpm_sort_key(self):
+		return (self.prefix.prefixlen, self.metric)
+
 class RoutingTable(object):
 	""" Simple collection type, which holds routes and supports longest prefix
 	match """
@@ -70,9 +73,9 @@ class RoutingTable(object):
 			pass
 		else:
 			raise TypeError("Expected addr to be str or netaddr.IPAddress, got {}".format(type(addr)))
-		
+
 		return sorted((route for route in self if addr in route.prefix),
-			key=lambda route: (route.prefix.prefixlen, route.metric), reverse=True)
+			key=Route.lpm_sort_key, reverse=True)
 
 	def match(self, addr):
 		try:
