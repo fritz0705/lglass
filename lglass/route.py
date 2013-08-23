@@ -5,7 +5,7 @@ import netaddr
 class Route(object):
 	""" Simple object which holds all relevant routing information """
 
-	def __init__(self, prefix, nexthop=None):
+	def __init__(self, prefix, nexthop=None, metric=100):
 		if isinstance(prefix, str):
 			prefix = netaddr.IPNetwork(prefix)
 		elif isinstance(prefix, netaddr.IPNetwork):
@@ -17,6 +17,7 @@ class Route(object):
 		
 		self.prefix = prefix
 		self.nexthop = nexthop
+		self.metric = 100
 		self.annotations = {}
 
 	def __getitem__(self, key):
@@ -35,7 +36,7 @@ class Route(object):
 		return hash(self.prefix) ^ hash(self.nexthop)
 
 	def __repr__(self):
-		return "Route({self.prefix!r})".format(self=self)
+		return "Route({self.prefix!r}, nexthop={self.nexthop!r})".format(self=self)
 
 class RoutingTable(object):
 	""" Simple collection type, which holds routes and supports longest prefix
@@ -71,7 +72,7 @@ class RoutingTable(object):
 			raise TypeError("Expected addr to be str or netaddr.IPAddress, got {}".format(type(addr)))
 		
 		return sorted((route for route in self if addr in route.prefix),
-			key=lambda route: route.prefix.prefixlen, reverse=True)
+			key=lambda route: (route.prefix.prefixlen, route.metric), reverse=True)
 
 	def match(self, addr):
 		try:
@@ -79,6 +80,12 @@ class RoutingTable(object):
 		except IndexError:
 			return None
 
+	def __repr__(self):
+		return "RoutingTable({self.routes!r})".format(self=self)
+
 	def __iter__(self):
 		return iter(self.routes)
+
+	def __len__(self):
+		return len(self.routes)
 
