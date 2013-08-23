@@ -29,7 +29,7 @@ class BirdClient(object):
 		p.wait()
 		return data.split(b"\n", 1)[1]
 
-	def routes(self, table=None, protocol=None, primary=False, all=True, filtered=False):
+	def routes(self, table=None, protocol=None, primary=True, all=True, filtered=False):
 		command = ["show", "route"]
 		if table is not None:
 			command.append("table")
@@ -89,4 +89,4 @@ def parse_routes(lines):
 
 	if cur_route is not None:
 		yield cur_route
-	
+
