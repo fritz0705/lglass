@@ -28,6 +28,9 @@ class Route(object):
 	def __delitem__(self, key):
 		del self.annotations[key]
 
+	def __contains__(self, key):
+		return key in self.annotations
+
 	def __hash__(self):
 		return hash(self.prefix) ^ hash(self.nexthop)
 
