@@ -44,7 +44,7 @@ class BirdClient(object):
 			command.append(str(protocol))
 		res = self.send(command)
 
-		return list(parse_routes(res.decode().splitlines()))
+		return parse_routes(res.decode().splitlines())
 	
 	def protocols(self):
 		command = ["show", "protocols"]
