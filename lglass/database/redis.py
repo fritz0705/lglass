@@ -46,7 +46,7 @@ class RedisDatabase(lglass.database.base.Database):
 	def list(self):
 		listing = self.redis.get(self._key_for_list())
 		if listing is None:
-			listing = self.database.list()
+			listing = list(self.database.list())
 			self.redis.set(self._key_for_list(),
 				self._serialize_listing(listing),
 				ex=self.timeout)
@@ -59,7 +59,7 @@ class RedisDatabase(lglass.database.base.Database):
 			types = self.object_types
 		results = self.redis.get(self._key_for_find(key, types))
 		if results is None:
-			results = self.database.find(key, types)
+			results = list(self.database.find(key, types))
 			self.redis.set(self._key_for_find(key, types),
 					self._serialize_find(results),
 					ex=self.timeout)
