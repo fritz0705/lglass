@@ -2,8 +2,8 @@ schema:          ROUTE-SET-SCHEMA
 type-name:       route-set
 key:             route-set mandatory single primary lookup
 key:             descr mandatory multiple
-key:             members optional multiple
-key:             mp-members optional multiple
+key:             members optional multiple inverse route-set,route
+key:             mp-members optional multiple inverse route-set,route,route6
 key:             mbrs-by-ref optional multiple inverse route
 key:             remarks optional multiple
 key:             org optional multiple inverse organisation
