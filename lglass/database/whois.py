@@ -68,3 +68,16 @@ class WhoisClientDatabase(lglass.database.base.Database):
 	def from_url(cls, url):
 		return cls((url.hostname, url.port if url.port else 43))
 
+@lglass.database.base.register
+class RIPEDatabase(WhoisClientDatabase):
+	def __init__(self, hostspec=None):
+		if hostspec is None:
+			hostspec = ("whois.ripe.net", 43)
+		WhoisClientDatabase.__init__(self, hostspec)
+	
+	def schema(self, type):
+		results = self.find(type, flags="-t")
+		if len(results) == 0:
+			raise KeyError("schema({})".format(type))
+		return lglass.rpsl.RIPESchemaObject(results[0])
+
