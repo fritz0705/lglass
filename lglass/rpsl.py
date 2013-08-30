@@ -398,6 +398,28 @@ class RIPESchemaObject(SchemaObject):
 			"upd-to": ["person"],
 			"zone-c": ["person"],
 		}
+		return lookup[key]
+	
+	def to_schema(self):
+		schema = SchemaObject()
+		schema.add("schema", self.primary_key.upper() + "-SCHEMA")
+		schema.add("type-name", self.primary_key)
+		for constraint in self.constraints():
+			keywords = [constraint.key_name]
+			keywords.append("multiple" if constraint.multiple else "single")
+			keywords.append("mandatory" if constraint.mandatory else "optional")
+			if constraint.primary:
+				keywords.append("primary")
+			if constraint.lookup:
+				keywords.append("lookup")
+			if constraint.hidden:
+				keywords.append("hidden")
+			if constraint.inverse:
+				keywords.append("inverse")
+				print(constraint.inverse)
+				keywords.append(",".join(constraint.inverse))
+			schema.add("key", " ".join(keywords))
+		return schema
 
 	def constraints(self):
 		import re
@@ -668,13 +690,16 @@ try:
 except ImportError:
 	pass
 
-def main():
+def main(argv=None):
 	import argparse
 	import sys
 	import traceback
 	import warnings
 	import pkg_resources
 	import lglass.database.file
+
+	if argv is None:
+		argv = sys.argv[1:]
 	
 	argparser = argparse.ArgumentParser(description="Simple tool for RPSL formatting")
 	argparser.add_argument("--padding", "-p", default=8, type=int,
@@ -693,7 +718,7 @@ def main():
 			default=pkg_resources.resource_filename("lglass", "."),
 			help="Database for schema files")
 
-	args = argparser.parse_args()
+	args = argparser.parse_args(argv)
 
 	database = lglass.database.file.FileDatabase(args.database)
 
