@@ -92,7 +92,7 @@ def main_list_objects(args, config, database):
 	for spec in database.list():
 		if args.types and spec[0] not in args.types:
 			continue
-		print(" ".join(spec))
+		print("\t".join(spec))
 
 def main_find_objects(args, config, database):
 	database = lglass.database.cidr.CIDRDatabase(database)
