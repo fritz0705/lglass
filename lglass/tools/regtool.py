@@ -14,6 +14,7 @@ import pkg_resources
 
 import lglass.rpsl
 import lglass.database
+import lglass.database.cidr
 import lglass.generators.roa
 import lglass.whoisd
 
@@ -94,8 +95,6 @@ def main_list_objects(args, config, database):
 		print(" ".join(spec))
 
 def main_find_objects(args, config, database):
-	import lglass.database.cidr
-	
 	database = lglass.database.cidr.CIDRDatabase(database)
 	for obj in database.find(args.term):
 		if args.types and obj.type not in args.types:
