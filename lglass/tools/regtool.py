@@ -101,6 +101,20 @@ def main_find_objects(args, config, database):
 			continue
 		print(obj.pretty_print())
 
+def main_find_inverse(args, config, database):
+	try:
+		obj = database.get(args.type, args.primary_key)
+		schema = database.schema(obj.type)
+	except KeyError:
+		pass
+	else:
+		inverses = set()
+		for key, value in obj:
+			for inverse in schema.find_inverse(database, key, value):
+				inverses.add((inverse, value))
+		for inverse in inverses:
+			print("{}\t{}".format(*inverse))
+
 def main_whoisd(args, config, database):
 	if args.protocol == 4:
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -175,6 +189,10 @@ def main(args=sys.argv[1:]):
 	parser_find_objects.add_argument("--type", "-T", dest="types", action="append")
 	parser_find_objects.add_argument("term")
 
+	parser_find_inverse = subparsers.add_parser("find-inverse", help="Find inverse objects by schema")
+	parser_find_inverse.add_argument("type")
+	parser_find_inverse.add_argument("primary_key")
+
 	parser_whoisd = subparsers.add_parser("whoisd", help="Run whois server")
 	parser_whoisd.add_argument("-4", dest="protocol", default=6, action="store_const", const=4, help="Listen on IPv4")
 	parser_whoisd.add_argument("-6", dest="protocol", default=6, action="store_const", const=6, help="Listen on IPv6")
@@ -222,6 +240,7 @@ def main(args=sys.argv[1:]):
 		"delete-object": main_delete_object,
 		"list-objects": main_list_objects,
 		"find-objects": main_find_objects,
+		"find-inverse": main_find_inverse,
 		"whoisd": main_whoisd,
 		"roagen": main_roagen,
 		"install-schemas": main_install_schemas
