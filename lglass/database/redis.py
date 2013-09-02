@@ -69,7 +69,7 @@ class RedisDatabase(lglass.database.base.Database):
 
 	def save(self, obj):
 		self.database.save(obj)
-		self.redis.set(self._key_for(type, primary_key),
+		self.redis.set(self._key_for(obj.type, obj.primary_key),
 			self._serialize(obj),
 			ex=self.timeout)
 
