@@ -74,10 +74,21 @@ class RIPEDatabase(WhoisClientDatabase):
 		if hostspec is None:
 			hostspec = ("whois.ripe.net", 43)
 		WhoisClientDatabase.__init__(self, hostspec)
+
+	def find(self, primary_key, types=None, flags=None):
+		if flags is not None:
+			flags = "-B " + flags
+		else:
+			flags = "-B"
+		return WhoisClientDatabase.find(self, primary_key, types, flags)
 	
 	def schema(self, type):
 		results = self.find(type, flags="-t")
 		if len(results) == 0:
 			raise KeyError("schema({})".format(type))
 		return lglass.rpsl.RIPESchemaObject(results[0])
+
+	@classmethod
+	def from_url(cls, url):
+		return cls()
 
