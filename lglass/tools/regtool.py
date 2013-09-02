@@ -66,6 +66,7 @@ def main_validate_object(args, config, database):
 		obj = database.get(args.type, args.primary_key)
 		schema = database.schema(args.type)
 	except KeyError:
+		print("{} {} not found".format(args.type, args.primary_key))
 		exit(111)
 	else:
 		try:
@@ -82,6 +83,7 @@ def main_edit_object(args, config, database):
 	try:
 		obj = database.get(args.type, args.primary_key)
 	except KeyError:
+		print("{} {} not found".format(args.type, args.primary_key))
 		exit(111)
 	else:
 		obj = _edit_object(args.editor, obj)
