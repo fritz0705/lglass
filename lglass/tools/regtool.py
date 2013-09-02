@@ -50,6 +50,18 @@ def main_create_object(args, config, database):
 	if args.edit:
 		obj = _edit_object(args.editor, obj)
 
+	if args.validate:
+		try:
+			schema = database.schema(obj.type)
+			schema.validate(obj)
+		except KeyError:
+			print("Schema for {} not found".format(obj.type), file=sys.stderr)
+			exit(111)
+		except lglass.rpsl.SchemaValidationError as e:
+			print("{} {} is invalid: Key {}: {}".format(args.type, args.primary_key,
+				e.key, e.message))
+			exit(1)
+
 	database.save(obj)
 
 def main_show_object(args, config, database):
@@ -85,9 +97,22 @@ def main_edit_object(args, config, database):
 	except KeyError:
 		print("{} {} not found".format(args.type, args.primary_key))
 		exit(111)
-	else:
-		obj = _edit_object(args.editor, obj)
-		database.save(obj)
+
+	obj = _edit_object(args.editor, obj)
+
+	if args.validate:
+		try:
+			schema = database.schema(obj.type)
+			schema.validate(obj)
+		except KeyError:
+			print("Schema for {} not found".format(obj.type), file=sys.stderr)
+			exit(111)
+		except lglass.rpsl.SchemaValidationError as e:
+			print("{} {} is invalid: Key {}: {}".format(args.type, args.primary_key,
+				e.key, e.message))
+			exit(1)
+
+	database.save(obj)
 
 def main_delete_object(args, config, database):
 	database.delete(args.type, args.primary_key)
@@ -184,6 +209,8 @@ def main(args=sys.argv[1:]):
 	parser_create_object.add_argument("--no-fill", dest="fill", action="store_false", help="Do not prefill required fields with placeholders")
 	parser_create_object.add_argument("--edit", dest="edit", action="store_true", default=False, help="Start editor after creation")
 	parser_create_object.add_argument("--no-edit", dest="edit", action="store_false", help="Do not start editor after creation")
+	parser_create_object.add_argument("--validate", dest="validate", action="store_true", default=False, help="Validate object before save")
+	parser_create_object.add_argument("--no-validate", dest="validate", action="store_false", help="Do not validate object before save")
 	parser_create_object.add_argument("type")
 	parser_create_object.add_argument("primary_key")
 	parser_create_object.add_argument("kvpairs", nargs='*', help="List of key-value-pairs")
@@ -198,6 +225,8 @@ def main(args=sys.argv[1:]):
 	parser_validate_object.add_argument("primary_key")
 
 	parser_edit_object = subparsers.add_parser("edit-object", help="Edit object in registry")
+	parser_edit_object.add_argument("--validate", dest="validate", action="store_true", default=False, help="Validate object before save")
+	parser_edit_object.add_argument("--no-validate", dest="validate", action="store_false", help="Do not validate object before save")
 	parser_edit_object.add_argument("type")
 	parser_edit_object.add_argument("primary_key")
 
