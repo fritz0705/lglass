@@ -128,6 +128,7 @@ def register(scheme_or_cls):
 	def decorator(cls):
 		if hasattr(cls, "from_url") and callable(cls.from_url):
 			url_schemes[(cls.__module__ + "." + cls.__name__).lower()] = cls
+			url_schemes[(cls.__name__).lower()] = cls
 			if name is not None:
 				url_schemes[name.lower()] = cls
 		return cls
