@@ -15,6 +15,7 @@ import pkg_resources
 import lglass.rpsl
 import lglass.database
 import lglass.database.cidr
+import lglass.database.schema
 import lglass.generators.roa
 import lglass.whoisd
 
@@ -55,7 +56,8 @@ def main_show_object(args, config, database):
 	try:
 		obj = database.get(args.type, args.primary_key)
 	except KeyError:
-		pass
+		print("{} {} not found".format(args.type, args.primary_key), file=sys.stderr)
+		exit(1)
 	else:
 		sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
 
@@ -99,14 +101,15 @@ def main_find_objects(args, config, database):
 	for obj in database.find(args.term):
 		if args.types and obj.type not in args.types:
 			continue
-		print(obj.pretty_print())
+		print("\t".join(obj.spec))
 
 def main_find_inverse(args, config, database):
 	try:
 		obj = database.get(args.type, args.primary_key)
 		schema = database.schema(obj.type)
 	except KeyError:
-		pass
+		print("{} {} not found".format(args.type, args.primary_key))
+		exit(1)
 	else:
 		inverses = set()
 		for key, value in obj:
@@ -123,6 +126,14 @@ def main_whoisd(args, config, database):
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((args.host, args.port))
 	sock.listen(5)
+
+	if args.cidr:
+		database = lglass.database.cidr.CIDRDatabase(database)
+	if args.inverse:
+		database = lglass.database.schema.SchemaDatabase(database)
+		database.hide_attributes = False
+		database.schema_validation_field = None
+		database.hidden_attr_field = None
 
 	handler = lglass.whoisd.WhoisHandler(database)
 	lglass.whoisd.WhoisdServer(sock, handler)
@@ -146,11 +157,21 @@ def main_install_schemas(args, config, database):
 			obj = lglass.rpsl.Object.from_iterable(fh)
 			database.save(obj)
 
+def main_format_object(args, config, database):
+	try:
+		obj = database.get(args.type, args.primary_key)
+	except KeyError:
+		print("{} {} not found".format(args.type, args.primary_key), file=sys.stderr)
+		exit(1)
+	else:
+		database.save(obj)
+
 def main(args=sys.argv[1:]):
 	argparser = argparse.ArgumentParser(description="Registry management tool")
 
 	argparser.add_argument("--config", "-c", help="Configuration file")
 	argparser.add_argument("--editor", "-e", dest="editor", help="Editor (e.g. vim, nano)")
+	argparser.add_argument("--database", "-D", help="Optional url to database")
 
 	subparsers = argparser.add_subparsers(dest="command", help="Command to execute")
 
@@ -193,11 +214,19 @@ def main(args=sys.argv[1:]):
 	parser_find_inverse.add_argument("type")
 	parser_find_inverse.add_argument("primary_key")
 
+	parser_format_object = subparsers.add_parser("format-object", help="Reformat object")
+	parser_format_object.add_argument("type")
+	parser_format_object.add_argument("primary_key")
+
 	parser_whoisd = subparsers.add_parser("whoisd", help="Run whois server")
 	parser_whoisd.add_argument("-4", dest="protocol", default=6, action="store_const", const=4, help="Listen on IPv4")
 	parser_whoisd.add_argument("-6", dest="protocol", default=6, action="store_const", const=6, help="Listen on IPv6")
 	parser_whoisd.add_argument("--host", "-H", dest="host", default="::", help="Listen on host")
 	parser_whoisd.add_argument("--port", "-p", dest="port", default=4343, type=int, help="Listen on port")
+	parser_whoisd.add_argument("--cidr", "-c", dest="cidr", action="store_true", default=False, help="Perform CIDR matching on queries")
+	parser_whoisd.add_argument("--no-cidr", dest="cidr", action="store_false", help="Do not perform CIDR matching on queries")
+	parser_whoisd.add_argument("--inverse", "-i", dest="inverse", action="store_true", default=False, help="Perform inverse matching on queries")
+	parser_whoisd.add_argument("--no-inverse", dest="inverse", action="store_false", help="Do not perform inverse matching on queries")
 
 	parser_roagen = subparsers.add_parser("roagen", help="Generate ROA tables")
 	parser_roagen.add_argument("-4", dest="protocol", default=4, action="store_const", const=4)
@@ -238,6 +267,7 @@ def main(args=sys.argv[1:]):
 		"validate-object": main_validate_object,
 		"edit-object": main_edit_object,
 		"delete-object": main_delete_object,
+		"format-object": main_format_object,
 		"list-objects": main_list_objects,
 		"find-objects": main_find_objects,
 		"find-inverse": main_find_inverse,
@@ -246,7 +276,10 @@ def main(args=sys.argv[1:]):
 		"install-schemas": main_install_schemas
 	}
 
-	database = lglass.database.build_chain(config["database"])
+	if args.database is not None:
+		database = lglass.database.from_url(args.database)
+	else:
+		database = lglass.database.build_chain(config["database"])
 
 	if args.command in commands:
 		commands[args.command](args, config, database)
