@@ -94,6 +94,15 @@ class Database(object):
 			raise KeyError("schema({})".format(type))
 		return lglass.rpsl.SchemaObject(obj)
 
+	def update(self, other):
+		for obj in other:
+			if obj.spec not in self:
+				self.save(obj)
+			else:
+				old_obj = self.get(*obj.spec)
+				if obj != old_obj:
+					self.save(obj)
+
 	def __len__(self):
 		return len(self.list())
 

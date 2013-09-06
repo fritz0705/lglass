@@ -191,6 +191,17 @@ class Object(object):
 	def __hash__(self):
 		return hash((self.type, self.primary_key))
 
+	def __eq__(self, other):
+		if hash(self) != hash(other):
+			return False
+		try:
+			return self.data == other.data
+		except AttributeError:
+			return False
+	
+	def __ne__(self, other):
+		return not self == other
+
 	def __bool__(self):
 		return bool(self.data)
 
