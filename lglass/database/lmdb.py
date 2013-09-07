@@ -25,48 +25,37 @@ class LMDBDatabase(lglass.database.base.Database):
 			self.env = lmdb.Environment(lib)
 			self.env.open(env_or_path)
 		else:
-			raise TypeError("EXpected env_or_path to be lmdb.Environment or str, got {}".format(type(env_or_path)))
-
-		with self.env.transaction() as txn:
-			with txn.primary_database as db:
-				if "+directory" not in db:
-					db["+directory"] = json.dumps([])
+			raise TypeError("Expected env_or_path to be lmdb.Environment or str, got {}".format(type(env_or_path)))
 	
 	def get(self, type, primary_key):
 		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
-			obj = txn["+".join((type, primary_key))].decode()
+			key = "\0".join((type, primary_key))
+			obj = txn[key].decode()
 		return lglass.rpsl.Object.from_string(obj)
 
 	def list(self):
 		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
-			directory = txn["+directory"].decode()
-		for entry in json.loads(directory):
-			yield tuple(entry)
+			for key, value in txn.cursor():
+				yield tuple(key.decode().split("\0"))
 
 	def find(self, primary_key, types=None):
 		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
-			directory = txn["+directory"].decode()
-		for entry in json.loads(directory):
-			if types is not None and entry[0] not in types:
-				continue
-			if entry[1] != primary_key:
-				continue
-			yield self.get(*entry)
+			for key, value in txn.cursor():
+				type, pk = key.decode().split("\0")
+				if types is not None and type in types:
+					continue
+				if primary_key != pk:
+					continue
+				yield lglass.rpsl.Object.from_string(value.decode())
 
 	def save(self, object):
 		with self.env.transaction() as txn:
-			txn["+".join(object.spec)] = object.pretty_print()
-			directory = json.loads(txn["+directory"].decode())
-			if list(object.spec) not in directory:
-				directory.append(list(object.spec))
-				txn["+directory"] = json.dumps(directory)
+			key = "\0".join(object.spec)
+			txn[key] = object.pretty_print()
 
 	def delete(self, type, primary_key):
 		with self.env.transaction() as txn:
-			del txn["+".join((type, primary_key))]
-			directory = json.loads(txn["+directory"].decode())
-			directory.remove([type, primary_key])
-			txn["+directory"] = json.dumps(directory)
+			del txn["\0".join((type, primary_key))]
 
 	def __hash__(self):
 		return hash(self.env)
