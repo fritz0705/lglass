@@ -31,7 +31,10 @@ class LMDBDatabase(lglass.database.base.Database):
 		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
 			key = "\0".join((type, primary_key))
 			obj = txn[key].decode()
-		return lglass.rpsl.Object.from_string(obj)
+		obj = lglass.rpsl.Object.from_string(obj)
+		obj.real_type = type
+		obj.real_primary_key = primary_key
+		return obj
 
 	def list(self):
 		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
@@ -46,11 +49,14 @@ class LMDBDatabase(lglass.database.base.Database):
 					continue
 				if primary_key != pk:
 					continue
-				yield lglass.rpsl.Object.from_string(value.decode())
+				obj = lglass.rpsl.Object.from_string(value.decode())
+				obj.real_type = type
+				obj.real_primary_key = pk
+				yield obj
 
 	def save(self, object):
 		with self.env.transaction() as txn:
-			key = "\0".join(object.spec)
+			key = "\0".join(object.real_spec)
 			txn[key] = object.pretty_print()
 
 	def delete(self, type, primary_key):
