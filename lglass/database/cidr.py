@@ -118,6 +118,8 @@ class CIDRDatabase(lglass.database.base.Database):
 		return self
 
 def _str_to_slice(string):
+	if not string:
+		return slice(None)
 	tokens = [int(n) for n in string.split(":")]
 	if len(tokens) == 1:
 		return slice(*tokens)
@@ -125,5 +127,4 @@ def _str_to_slice(string):
 		return slice(*tokens)
 	elif len(tokens) == 3:
 		return slice(*tokens)
-	return slice(None)
 
