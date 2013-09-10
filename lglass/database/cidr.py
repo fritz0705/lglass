@@ -18,6 +18,9 @@ class CIDRDatabase(lglass.database.base.Database):
 	perform_range = True
 	perform_cidr = True
 
+	range_slice = slice(None)
+	cidr_slice = slice(None)
+
 	def __init__(self, db, **kwargs):
 		self.database = db
 		self.__dict__.update(kwargs)
@@ -35,12 +38,12 @@ class CIDRDatabase(lglass.database.base.Database):
 
 		if self.perform_cidr:
 			objects.extend([o for o in self.find_by_cidr(primary_key, types)
-				if o.spec not in found_objects])
+				if o.spec not in found_objects][self.cidr_slice])
 			found_objects = set([obj.spec for obj in objects])
 
 		if self.perform_range:
 			objects.extend([o for o in self.find_by_range(primary_key, types)
-				if o.spec not in found_objects])
+				if o.spec not in found_objects][self.range_slice])
 			found_objects = set([obj.spec for obj in objects])
 
 		return objects
@@ -51,20 +54,18 @@ class CIDRDatabase(lglass.database.base.Database):
 			cidr_types = cidr_types & set(types)
 
 		try:
-			primary_key = netaddr.IPNetwork(primary_key)
+			address = netaddr.IPNetwork(primary_key)
 		except (ValueError, netaddr.core.AddrFormatError):
 			return []
-		matches = []
 
-		for obj in self.list():
-			if obj[0] not in cidr_types:
-				continue
-			obj_addr = netaddr.IPNetwork(obj[1])
-			if primary_key in obj_addr:
-				matches.append((obj_addr.prefixlen, obj))
+		objects = []
 
-		matches = sorted(matches, key=lambda o: o[0], reverse=True)
-		return [self.get(*m[1]) for m in matches]
+		for supernet in address.supernet():
+			supernets = self.database.find(str(supernet), types=cidr_types)
+			for _supernet in supernets:
+				objects.append((supernet.prefixlen, _supernet))
+
+		return (obj[1] for obj in sorted(objects, key=lambda obj: obj[0], reverse=True))
 
 	def find_by_range(self, primary_key, types=None):
 		range_types = self.range_types
@@ -76,19 +77,18 @@ class CIDRDatabase(lglass.database.base.Database):
 		except ValueError:
 			return []
 
-		matches = []
+		objects = []
 
-		for obj in self.list():
-			if obj[0] not in range_types:
+		for type, _primary_key in self.list():
+			if type not in range_types:
 				continue
-			obj_range = tuple([int(x.strip()) for x in obj[1].split("/", 2)])
+			obj_range = tuple([int(x.strip()) for x in _primary_key.split("/", 2)])
 			if len(obj_range) != 2:
-				raise ValueError("Expected obj_range to be 2. Your database might be broken")
+				continue
 			if primary_key >= obj_range[0] and primary_key <= obj_range[1]:
-				matches.append(((obj_range[1] - obj_range[0]), obj))
+				objects.append((obj_range[1] - obj_range[0], self.get(type, _primary_key)))
 
-		matches = sorted(matches, key=lambda o: o[0], reverse=True)
-		return [self.get(*m[1]) for m in matches]
+		return (obj[1] for obj in sorted(objects, key=lambda obj: obj[0], reverse=True))
 
 	def save(self, object):
 		self.database.save(object)
@@ -111,5 +111,19 @@ class CIDRDatabase(lglass.database.base.Database):
 				self.range_types = set(query["range-types"][-1].split(","))
 			if "cidr-types" in query:
 				self.cidr_types = set(query["cidr-types"][-1].split(","))
+			if "range-slice" in query:
+				self.range_slice = _str_to_slice(query["range-slice"][-1])
+			if "cidr-slice" in query:
+				self.cidr_slice = _str_to_slice(query["cidr-slice"][-1])
 		return self
+
+def _str_to_slice(string):
+	tokens = [int(n) for n in string.split(":")]
+	if len(tokens) == 1:
+		return slice(*tokens)
+	elif len(tokens) == 2:
+		return slice(*tokens)
+	elif len(tokens) == 3:
+		return slice(*tokens)
+	return slice(None)
 
