@@ -70,7 +70,7 @@ def main_dns(args, db):
 		nameservers=args.nameservers
 	))
 
-	print("\n".join(zone))
+	print("\n".join(map(str, zone)))
 
 def main_rdns4(args, db):
 	inetnums = (db.get(*spec) for spec in db.list() if spec[0] == "inetnum")

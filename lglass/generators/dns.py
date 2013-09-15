@@ -1,11 +1,9 @@
 # coding: utf-8
 
-# XXX This code is so horrible, don't read it
-
 import lglass.rpsl
+import lglass.dns
 import netaddr
 import time
-import traceback
 
 def rdns_domain(network):
 	if network.version == 4:
@@ -17,10 +15,8 @@ def comment(txt):
 	return "; {}".format(str(txt))
 
 def delegation(domain, nameserver):
-	nameserver, *trash = nameserver.split()
-	return "{domain}. IN NS {nserver}.".format(
-		domain=domain,
-		nserver=nameserver)
+	nameserver, *_ = nameserver.split()
+	return lglass.dns.ResourceRecord(domain, "NS", lglass.dns.absolute(nameserver))
 
 def rdns_delegation(network, nameserver):
 	return delegation(rdns_domain(network), nameserver)
@@ -30,9 +26,9 @@ rdns6_delegation = rdns_delegation
 
 def glue(domain, addr):
 	if addr.version == 4:
-		return "{ns}. IN A {glue}".format(ns=domain, glue=str(addr))
+		return lglass.dns.ResourceRecord(domain, "A", addr)
 	elif addr.version == 6:
-		return "{ns}. IN AAAA {glue}".format(ns=domain, glue=str(addr))
+		return lglass.dns.ResourceRecord(domain, "AAAA", addr)
 
 def generate_delegation(dns, with_glue=True):
 	""" Generate a valid DNS delegation to the given dns object. This function
@@ -81,15 +77,8 @@ def generate_soa(domain, master, email, serial=None, refresh=86400, retry=7200,
 	if serial is None:
 		serial = int(time.time())
 	
-	return "{domain}. IN SOA {master}. {email}. {serial} {refresh} {retry} {expire} {ttl}".format(
-		domain=domain,
-		master=master,
-		email=email,
-		serial=serial,
-		refresh=refresh,
-		retry=retry,
-		expire=expire,
-		ttl=ttl)
+	return lglass.dns.ResourceRecord(domain, "SOA", lglass.dns.absolute(master),
+		lglass.dns.email(email), serial, refresh, retry, expire, ttl)
 
 def generate_zone(zone, domains, soa=None, nameservers=[]):
 	""" Generate fully compilant zone for given domains, which need delegation. """
