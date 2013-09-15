@@ -1,7 +1,5 @@
 # coding: utf-8
 
-# TODO Implement real object parser and attribute parsers
-
 class Object(object):
 	""" This object type is some kind of magic: It acts as a dictionary and a
 	list, therefore an implementation using a trie would be the best idea.
@@ -129,7 +127,7 @@ class Object(object):
 		return iter(self.data)
 
 	def __repr__(self):
-		return repr(self.data)
+		return "{0}({1!r})".format(self.__class__.__name__, self.data)
 
 	def get(self, key):
 		return [kvpair for kvpair in self.data if kvpair[0] == key]
@@ -427,7 +425,6 @@ class RIPESchemaObject(SchemaObject):
 				keywords.append("hidden")
 			if constraint.inverse:
 				keywords.append("inverse")
-				print(constraint.inverse)
 				keywords.append(",".join(constraint.inverse))
 			schema.add("key", " ".join(keywords))
 		return schema
