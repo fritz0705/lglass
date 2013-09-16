@@ -1,7 +1,5 @@
 # coding: utf-8
 
-import re
-
 def absolute(domain, zone=""):
 	if domain[-1] == '.':
 		return domain
