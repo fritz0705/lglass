@@ -5,9 +5,12 @@ import setuptools
 with open("README.md") as f:
 	long_description = f.read()
 
+with open("requirements.txt") as f:
+	install_requires = list(map(str.strip, f.readlines()))
+
 setuptools.setup(
 	name="lglass",
-	version="1.0dev",
+	version="1.0.0b1",
 	packages=[
 		"lglass",
 		"lglass.database",
@@ -30,12 +33,7 @@ setuptools.setup(
 		"Topic :: System :: Systems Administration"
 	],
 	long_description=__doc__,
-	install_requires=[
-		"Jinja2>=2.7",
-		"bottle>=0.11.6",
-		"netaddr>=0.7.10",
-		"redis>=2.7.6"
-	],
+	install_requires=install_requires,
 	entry_points={
 		"console_scripts": [
 			"lglass-regtool = lglass.tools.regtool:main",
