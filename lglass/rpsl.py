@@ -371,11 +371,9 @@ class SchemaObject(Object):
 			return
 		for inverse in constraint.inverse:
 			try:
-				db.get(inverse, value)
+				yield db.get(inverse, value)
 			except KeyError:
 				pass
-			else:
-				yield inverse
 
 	@property
 	def type_name(self):

@@ -14,7 +14,8 @@ class SchemaDatabase(lglass.database.base.Database):
 	hidden_attr_field = "x-hidden"
 
 	hide_attributes = True
-	resolve_inverse = True
+	
+	inverse_levels = 1
 
 	inverse_type_filter = staticmethod(lambda key: True)
 
@@ -60,30 +61,16 @@ class SchemaDatabase(lglass.database.base.Database):
 	def find_inverse_objects(self, objs):
 		if isinstance(objs, lglass.rpsl.Object):
 			objs = [objs]
-		seen = set(obj.spec for obj in objs)
-		inverse_objs = []
-		for obj in objs:
-			try:
-				schema = self.schema(obj.type)
-			except KeyError:
-				continue
-			for constraint in schema.constraints():
-				if constraint.inverse is None:
-					continue
+		found = set(objs)
 
-				for inverse in constraint.inverse:
-					for key, value in obj.get(constraint.key_name):
-						if not self.inverse_type_filter(inverse):
-							continue
-						if (inverse, value) not in seen:
-							try:
-								inv_obj = self.get(inverse, value)
-							except KeyError:
-								pass
-							else:
-								seen.add((inverse, value))
-								inverse_objs.append(inv_obj)
-		return inverse_objs
+		for n in range(self.inverse_levels):
+			new_found = set()
+			for obj in found:
+				for _inv in obj.inverses(self):
+					if _inv not in found and _inv not in new_found:
+						yield _inv
+						new_found.add(_inv)
+			found.update(new_found)
 	
 	def _validate_schema(self, obj):
 		if self.schema_validation_field in obj:
@@ -133,7 +120,9 @@ class SchemaDatabase(lglass.database.base.Database):
 			if "hide-attributes" in query:
 				self.hide_attributes = True if query["hide-attributes"][-1] == "true" else False
 			if "resolve-inverse" in query:
-				self.resolve_inverse = True if query["resolve-inverse"][-1] == "true" else False
+				self.inverse_levels = 1 if query["resolve-inverse"][-1] == "true" else False
+			if "inverse-levels" in query:
+				self.inverse_levels = int(query["inverse-levels"][-1])
 
 		return self
 
