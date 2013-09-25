@@ -30,6 +30,8 @@ class FileDatabase(lglass.database.base.Database):
 					obj.real_type = type
 		except FileNotFoundError:
 			raise KeyError(repr((type, primary_key)))
+		except ValueError as verr:
+			raise ValueError((type, primary_key), *verr.args)
 		return obj
 
 	def list(self):
