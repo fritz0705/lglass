@@ -28,10 +28,8 @@ class LMDBDatabase(lglass.database.base.Database):
 			raise TypeError("Expected env_or_path to be lmdb.Environment or str, got {}".format(type(env_or_path)))
 	
 	def get(self, type, primary_key):
-		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
-			key = "\0".join((type, primary_key))
-			obj = txn[key].decode()
-		obj = lglass.rpsl.Object.from_string(obj)
+		key = ":".join((type, primary_key))
+		obj = lglass.rpsl.Object.from_string(self.env[key].decode())
 		obj.real_type = type
 		obj.real_primary_key = primary_key
 		return obj
@@ -39,12 +37,12 @@ class LMDBDatabase(lglass.database.base.Database):
 	def list(self):
 		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
 			for key, value in txn.cursor():
-				yield tuple(key.decode().split("\0"))
+				yield tuple(key.decode().split(":", 1))
 
 	def find(self, primary_key, types=None):
 		with self.env.transaction(lmdb.MDB_RDONLY) as txn:
 			for key, value in txn.cursor():
-				type, pk = key.decode().split("\0")
+				type, pk = key.decode().split(":")
 				if types is not None and type in types:
 					continue
 				if primary_key != pk:
@@ -56,12 +54,12 @@ class LMDBDatabase(lglass.database.base.Database):
 
 	def save(self, object):
 		with self.env.transaction() as txn:
-			key = "\0".join(object.real_spec)
+			key = ":".join(object.real_spec)
 			txn[key] = object.pretty_print()
 
 	def delete(self, type, primary_key):
 		with self.env.transaction() as txn:
-			del txn["\0".join((type, primary_key))]
+			del txn[":".join((type, primary_key))]
 
 	def __hash__(self):
 		return hash(self.env)
