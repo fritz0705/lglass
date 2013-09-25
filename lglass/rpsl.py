@@ -130,12 +130,15 @@ class Object(object):
 		return "{0}({1!r})".format(self.__class__.__name__, self.data)
 
 	def get(self, key):
+		"""Get all values for given key."""
 		return [kvpair for kvpair in self.data if kvpair[0] == key]
 
 	def add(self, k, v):
+		"""Add new entry at the end with given key and value."""
 		return self.data.append((k, v))
 
 	def remove(self, k):
+		""" Remove any occurence of a key."""
 		self.data = [kvpair for kvpair in self.data if kvpair[0] != k]
 
 	def index(self, key):
@@ -204,6 +207,7 @@ class Object(object):
 		return bool(self.data)
 
 	def to_dict(self):
+		"""Return dictionary format."""
 		new_dict = dict()
 		for key, value in self:
 			if key not in new_dict:
@@ -212,6 +216,7 @@ class Object(object):
 		return new_dict
 
 	def to_json_form(self):
+		"""Return json format with attached real spec."""
 		items = []
 		for item in self.items():
 			items.append([item[0], item[1]])
@@ -220,6 +225,25 @@ class Object(object):
 		if self._real_primary_key is not None:
 			items.append((":json-real-primary-key", self.real_primary_key))
 		return items
+
+	def schema(self, database):
+		"""Return schema object or None."""
+		try:
+			return database.schema(self.type)
+		except KeyError:
+			return None
+
+	def inverses(self, database):
+		"""Returns a generator which yields any related object."""
+		found = set()
+		schema = self.schema(database)
+		if schema is None: return
+		for key, value in self[1:]:
+			inverse = schema.find_inverse(database, key, value)
+			for inv in inverse:
+				if inv not in found:
+					yield inv
+					found.add(inv)
 
 	@property
 	def type(self):
@@ -319,6 +343,11 @@ class SchemaValidationError(Exception):
 		return self.args[1]
 
 class SchemaObject(Object):
+	"""A SchemaObject is an extended object type which acts as a schema for other
+	Object instances and defines the attributes of an Object instance. It has
+	additional methods for finding inverse objects, validating other objects and
+	generating constraints."""
+
 	SCHEMA_SCHEMA = None
 
 	def __init__(self, ex=None):
@@ -327,13 +356,16 @@ class SchemaObject(Object):
 			self.validate_self()
 
 	def validate_self(self):
+		"""Check whether the instance of the current SchemaObject is a valid schema."""
 		return self.SCHEMA_SCHEMA.validate(self)
 
 	def validate(self, obj):
+		"""Check whether the given object is valid."""
 		validator = SchemaValidator(self)
 		return validator.validate(obj)
 
 	def find_inverse(self, db, key, value):
+		"""Return generator which yields all inverse objects."""
 		constraint = self.constraint_for(key)
 		if constraint is None or constraint.inverse is None:
 			return
@@ -350,12 +382,14 @@ class SchemaObject(Object):
 		return self["type-name"][0]
 
 	def constraint_for(self, key):
+		"""Return constraint for given key."""
 		for constraint in self.constraints():
 			if constraint.key_name == key:
 				return constraint
 		return None
 
 	def constraints(self):
+		"""Return generator which yields all constraints."""
 		for _, value in self.get("key"):
 			yield SchemaKeyConstraint.from_string(value)
 
@@ -368,6 +402,10 @@ SchemaObject.SCHEMA_SCHEMA = SchemaObject([
 ])
 
 class RIPESchemaObject(SchemaObject):
+	"""The RIPESchemaObject is similar to the SchemaObject, except that it's
+	accepting RIPE-style schemas and is able to generate a normal schema object
+	including guessed inverse relations."""
+
 	def __init__(self, ex=None):
 		Object.__init__(self, ex)
 
@@ -410,6 +448,7 @@ class RIPESchemaObject(SchemaObject):
 		return lookup[key]
 	
 	def to_schema(self):
+		"""Convert object to a traditional SchemaObject."""
 		schema = SchemaObject()
 		schema.add("schema", self.primary_key.upper() + "-SCHEMA")
 		schema.add("type-name", self.primary_key)
@@ -430,6 +469,9 @@ class RIPESchemaObject(SchemaObject):
 		return schema
 
 	def constraints(self):
+		"""Return generator which yields all constraints, except that this function
+		parses RIPE style schemas."""
+
 		import re
 
 		for key, value in self.data:
@@ -459,6 +501,8 @@ class RIPESchemaObject(SchemaObject):
 			yield constraint
 
 class SchemaKeyConstraint(object):
+	"""The SchemaKeyConstraint object represents a simple constraint for attributes
+	of Object instances. One object can describe several constraints for one key."""
 	multiple = True
 	mandatory = False
 	lookup = False
@@ -471,6 +515,7 @@ class SchemaKeyConstraint(object):
 		self.__dict__.update(kwargs)
 
 	def validate(self, obj):
+		"""Validate constraint against object."""
 		kvpairs = obj.get(self.key_name)
 		if self.multiple == False and len(kvpairs) > 1:
 			raise SchemaValidationError(self.key_name, "Too much occurrences")
@@ -522,6 +567,9 @@ class SchemaKeyConstraint(object):
 		return obj
 
 class SchemaValidator(object):
+	"""The SchemaValidator object binds a schema to an validator and is able to
+	check the validity for all constraints."""
+
 	def __init__(self, schema):
 		if not isinstance(schema, Object):
 			schema = SchemaObject(schema)
@@ -530,6 +578,7 @@ class SchemaValidator(object):
 		self.schema = schema
 
 	def is_valid(self, obj):
+		"""Return true if given Object instance is valid for a schema, otherwise False."""
 		try:
 			self.validate(obj)
 		except SchemaValidationError:
@@ -537,6 +586,8 @@ class SchemaValidator(object):
 		return True
 
 	def validate(self, obj):
+		"""Return True if given Object instance is valid for a schema, otherwise
+		the exception of the first invalid attribute will be raised."""
 		for constraint in self.schema.constraints():
 			constraint.validate(obj)
 		return True
