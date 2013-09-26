@@ -82,7 +82,7 @@ def show_object(type, primary_key, db):
 	for key, value in obj:
 		inverse = list(schema.find_inverse(db, key, value))
 		if inverse:
-			inverse = inverse[0]
+			inverse = inverse[0].type
 		else:
 			inverse = None
 		items.append((key, value, inverse))
