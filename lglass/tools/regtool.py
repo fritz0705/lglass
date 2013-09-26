@@ -138,12 +138,9 @@ def main_find_inverse(args, config, database):
 		print("{} {} not found".format(args.type, args.primary_key))
 		exit(1)
 	else:
-		inverses = set()
-		for key, value in obj:
-			for inverse in schema.find_inverse(database, key, value):
-				inverses.add((inverse, value))
+		inverses = set(obj.inverses(database))
 		for inverse in inverses:
-			print("{}\t{}".format(*inverse))
+			print("{}\t{}".format(*inverse.spec))
 
 def main_whoisd(args, config, database):
 	if args.protocol == 4:
