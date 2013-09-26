@@ -34,7 +34,7 @@ class SchemaDatabase(lglass.database.base.Database):
 	def find(self, primary_key, types=None):
 		objs = self.database.find(primary_key, types)
 
-		if self.resolve_inverse:
+		if self.inverse_levels:
 			objs.extend(self.find_inverse_objects(objs))
 
 		if self.schema_validation_field is not None:
