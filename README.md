@@ -75,3 +75,8 @@ ROA table Generator
 
 The ROA table generator produces input for birdc.
 
+Todo
+----
+
+* Implement new database subsystem with extended querying facilities
+
