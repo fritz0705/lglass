@@ -40,7 +40,7 @@ class WhoisClientDatabase(lglass.database.base.Database):
 					break
 				recv_buffer += recvd
 
-		lines = recv_buffer.decode().splitlines()
+		lines = recv_buffer.decode(errors="replace").splitlines()
 		lines_iter = iter(lines)
 
 		objs = []
