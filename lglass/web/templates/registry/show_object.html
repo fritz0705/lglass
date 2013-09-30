@@ -5,7 +5,23 @@ lglass » registry » {{ object.type }} » {{ object.primary_key|e }}
 {% endblock %}
 
 {% block content %}
-<dl class="rpsl">
+<div class="col-md-3 well well-sm">
+	{% if inverses %}
+	<strong>Related objects</strong>
+	<ul>
+	{% for inverse in inverses %}
+	<li>
+		<span class="label label-default">{{ inverse.type }}</span>
+		<a href="/obj/{{ inverse.type|e }}/{{ inverse.primary_key|e }}">
+			<code>{{ inverse.primary_key|e }}</code>
+		</a>
+	</li>
+	{% endfor %}
+	</ul>
+	{% endif %}
+</div>
+<div class="col-md-9">
+<dl class="dl-horizontal">
 	{% for item in items %}
 	<dt>{{ item[0]|e }}</dt>
 	{% if item[2] != None %}
@@ -15,4 +31,5 @@ lglass » registry » {{ object.type }} » {{ object.primary_key|e }}
 	{% endif %}
 	{% endfor %}
 </dd>
+	</div>
 {% endblock %}

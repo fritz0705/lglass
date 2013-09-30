@@ -77,17 +77,25 @@ def show_object(type, primary_key, db):
 	except KeyError:
 		pass
 
+	inverses = set()
+
 	# (key, value, reference) => ("origin", "AS64712", "aut-num")
 	items = []
 	for key, value in obj:
 		inverse = list(schema.find_inverse(db, key, value))
 		if inverse:
+			inverses.update(inverse)
 			inverse = inverse[0].type
 		else:
 			inverse = None
 		items.append((key, value, inverse))
 
-	return render_template("registry/show_object.html", items=items, object=obj)
+	inverses = sorted(inverses, key=lambda o: o.spec)
+
+	return render_template("registry/show_object.html",
+		items=items,
+		object=obj,
+		inverses=inverses)
 
 @with_db
 def show_objects(type, db):
