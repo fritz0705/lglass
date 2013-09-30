@@ -1,0 +1,5 @@
+{
+	"database": [
+		"whois+lglass.database.file+FileDatabase:."
+	]
+}
