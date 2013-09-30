@@ -263,6 +263,8 @@ class Object(object):
 
 	@property
 	def primary_key(self):
+		if "nic-hdl" in self:
+			return self["nic-hdl"]
 		try:
 			return self.data[0][1]
 		except IndexError:
@@ -374,7 +376,7 @@ class SchemaObject(Object):
 				yield db.get(inverse, value)
 			except KeyError:
 				pass
-
+	
 	@property
 	def type_name(self):
 		return self["type-name"][0]
