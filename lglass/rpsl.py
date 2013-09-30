@@ -331,6 +331,15 @@ class Object(object):
 		""" The real_spec is the spec which can be used on databases, if they are
 		broken and use a real_primary_key. """
 		return (self.real_type, self.real_primary_key)
+	
+	def schema_primary_key(self, schema):
+		return tuple(map(self.__getitem__, schema.primary_keys()))
+
+	def schema_type(self, schema):
+		return self.type
+
+	def schema_spec(self, schema):
+		return (self.schema_type(schema), self.schema_primary_key(schema))
 
 class SchemaValidationError(Exception):
 	def __init__(self, key, message):
@@ -376,6 +385,21 @@ class SchemaObject(Object):
 				yield db.get(inverse, value)
 			except KeyError:
 				pass
+	
+	def lookup_keys(self):
+		for c in self.constraints():
+			if c.lookup:
+				yield c.key_name
+	
+	def primary_keys(self):
+		for c in self.constraints():
+			if c.primary:
+				yield c.key_name
+	
+	def inverse_keys(self):
+		for c in self.constraints():
+			if c.inverse:
+				yield c.key_name
 	
 	@property
 	def type_name(self):
