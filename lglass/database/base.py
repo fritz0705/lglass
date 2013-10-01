@@ -175,6 +175,8 @@ def from_url(url):
 	return url_schemes[scheme].from_url(url)
 
 def build_chain(urls):
+	if isinstance(urls, str):
+		return from_url(urls)
 	db = None
 	for url in urls:
 		new_db = from_url(url)

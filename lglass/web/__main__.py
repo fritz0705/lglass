@@ -29,11 +29,7 @@ def main():
 		except FileNotFoundError:
 			sys.stderr.write("Fatal: Could not find file {}\n".format(args.config))
 			exit(111)
-
-		def _config_middleware(environ, start_response):
-			environ["lglass-web.config"] = config
-			return lglass.web.application.app(environ, start_response)
-		app = _config_middleware
+		app.config.update(config)
 
 	httpd = wsgiref.simple_server.make_server(args.host, args.port, app)
 	print("Serving HTTP on {host}:{port}...".format(host=args.host, port=args.port))
