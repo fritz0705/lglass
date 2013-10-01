@@ -6,8 +6,10 @@ lglass » registry » {{ type|e }}
 
 {% block content %}
 <ul>
-	{% for obj in objects %}
-	<li><a href="/obj/{{ obj.real_type|e }}/{{ obj.real_primary_key|obj_urlize|e }}">{{ obj.primary_key|e }} ({{ obj.type|e }})</a></li>
-	{% endfor %}
+	{% for spec in specs %}
+	<li><a href="/obj/{{ spec[0]|e }}/{{ spec[1]|obj_urlize|e }}">
+		<span class="label label-default">{{ spec[0]|e }}</span><code>{{ spec[1]|e }}</code>
+	</a></li>
+	{% endfor %} 
 </ul>
 {% endblock %}

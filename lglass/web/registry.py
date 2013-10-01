@@ -15,11 +15,11 @@ def show_object(app, type, primary_key):
 
 	items = []
 	for key, value in obj:
-		inverse = list(schema.find_inverse(db, key, value))
+		inverse = list(schema.find_inverse(app.registry, key, value))
 		inverses.update(inverse)
 		items.append((key, value, inverse))
 	
-	inverses = sorted(inverses, lambda o: o.spec)
+	inverses = sorted(inverses, key=lambda o: o.spec)
 
 	return app.render("registry/show_object.html",
 		inverses=inverses,

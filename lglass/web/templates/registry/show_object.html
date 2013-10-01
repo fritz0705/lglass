@@ -12,7 +12,7 @@ lglass » registry » {{ object.type }} » {{ object.primary_key|e }}
 	{% for inverse in inverses %}
 	<li>
 		<span class="label label-default">{{ inverse.type }}</span>
-		<a href="/obj/{{ inverse.type|e }}/{{ inverse.primary_key|e }}">
+		<a href="/obj/{{ inverse.type|e }}/{{ inverse.primary_key|obj_urlize|e }}">
 			<code>{{ inverse.primary_key|e }}</code>
 		</a>
 	</li>
@@ -21,14 +21,25 @@ lglass » registry » {{ object.type }} » {{ object.primary_key|e }}
 	{% endif %}
 </div>
 <div class="col-md-9">
-<dl class="dl-horizontal">
-	{% for item in items %}
-	<dt>{{ item[0]|e }}</dt>
-	{% if item[2] != None %}
-	<dd><a href="/obj/{{ item[2]|e }}/{{ item[1]|e }}">{{ item[1] }}</a></dd>
+<dl class="dl-horizontal rpsl">
+	{% for key, value, inverses in items %}
+	{% if inverses|length == 0 %}
+	<dt>{{ key|e }}</dt>
+	<dd class="value">{{ value|e }}</dd>
+	{% elif inverses|length == 1 %}
+	<dt>{{ key|e }}</dt>
+	<dd class="value"><a href="/obj/{{ inverses[0].type|e }}/{{ inverses[0].primary_key|obj_urlize|e }}">{{ value|e }}</a></dt>
 	{% else %}
-	<dd>{{ item[1]|e }}</dd>
-	{% endif %}
+	<dt>{{ key|e }}</dt>
+	<dd class="value">{{ value|e }}</dd>
+	<dd class="inverses"><strong>inverses</strong>
+		{% for inverse in inverses %}
+		<a href="{{ inverse.type|e }}/{{ inverse.primary_key|obj_urlize|e }}">
+			<span class="label label-default">{{ inverse.type|e }}</span>
+		</a>
+		{% endfor %}
+	</dd>
+	{% endif%}
 	{% endfor %}
 </dd>
 	</div>
