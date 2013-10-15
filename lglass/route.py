@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import json
+
 import netaddr
 
 class Route(object):
@@ -109,3 +111,16 @@ class RoutingTable(object):
 	def __len__(self):
 		return len(self.routes)
 	
+	def to_json(self):
+		return json.dumps(list(map(Route.to_dict, self.routes)))
+
+	def load_json(self, data):
+		for route in json.loads(data):
+			self.routes.add(Route.from_dict(route))
+
+	@classmethod
+	def from_json(cls, data):
+		obj = cls()
+		obj.load_json(data)
+		return obj
+
