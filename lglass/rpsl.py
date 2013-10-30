@@ -469,7 +469,7 @@ class RIPESchemaObject(SchemaObject):
 			"upd-to": ["person"],
 			"zone-c": ["person"],
 		}
-		return lookup[key]
+		return lookup.get(key)
 	
 	def to_schema(self):
 		"""Convert object to a traditional SchemaObject."""
