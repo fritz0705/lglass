@@ -39,40 +39,55 @@ def network_graph(rtable):
 				pref=_prefix, asn=asn))
 			builder.append("{pref} [label=\"{label}\"];".format(
 				pref=_prefix, label=str(prefix)))
-
-	seen = set()
 	
-	for route in rtable:
-		if route["Type"].startswith("BGP"):
-			as_path = map(int, route["BGP.as_path"].split())
-			for as1, as2 in _window(as_path):
-				if (as1, as2) in seen or as1 == as2:
-					continue
-				builder.append("AS{left} -> AS{right};".format(
-					left=as1, right=as2))
-				seen.add((as1, as2))
+	builder.extend(peering_graph(rtable, join=False))
 	
 	builder.append("}")
 	return "\n".join(builder)
 
-def peering_graph(rtable):
+def peering_graph(rtable, join=True):
 	builder = []
-	builder.append("digraph {")
+	if join:
+		builder.append("digraph {")
 
-	seen = set()
-	
+	peer_info = {}
+
 	for route in rtable:
-		if route["Type"].startswith("BGP"):
-			as_path = map(int, route["BGP.as_path"].split())
-			for as1, as2 in _window(as_path):
-				if (as1, as2) in seen or as1 == as2:
-					continue
-				builder.append("AS{left} -> AS{right};".format(
-					left=as1, right=as2))
-				seen.add((as1, as2))
+		if not route["Type"].startswith("BGP"):
+			continue
+		as_path = map(int, route["BGP.as_path"].split())
+		for as1, as2 in _window(as_path):
+			if (as1, as2) not in peer_info:
+				peer_info[(as1, as2)] = 0
+			peer_info[(as1, as2)] += 1
+
+	max_routes = max(peer_info.values())
+	min_routes = min(peer_info.values())
+
+	colors = {
+		0: "grey50",
+		1: "grey45",
+		2: "grey40",
+		3: "grey35",
+		4: "grey30",
+		5: "grey25",
+		6: "grey20",
+		7: "grey15",
+		8: "grey10",
+		9: "grey5",
+		10: "grey0"
+	}
+
+	for peering, routes in peer_info.items():
+		color = colors[int((routes - min_routes) / (max_routes - min_routes) * 10)]
+		builder.append("AS{left} -> AS{right} [color={color}];".format(
+			left=peering[0], right=peering[1], color=color))
 	
-	builder.append("}")
-	return "\n".join(builder)
+	if join:
+		builder.append("}")
+		return "\n".join(builder)
+	else:
+		return builder
 
 def database_graph(database, subset=None):
 	def _spec_id(spec):
