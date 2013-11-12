@@ -2,6 +2,10 @@
 
 import sys
 
+def _spec_id(spec):
+	import hashlib
+	return "x" + hashlib.md5(":".join(str(spec)).encode()).hexdigest()
+
 def _window(iterable, size=2):
 	i = iter(iterable)
 	win = []
@@ -11,6 +15,89 @@ def _window(iterable, size=2):
 	for e in i:
 		win = win[1:] + [e]
 		yield win
+
+def _format_asn(asn):
+	if isinstance(asn, str):
+		if asn.startswith("AS"):
+			return asn
+		else:
+			return "AS" + asn
+	elif isinstance(asn, int):
+		return "AS" + str(asn)
+
+def _colors():
+	while True:
+		for color in [
+				"aquamarine",
+				"bisque",
+				"blue",
+				"blueviolet",
+				"brown",
+				"burlywood",
+				"cadetblue",
+				"chartreuse",
+				"chocolate",
+				"coral",
+				"cornflowerblue",
+				"crimson",
+				"cyan",
+				"darkgoldenrod",
+				"darkgreen",
+				"darkorange",
+				"darkorchid",
+				"darksalmon",
+				"deeppink",
+				"firebrick"
+			]:
+			yield color
+
+def routing_graph(rtable, dest, local_address, local_asn):
+	routes = rtable.match_all(dest)
+	local_asn = _format_asn(local_asn);
+
+	builder = []
+	builder.append("digraph {");
+
+	builder.append("{node} [shape=box,label=\"{label}\"];".format(
+		node=_spec_id(local_address),
+		label=local_address))
+	builder.append("{node} [shape=box,label=\"{label}\"];".format(
+		node=_spec_id(dest),
+		label=dest))
+	builder.append("{node} [label=\"{label}\"];".format(
+		node=_spec_id(local_asn),
+		label=local_asn))
+
+	for color, route in zip(_colors(), routes):
+		if not route.type == "bgp":
+			continue
+		as_path = list(map(int, route["BGP.as_path"].split()))
+		if not as_path:
+			continue
+		builder.append("{left} -> {right} [color={color}];".format(
+			left=_spec_id(local_address),
+			right=_spec_id(local_asn),
+			color=color))
+		builder.append("{left} -> {right} [color={color}];".format(
+			left=_spec_id(local_asn),
+			right=_spec_id(as_path[0]),
+			color=color))
+		builder.append("{left} -> {right} [color={color}];".format(
+			left=_spec_id(as_path[-1]),
+			right=_spec_id(dest),
+			color=color))
+		for as1, as2 in _window(as_path):
+			builder.append("{left} -> {right} [color={color}];".format(
+				left=_spec_id(as1),
+				right=_spec_id(as2),
+				color=color))
+		for asn in as_path:
+			builder.append("{node} [label=\"{label}\"];".format(
+				node=_spec_id(asn),
+				label="AS{}".format(asn)))
+
+	builder.append("}")
+	return "\n".join(builder)
 
 def network_graph(rtable):
 	def _spec_id(spec):
@@ -176,6 +263,17 @@ def main_peering(args):
 	
 	print(peering_graph(rtable))
 
+def main_routing(args):
+	import lglass.route
+
+	rtable = lglass.route.RoutingTable()
+
+	for _rt in args.rtables:
+		with open(_rt) as fh:
+			rtable.update(lglass.route.RoutingTable.from_json(fh.read()))
+	
+	print(routing_graph(rtable, args.destination, args.local_ip, args.local_as))
+
 def main(args=sys.argv[1:]):
 	import argparse
 
@@ -188,6 +286,7 @@ def main(args=sys.argv[1:]):
 	argparser_db = subparsers.add_parser("database")
 	argparser_peerings = subparsers.add_parser("peering")
 	argparser_network = subparsers.add_parser("network")
+	argparser_routing = subparsers.add_parser("routing")
 	subparsers.add_parser("help")
 
 	argparser_db.add_argument("-d", "--database", default=".")
@@ -197,12 +296,18 @@ def main(args=sys.argv[1:]):
 
 	argparser_network.add_argument("rtables", nargs="+")
 
+	argparser_routing.add_argument("destination")
+	argparser_routing.add_argument("local_ip")
+	argparser_routing.add_argument("local_as")
+	argparser_routing.add_argument("rtables", nargs="+")
+
 	args = argparser.parse_args(args)
 
 	_cmd = {
 		"database": main_database,
 		"peering": main_peering,
-		"network": main_network
+		"network": main_network,
+		"routing": main_routing
 	}.get(args.command, lambda _args: argparser.print_help())(args)
 
 if __name__ == "__main__":

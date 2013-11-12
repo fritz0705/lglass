@@ -50,6 +50,10 @@ class Route(object):
 			"metric": self.metric,
 			"annotations": self.annotations
 		}
+
+	@property
+	def type(self):
+		return self["Type"].split()[0].lower()
 	
 	@classmethod
 	def from_dict(cls, d):
@@ -123,4 +127,13 @@ class RoutingTable(object):
 		obj = cls()
 		obj.load_json(data)
 		return obj
+
+def format_asn(asn):
+	if isinstance(asn, str):
+		if asn.startswith("AS"):
+			return asn
+		else:
+			return "AS" + asn
+	elif isinstance(asn, int):
+		return "AS" + str(asn)
 
