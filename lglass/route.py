@@ -128,27 +128,34 @@ class RoutingTable(object):
 		for route in iterable:
 			self.routes.add(Route.load(iterable))
 
-	def to_json(self):
-		return json.dumps(list(self.dump()))
+	def to_json(self, fh=None):
+		if fh is None:
+			return json.dumps(list(self.dump()))
+		else:
+			return json.dump(list(self.dump()), fh)
 
 	dump_json = to_json
 
-	def load_json(self, data):
-		self.load(json.loads(data))
-
-	def to_cbor(self):
+	def to_cbor(self, fh=None):
 		import flynn
-		return flynn.dumps(map(Route.to_dict, self.routes))
+		if fh is None:
+			return flynn.dumps(map(Route.to_dict, self.routes))
+		else:
+			return flynn.dump(map(Route.to_dict, self.routes), fh)
 
 	dump_cbor = to_cbor
 
 	def load_json(self, data):
-		for route in json.loads(data):
+		if hasattr(data, "read"):
+			routes = json.load(data)
+		else:
+			routes = json.loads(data)
+		for route in routes:
 			self.routes.add(Route.from_dict(route))
 
 	def load_cbor(self, data):
 		import flynn
-		for route in flynn.loads(data):
+		for route in flynn.load(data):
 			self.routes.add(Route.from_dict(route))
 
 	@classmethod
@@ -162,6 +169,15 @@ class RoutingTable(object):
 		self = cls()
 		self.load_cbor(data)
 		return self
+
+	@classmethod
+	def from_data(cls, data, format):
+		if format == "json":
+			return cls.from_json(data)
+		elif format == "cbor":
+			return cls.from_cbor(data)
+		else:
+			raise ValueError("Invalid serialization format {}".format(format))
 
 def format_asn(asn):
 	if isinstance(asn, str):
