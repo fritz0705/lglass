@@ -27,7 +27,10 @@ def main(args=sys.argv[1:]):
 	routes = client.routes(**query)
 	routes = lglass.route.RoutingTable(routes)
 
-	print(routes.to_json())
+	if sys.stdout.isatty():
+		print(routes.to_json())
+	else:
+		sys.stdout.raw.write(routes.to_cbor())
 
 if __name__ == "__main__":
 	main()

@@ -51,6 +51,9 @@ class Route(object):
 			"annotations": self.annotations
 		}
 
+	def dump(self):
+		return self.to_dict()
+
 	@property
 	def type(self):
 		return self["Type"].split()[0].lower()
@@ -63,6 +66,8 @@ class Route(object):
 		self.annotations = d["annotations"].copy()
 		self.metric = d["metric"]
 		return self
+
+	load = from_dict
 
 class RoutingTable(object):
 	""" Simple collection type, which holds routes and supports longest prefix
@@ -114,19 +119,49 @@ class RoutingTable(object):
 
 	def __len__(self):
 		return len(self.routes)
-	
+
+	def dump(self):
+		for route in self.routes:
+			yield route.dump()
+
+	def load(self, iterable):
+		for route in iterable:
+			self.routes.add(Route.load(iterable))
+
 	def to_json(self):
-		return json.dumps(list(map(Route.to_dict, self.routes)))
+		return json.dumps(list(self.dump()))
+
+	dump_json = to_json
+
+	def load_json(self, data):
+		self.load(json.loads(data))
+
+	def to_cbor(self):
+		import flynn
+		return flynn.dumps(map(Route.to_dict, self.routes))
+
+	dump_cbor = to_cbor
 
 	def load_json(self, data):
 		for route in json.loads(data):
 			self.routes.add(Route.from_dict(route))
 
+	def load_cbor(self, data):
+		import flynn
+		for route in flynn.loads(data):
+			self.routes.add(Route.from_dict(route))
+
 	@classmethod
 	def from_json(cls, data):
-		obj = cls()
-		obj.load_json(data)
-		return obj
+		self = cls()
+		self.load_json(data)
+		return self
+
+	@classmethod
+	def from_cbor(cls, data):
+		self = cls()
+		self.load_cbor(data)
+		return self
 
 def format_asn(asn):
 	if isinstance(asn, str):
