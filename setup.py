@@ -10,7 +10,7 @@ with open("requirements.txt") as f:
 
 setuptools.setup(
 	name="lglass",
-	version="1.0.0b2",
+	version="1.0.0b3",
 	packages=[
 		"lglass",
 		"lglass.database",
