@@ -6,6 +6,21 @@ import netaddr
 
 import lglass.route
 
+class ParseError(Exception):
+	def __init__(self, line_no, exc):
+		Exception.__init__(self, line_no, exc)
+
+	@property
+	def line(self):
+		return self.args[0]
+
+	@property
+	def exception(self):
+		return self.args[1]
+
+	def __str__(self):
+		return "Parser error at line {}: {}".format(self.line, self.exception)
+
 class BirdClient(object):
 	def __init__(self, executable="birdc"):
 		self.executable = executable
@@ -61,31 +76,34 @@ def parse_routes(lines):
 	cur_prefix = None
 	cur_route = None
 	
-	for line in lines_iter:
-		if line[0] == "\t":
-			# route annotation
-			key, value = line.split(":", 1)
-			cur_route[key.strip()] = value.strip()
-			continue
+	for line_no, line in enumerate(lines_iter):
+		try:
+			if line[0] == "\t":
+				# route annotation
+				key, value = line.split(":", 1)
+				cur_route[key.strip()] = value.strip()
+				continue
 
-		if cur_route is not None:
-			yield cur_route
+			if cur_route is not None:
+				yield cur_route
 
-		if line[0] != " ":
-			cur_prefix, *args = line.split()
-		else:
-			args = line.split()
+			if line[0] != " ":
+				cur_prefix, *args = line.split()
+			else:
+				args = line.split()
 
-		cur_route = lglass.route.Route(cur_prefix)
+			cur_route = lglass.route.Route(cur_prefix)
 
-		if args[0] == "via":
-			cur_route.nexthop = (netaddr.IPAddress(args[1]), args[3])
+			if args[0] == "via":
+				cur_route.nexthop = (netaddr.IPAddress(args[1]), args[3])
 
-		if args[-2][0] == "(" and args[-2][-1] == ")":
-			metric = args[-2][1:-1]
-			if "/" in metric:
-				metric = metric.split("/", 1)[0]
-			cur_route.metric = int(metric)
+			if args[-2][0] == "(" and args[-2][-1] == ")":
+				metric = args[-2][1:-1]
+				if "/" in metric:
+					metric = metric.split("/", 1)[0]
+				cur_route.metric = int(metric)
+		except BaseException as e:
+			raise ParseError(line_no, e)
 
 	if cur_route is not None:
 		yield cur_route
