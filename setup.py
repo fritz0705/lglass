@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
+"""lglass is a collection of code and data files written in Python. It is designed
+to support registries in their work and to provide public services for access
+to the database."""
+
 import setuptools
-
-with open("README.md") as f:
-	long_description = f.read()
-
-with open("requirements.txt") as f:
-	install_requires = list(map(str.strip, f.readlines()))
 
 setuptools.setup(
 	name="lglass",
-	version="1.0.0b3",
+	version="1.0c1",
 	packages=[
 		"lglass",
 		"lglass.database",
@@ -33,7 +31,13 @@ setuptools.setup(
 		"Topic :: System :: Systems Administration"
 	],
 	long_description=__doc__,
-	install_requires=install_requires,
+	install_requires=[
+		"Jinja2==2.7.1",
+		"bottle==0.11.6",
+		"redis==2.8.0",
+		"netaddr==0.7.10",
+		"flynn==1.0.0b1"
+	],
 	entry_points={
 		"console_scripts": [
 			"lglass-regtool = lglass.tools.regtool:main",

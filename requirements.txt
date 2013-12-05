@@ -1,5 +1,5 @@
-Jinja2
-bottle
-redis
-netaddr
-flynn
+Jinja2==2.7.1
+bottle==0.11.6
+redis==2.8.0
+netaddr==0.7.10
+flynn==1.0.0b1
