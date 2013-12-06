@@ -89,7 +89,7 @@ def main_rdns4(args, db):
 		nameservers=args.nameservers
 	))
 
-	print("\n".join(zone))
+	print("\n".join(map(str, zone)))
 
 def main_rdns6(args, db):
 	inet6nums = (db.get(*spec) for spec in db.list() if spec[0] == "inet6num")
@@ -108,7 +108,7 @@ def main_rdns6(args, db):
 		nameservers=args.nameservers
 	))
 
-	print("\n".join(zone))
+	print("\n".join(map(str, zone)))
 
 if __name__ == "__main__":
 	main()
