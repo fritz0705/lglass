@@ -1,0 +1,378 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>lglass.rpsl &mdash; lglass 1.0c1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0c1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="lglass 1.0c1 documentation" href="../index.html" />
+    <link rel="up" title="API Documentation" href="index.html" />
+    <link rel="next" title="lglass.tools.bird" href="lglass.tools.bird.html" />
+    <link rel="prev" title="lglass.route" href="lglass.route.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="lglass.tools.bird.html" title="lglass.tools.bird"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="lglass.route.html" title="lglass.route"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">lglass 1.0c1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">API Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-lglass.rpsl">
+<span id="lglass-rpsl"></span><h1><a class="reference internal" href="#module-lglass.rpsl" title="lglass.rpsl"><tt class="xref py py-mod docutils literal"><span class="pre">lglass.rpsl</span></tt></a><a class="headerlink" href="#module-lglass.rpsl" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="lglass.rpsl.Object">
+<em class="property">class </em><tt class="descclassname">lglass.rpsl.</tt><tt class="descname">Object</tt><big>(</big><em>data=None</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object" title="Permalink to this definition">¶</a></dt>
+<dd><p>This object type is some kind of magic: It acts as a dictionary and a
+list, therefore an implementation using a trie would be the best idea.
+Unfortunately, lists are fast enough for our purpose, so we perform linear
+searches. If you have time, implement is as tree. And don&#8217;t implement it as
+dict.</p>
+<dl class="method">
+<dt id="lglass.rpsl.Object.add">
+<tt class="descname">add</tt><big>(</big><em>k</em>, <em>v</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add new entry at the end with given key and value.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.extend">
+<tt class="descname">extend</tt><big>(</big><em>ex</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.extend" title="Permalink to this definition">¶</a></dt>
+<dd><p>expand has also multiple behaviours depending on given data types. If
+ex is a list of tuples, then this is simply appended as key-value-pairs to
+the structure. Otherwise, if ex is a dict, then __setitem__ will be used on
+the values of struct</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.get">
+<tt class="descname">get</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all values for given key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.index">
+<tt class="descname">index</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return index of first entry for key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.inverses">
+<tt class="descname">inverses</tt><big>(</big><em>database</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.inverses" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a generator which yields any related object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.items">
+<tt class="descname">items</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.items" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return iterator which yields all items</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.keys">
+<tt class="descname">keys</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return iterator which yields all keys.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lglass.rpsl.Object.real_primary_key">
+<tt class="descname">real_primary_key</tt><a class="headerlink" href="#lglass.rpsl.Object.real_primary_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The real primary key is a database-dependent primary key which was used
+to lookup the object in the database. This is useful in broken databases,
+which don&#8217;t use the primary_key as file name.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lglass.rpsl.Object.real_spec">
+<tt class="descname">real_spec</tt><a class="headerlink" href="#lglass.rpsl.Object.real_spec" title="Permalink to this definition">¶</a></dt>
+<dd><p>The real_spec is the spec which can be used on databases, if they are
+broken and use a real_primary_key.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lglass.rpsl.Object.real_type">
+<tt class="descname">real_type</tt><a class="headerlink" href="#lglass.rpsl.Object.real_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>The real type is a database-dependent type which addresses the object
+type in the database, due to inconsistence.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.remove">
+<tt class="descname">remove</tt><big>(</big><em>k</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.remove" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove any occurence of a key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.schema">
+<tt class="descname">schema</tt><big>(</big><em>database</em><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return schema object or None.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lglass.rpsl.Object.spec">
+<tt class="descname">spec</tt><a class="headerlink" href="#lglass.rpsl.Object.spec" title="Permalink to this definition">¶</a></dt>
+<dd><p>The spec of an object is a tuple consisting of the type and primary_key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.to_dict">
+<tt class="descname">to_dict</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dictionary format.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.to_json_form">
+<tt class="descname">to_json_form</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.to_json_form" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return json format with attached real spec.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.Object.values">
+<tt class="descname">values</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.Object.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return iterator which yields all values</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lglass.rpsl.RIPESchemaObject">
+<em class="property">class </em><tt class="descclassname">lglass.rpsl.</tt><tt class="descname">RIPESchemaObject</tt><big>(</big><em>ex=None</em><big>)</big><a class="headerlink" href="#lglass.rpsl.RIPESchemaObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>The RIPESchemaObject is similar to the SchemaObject, except that it&#8217;s
+accepting RIPE-style schemas and is able to generate a normal schema object
+including guessed inverse relations.</p>
+<dl class="method">
+<dt id="lglass.rpsl.RIPESchemaObject.constraints">
+<tt class="descname">constraints</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.RIPESchemaObject.constraints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return generator which yields all constraints, except that this function
+parses RIPE style schemas.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.RIPESchemaObject.to_schema">
+<tt class="descname">to_schema</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.RIPESchemaObject.to_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert object to a traditional SchemaObject.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lglass.rpsl.SchemaKeyConstraint">
+<em class="property">class </em><tt class="descclassname">lglass.rpsl.</tt><tt class="descname">SchemaKeyConstraint</tt><big>(</big><em>key_name</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaKeyConstraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>The SchemaKeyConstraint object represents a simple constraint for attributes
+of Object instances. One object can describe several constraints for one key.</p>
+<dl class="method">
+<dt id="lglass.rpsl.SchemaKeyConstraint.validate">
+<tt class="descname">validate</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaKeyConstraint.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate constraint against object.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lglass.rpsl.SchemaObject">
+<em class="property">class </em><tt class="descclassname">lglass.rpsl.</tt><tt class="descname">SchemaObject</tt><big>(</big><em>ex=None</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>A SchemaObject is an extended object type which acts as a schema for other
+Object instances and defines the attributes of an Object instance. It has
+additional methods for finding inverse objects, validating other objects and
+generating constraints.</p>
+<dl class="method">
+<dt id="lglass.rpsl.SchemaObject.constraint_for">
+<tt class="descname">constraint_for</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaObject.constraint_for" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return constraint for given key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.SchemaObject.constraints">
+<tt class="descname">constraints</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaObject.constraints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return generator which yields all constraints.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.SchemaObject.find_inverse">
+<tt class="descname">find_inverse</tt><big>(</big><em>db</em>, <em>key</em>, <em>value</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaObject.find_inverse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return generator which yields all inverse objects.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.SchemaObject.validate">
+<tt class="descname">validate</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaObject.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether the given object is valid.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.SchemaObject.validate_self">
+<tt class="descname">validate_self</tt><big>(</big><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaObject.validate_self" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check whether the instance of the current SchemaObject is a valid schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lglass.rpsl.SchemaValidator">
+<em class="property">class </em><tt class="descclassname">lglass.rpsl.</tt><tt class="descname">SchemaValidator</tt><big>(</big><em>schema</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaValidator" title="Permalink to this definition">¶</a></dt>
+<dd><p>The SchemaValidator object binds a schema to an validator and is able to
+check the validity for all constraints.</p>
+<dl class="method">
+<dt id="lglass.rpsl.SchemaValidator.is_valid">
+<tt class="descname">is_valid</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaValidator.is_valid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return true if given Object instance is valid for a schema, otherwise False.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lglass.rpsl.SchemaValidator.validate">
+<tt class="descname">validate</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#lglass.rpsl.SchemaValidator.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if given Object instance is valid for a schema, otherwise
+the exception of the first invalid attribute will be raised.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="lglass.rpsl.inetnum_cidrs">
+<tt class="descclassname">lglass.rpsl.</tt><tt class="descname">inetnum_cidrs</tt><big>(</big><em>inetnum</em><big>)</big><a class="headerlink" href="#lglass.rpsl.inetnum_cidrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return all CIDRs included in given inetnum object.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="lglass.rpsl.parse_rpsl">
+<tt class="descclassname">lglass.rpsl.</tt><tt class="descname">parse_rpsl</tt><big>(</big><em>lines</em>, <em>pragmas={}</em><big>)</big><a class="headerlink" href="#lglass.rpsl.parse_rpsl" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>This is a simple RPSL parser which expects an iterable which yields lines.</dt>
+<dd>This parser processes the object format, not the policy format. The object
+format used by this parser is similar to the format described by the RFC:
+Each line consists of key and value, which are separated by a colon &#8216;:&#8217;.
+The &#8216;:&#8217; can be surrounded by whitespace characters including line breaks,
+because this parser doesn&#8217;t split the input into lines; it&#8217;s newline unaware.
+The format also supports line continuations by beginning a new line of input
+with a whitespace character. This whitespace character is stripped, but the
+parser will produce a &#8216;</dd>
+<dt>&#8216; in the resulting value. Line continuations are</dt>
+<dd><p class="first">only possible for the value part, which means, that the key and &#8216;:&#8217; must be
+on the same line of input.</p>
+<p>We also support an extended format using pragmas, which can define the
+processing rules like line-break type, and whitespace preservation. Pragmas
+are on their own line, which must begin with &#8220;%!&#8221;, followed by any
+amount of whitespace, &#8220;pragma&#8221;, at least one whitespace, followed by the
+pragma-specific part.</p>
+<p>The following pragmas are supported:</p>
+<blockquote class="last">
+<div><dl class="docutils">
+<dt>%! pragma whitespace-preserve [on|off]</dt>
+<dd>Preserve any whitespace of input in keys and values and don&#8217;t strip
+whitespace.</dd>
+<dt>%! pragma newline-type [cr|lf|crlf|none]</dt>
+<dd>Define type of newline by choosing between cr &#8220;Mac OS 9&#8221;, lf &#8220;Unix&#8221;,
+crlf &#8220;Windows&#8221; and none.</dd>
+<dt>%! pragma rfc</dt>
+<dd>Reset all pragmas to the RFC-conform values.</dd>
+<dt>%! pragma stop-at-empty-line [on|off]</dt>
+<dd>Enforces the parser to stop at an empty line</dd>
+<dt>%! pragma condense-whitespace [on|off]</dt>
+<dd>Replace any sequence of whitespace characters with simple space (&#8216; &#8216;)</dd>
+<dt>%! pragma strict-ripe [on|off]</dt>
+<dd>Do completely RIPE database compilant parsing, e.g. don&#8217;t allow any
+space between key and the colon.</dd>
+<dt>%! pragma hash-comment [on|off]</dt>
+<dd>Recognize hash &#8216;#&#8217; as beginning of comment</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="lglass.route.html"
+                        title="previous chapter"><tt class="docutils literal"><span class="pre">lglass.route</span></tt></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="lglass.tools.bird.html"
+                        title="next chapter"><tt class="docutils literal"><span class="pre">lglass.tools.bird</span></tt></a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/lglass.rpsl.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="lglass.tools.bird.html" title="lglass.tools.bird"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="lglass.route.html" title="lglass.route"
+             >previous</a> |</li>
+        <li><a href="../index.html">lglass 1.0c1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >API Documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Fritz Grimpen.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
