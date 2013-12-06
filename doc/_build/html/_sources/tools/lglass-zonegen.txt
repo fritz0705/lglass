@@ -1,2 +1,0 @@
-`lglass-zonegen` – Zonefile generator
-=====================================
