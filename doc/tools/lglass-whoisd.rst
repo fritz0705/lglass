@@ -1,8 +1,8 @@
-:mod:`lglass-whoisd` – Full-featured whois server
-=================================================
+:program:`lglass-whoisd` – Full-featured whois server
+=====================================================
 
-The `lglass-whoisd` tool starts the full-featured lglass whois server. The
-configuration file is specified by the `--config` command line argument. By
+The :program:`lglass-whoisd` tool starts the full-featured lglass whois server.
+The configuration file is specified by the `--config` command line argument. By
 default, the whois server will listen on both IPv4 and IPv6 on port 4343.
 
 ::

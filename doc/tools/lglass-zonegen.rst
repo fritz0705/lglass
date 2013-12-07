@@ -1,9 +1,9 @@
-:mod:`lglass-zonegen` – Zonefile generator
-==========================================
+:program:`lglass-zonegen` – Zonefile generator
+==============================================
 
-The `lglass-zonegen` tool is a full-featured zone file generator. It generates
-RFC-conform DNS zones for forward and reverse DNS delegations and supports IPv4
-and IPv6.
+The :program:`lglass-zonegen` tool is a full-featured zone file generator. It
+generates RFC-conform DNS zones for forward and reverse DNS delegations and
+supports IPv4 and IPv6.
 
 You have to give at least one `--nameserver` argument, exactly one `--master`
 argument, and exactly one `--email` argument for your SOA email address.

@@ -20,9 +20,5 @@ API Documentation
   lglass.generators.roa
   lglass.route
   lglass.rpsl
-  lglass.tools.bird
-  lglass.tools.regtool
-  lglass.tools.roagen
-  lglass.tools.zonegen
   lglass.whoisd
 

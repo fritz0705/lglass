@@ -1,9 +1,9 @@
-:mod:`lglass-bird` – Routing table export for BIRD
-==================================================
+:program:`lglass-bird` – Routing table export for BIRD
+======================================================
 
-`lglass-bird` is a simple software tool written for routing table exports from
-BIRD. It exports the routing table to the internal lglass CBOR or JSON
-representation.
+:program:`lglass-bird` is a simple software tool written for routing table
+exports from BIRD. It exports the routing table to the internal lglass CBOR
+or JSON representation.
 
 ::
 

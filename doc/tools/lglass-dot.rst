@@ -1,9 +1,9 @@
-:mod:`lglass-dot` – Routing and registry visualisation
-======================================================
+:program:`lglass-dot` – Routing and registry visualisation
+==========================================================
 
-`lglass-dot` is a tool to export routing and registry information as GraphVIZ
-input. At the moment it supports routing graphs, a registry relation graph and
-a peering graph.
+:program:`lglass-dot` is a tool to export routing and registry information as
+GraphVIZ input. At the moment it supports routing graphs, a registry relation
+graph and a peering graph.
 
 ::
 

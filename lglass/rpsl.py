@@ -617,7 +617,7 @@ class SchemaValidator(object):
 		return True
 
 def parse_rpsl(lines, pragmas={}):
-	''' This is a simple RPSL parser which expects an iterable which yields lines.
+	r'''This is a simple RPSL parser which expects an iterable which yields lines.
 	This parser processes the object format, not the policy format. The object
 	format used by this parser is similar to the format described by the RFC:
 	Each line consists of key and value, which are separated by a colon ':'.
@@ -637,28 +637,28 @@ def parse_rpsl(lines, pragmas={}):
 	
 	The following pragmas are supported:
 
-		%! pragma whitespace-preserve [on|off]
+		``%! pragma whitespace-preserve [on|off]``
 				Preserve any whitespace of input in keys and values and don't strip
 				whitespace.
 
-		%! pragma newline-type [cr|lf|crlf|none]
+		``%! pragma newline-type [cr|lf|crlf|none]``
 				Define type of newline by choosing between cr "Mac OS 9", lf "Unix",
 				crlf "Windows" and none.
 
-		%! pragma rfc
+		``%! pragma rfc``
 				Reset all pragmas to the RFC-conform values.
 
-		%! pragma stop-at-empty-line [on|off]
+		``%! pragma stop-at-empty-line [on|off]``
 				Enforces the parser to stop at an empty line
 
-		%! pragma condense-whitespace [on|off]
+		``%! pragma condense-whitespace [on|off]``
 				Replace any sequence of whitespace characters with simple space (' ')
 
-		%! pragma strict-ripe [on|off]
+		``%! pragma strict-ripe [on|off]``
 				Do completely RIPE database compilant parsing, e.g. don't allow any
 				space between key and the colon.
 
-		%! pragma hash-comment [on|off]
+		``%! pragma hash-comment [on|off]``
 				Recognize hash '#' as beginning of comment
 	'''
 	result = []

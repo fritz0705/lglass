@@ -1,9 +1,9 @@
-:mod:`lglass-regtool` – Registry maintenance tool
-=================================================
+:program:`lglass-regtool` – Registry maintenance tool
+=====================================================
 
-`lglass-regtool` provides a simple interface for registry database maintenance.
-It consists of multiple subcommands to create, change, update and delete
-resources.
+:program:`lglass-regtool` provides a simple interface for registry database
+maintenance. It consists of multiple subcommands to create, change, update and
+delete resources.
 
 ::
 

@@ -1,11 +1,11 @@
-:mod:`lglass-rpsl` – RPSL object format parser
-==============================================
+:program:`lglass-rpsl` – RPSL object format parser
+==================================================
 
-The `lglass-rpsl` tool is a simple RPSL object formatter. It supports several
-options for padding and parsing of object files, including pragma selection. By
-default, it reads the standard input and writes the formatted object to standard
-output, but is also capable of doing inplace changes by using the `-i` command
-line option.
+The :program:`lglass-rpsl` tool is a simple RPSL object formatter. It supports
+several options for padding and parsing of object files, including pragma
+selection. By default, it reads the standard input and writes the formatted
+object to standard output, but is also capable of doing inplace changes by
+using the `-i` command line option.
 
 ::
 

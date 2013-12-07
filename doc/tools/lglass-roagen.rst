@@ -1,9 +1,10 @@
-:mod:`lglass-roagen` – ROA table generator
-==========================================
+:program:`lglass-roagen` – ROA table generator
+==============================================
 
-`lglass-roagen` provides a really simple ROA table generator for BIRD Internet
-Routing Daemon. It is capable of generating ROA tables for IPv4 and IPv6 from
-a registry database, but doesn't validate the authenticity of the database.
+:program:`lglass-roagen` provides a really simple ROA table generator for BIRD
+Internet Routing Daemon. It is capable of generating ROA tables for IPv4 and
+IPv6 from a registry database, but doesn't validate the authenticity of the
+database.
 
 ::
 

@@ -1,9 +1,10 @@
-:mod:`lglass-web` – Simple registry and routing web interface
-=============================================================
+:program:`lglass-web` – Simple registry and routing web interface
+=================================================================
 
-The `lglass-web` tool starts a simple HTTP server for the integrated lglass web
-interface. It reads the configuration from a JSON file. Please notice that the
-used web server is not suited for usage in public setups. Default port is 8080.
+The :program:`lglass-web` tool starts a simple HTTP server for the integrated
+lglass web interface. It reads the configuration from a JSON file. Please
+notice that the used web server is not suited for usage in public setups.
+Default port is 8080.
 
 ::
 

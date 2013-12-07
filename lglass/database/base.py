@@ -6,42 +6,42 @@ import functools
 import lglass.rpsl
 
 class Database(object):
-	""" Database is an abstract class which defines some constants and setter/getter
+	"""Database is an abstract class which defines some constants and setter/getter
 	for subscripts. You have to extend from it by creating a new class and
 	overriding __init__, get, list, find, save and delete to conform to the
-	database protocol. """
+	database protocol."""
 
 	def __init__(self):
 		raise NotImplementedError("Instances of Database are not permitted")
 
 	def get(self, type, primary_key):
-		""" Get specific object addressed by type and primary_key from database. Returns
+		"""Get specific object addressed by type and primary_key from database. Returns
 		lglass.rpsl.Object. This method shall raise a KeyError if the object was not
-		found. """
+		found."""
 		raise NotImplementedError("get() is not implemented")
 
 	def list(self, filter=None, limit=None):
-		""" Return list of matching RPSL object specs, filter can be a callable taking
-		two arguments (type, primary_key), and limit can be a int. RPSL object specs
-		are tuples consisting of two str instances. """
+		"""Return list of matching RPSL object specs, filter can be a callable taking
+		two arguments (``type``, ``primary_key``), and limit can be a int. RPSL object specs
+		are tuples consisting of two str instances."""
 		raise NotImplementedError("list() is not implemented")
 
 	def find(self, key, types=None, limit=None):
-		""" Finds an object by searching the whole database for key. It's possible
+		"""Finds an object by searching the whole database for key. It's possible
 		to supply a list of acceptable object types and to provide a limit of objects.
-		This method returns a list of lglass.rpsl.Object. """
+		This method returns a list of :py:class:`lglass.rpsl.Object`."""
 		raise NotImplementedError("find() is not implemented")
 
 	def save(self, obj):
-		""" Save object in database. """
+		"""Save object in database."""
 		raise NotImplementedError("save() is not implemented")
 
 	def delete(self, type, primary_key):
-		""" Delete object in database. """
+		"""Delete object in database."""
 		raise NotImplementedError("delete() is not implemented")
 
 	def flush(self):
-		""" Flush database cache """
+		"""Flush database cache."""
 		raise NotImplementedError("flush() is not implemented")
 
 	object_types = {
@@ -132,8 +132,8 @@ class Database(object):
 url_schemes = {}
 
 def register(scheme_or_cls):
-	""" This decorator adds the supplied class to the url_schemes dict with
-	the schema specified in `name` """
+	"""This decorator adds the supplied class to the url_schemes dict with
+	the schema specified in ``name``"""
 	def decorator(cls):
 		if hasattr(cls, "from_url") and callable(cls.from_url):
 			url_schemes[(cls.__module__ + "." + cls.__name__).lower()] = cls
@@ -150,12 +150,12 @@ def register(scheme_or_cls):
 		return functools.wraps(scheme_or_cls)(decorator)
 
 def from_url(url):
-	""" Create database from URL. This function accepts a str or an URL tuple.
+	"""Create database from URL. This function accepts a str or an URL tuple.
 	The URL schema may have multiple formats:
 
-		1. {db_name}
-		2. whois+{db_name}
-		3. whois+{module}+{db_name}
+		1. ``{db_name}``
+		2. ``whois+{db_name}``
+		3. ``whois+{module}+{db_name}``
 	"""
 	import importlib
 	if isinstance(url, str):
@@ -185,9 +185,9 @@ def build_chain(urls):
 
 @register("dict")
 class DictDatabase(Database):
-	""" This database backend operates completely in memory by using a Python
+	"""This database backend operates completely in memory by using a Python
 	dictionary to organize the information. It uses only builtin Python data types
-	like list, tuple, and dict. """
+	like list, tuple, and dict."""
 
 	def __init__(self):
 		self.backend = dict()
