@@ -14,4 +14,5 @@ Contents:
   intro
   tools/index
   api/index
+  registry/index
 
