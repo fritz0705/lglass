@@ -52,6 +52,9 @@ def _colors():
 			yield color
 
 def routing_graph(rtable, dest, local_address, local_asn):
+	"""Return routing graph for given ``dest``, ``local_address`` and ``local_asn``
+	by using information provided by :py:class:`lglass.route.RoutingTable` object
+	in ``rtable``."""
 	routes = rtable.match_all(dest)
 	local_asn = _format_asn(local_asn);
 
@@ -100,6 +103,8 @@ def routing_graph(rtable, dest, local_address, local_asn):
 	return "\n".join(builder)
 
 def network_graph(rtable):
+	"""Return network graph by using information provided by
+	:py:class:`lglass.route.RoutingTable` object provided in ``rtable``."""
 	def _spec_id(spec):
 		import hashlib
 		return "x" + hashlib.md5(":".join(str(spec)).encode()).hexdigest()
@@ -133,6 +138,8 @@ def network_graph(rtable):
 	return "\n".join(builder)
 
 def peering_graph(rtable, join=True):
+	"""Return peering graph for information provided by
+	:py:class:`lglass.route.RoutingTable` object in ``rtable``."""
 	builder = []
 	if join:
 		builder.append("digraph {")
@@ -177,6 +184,8 @@ def peering_graph(rtable, join=True):
 		return builder
 
 def database_graph(database, subset=None):
+	"""Return database graph for given :py:class:`lglass.database.base.BaseDatabase`
+	database object, optionally using subset provided in ``subset`` as iterable."""
 	def _spec_id(spec):
 		import hashlib
 		return "x" + hashlib.md5(":".join(spec).encode()).hexdigest()
