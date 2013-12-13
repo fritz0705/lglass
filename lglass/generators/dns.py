@@ -6,25 +6,31 @@ import netaddr
 import time
 
 def rdns_domain(network):
+	"""Transform :py:class:`netaddr.IPNetwork` object to rDNS zone name"""
 	if network.version == 4:
 		return ".".join(map(str, reversed(network.ip.words[:network.prefixlen // 8]))) + ".in-addr.arpa"
 	elif network.version == 6:
 		return ".".join(map(str, reversed(list("".join(hex(n)[2:].rjust(4, "0") for n in network.ip.words))[:network.prefixlen // 4]))) + ".ip6.arpa"
 
 def comment(txt):
+	"""Generate simple DNS zonefile comment"""
 	return "; {}".format(str(txt))
 
 def delegation(domain, nameserver):
+	"""Generate DNS delegation for given domain and nameserver"""
 	nameserver, *_ = nameserver.split()
 	return lglass.dns.ResourceRecord(domain, "NS", lglass.dns.absolute(nameserver))
 
 def rdns_delegation(network, nameserver):
+	"""Generate rDNS delegation for given network and nameserver"""
 	return delegation(rdns_domain(network), nameserver)
 
 rdns4_delegation = rdns_delegation
 rdns6_delegation = rdns_delegation
 
 def glue(domain, addr):
+	"""Return :py:class:`lglass.dns.ResourceRecord` glue record object for given
+	IP address"""
 	if addr.version == 4:
 		return lglass.dns.ResourceRecord(domain, "A", addr)
 	elif addr.version == 6:
@@ -62,6 +68,8 @@ def generate_delegation(dns, with_glue=True):
 					pass
 
 def generate_rdns4_delegation(subnet, inetnum):
+	"""Generate delegation for given IPv4 network by passing an inetnum object
+	and the subnet object"""
 	for _, nserver in inetnum.get("nserver"):
 		yield rdns_delegation(subnet, nserver)
 
@@ -102,6 +110,7 @@ def generate_zone(zone, domains, soa=None, nameservers=[]):
 		yield from generate_delegation(domain)
 
 def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
+	"""Generate rDNS zone for IPv4 rDNS from inetnum objects and a given IP prefix"""
 	if network.prefixlen % 8:
 		raise ValueError("Network prefixlen must be a multiple of 8, got {}".format(network.prefixlen))
 
@@ -137,6 +146,7 @@ def generate_rdns4_zone(network, inetnums, soa=None, nameservers=[]):
 		yield from generate_rdns4_delegation(subnet, inetnum)
 
 def generate_rdns6_zone(network, inet6nums, soa=None, nameservers=[]):
+	"""Generate rDNS zone for IPv6 rDNS from inetnum objects and a given IP prefix"""
 	if network.prefixlen % 4:
 		raise ValueError("Network prefixlen must be a multiple of 4, got {}".format(network.prefixlen))
 
