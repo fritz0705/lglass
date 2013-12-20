@@ -139,9 +139,9 @@ class RoutingTable(object):
 	def to_cbor(self, fh=None):
 		import flynn
 		if fh is None:
-			return flynn.dumps(map(Route.to_dict, self.routes))
+			return flynn.dumps(self.routes, cls=_RouteEncoder)
 		else:
-			return flynn.dump(map(Route.to_dict, self.routes), fh)
+			return flynn.dump(self.routes, fh, cls=_RouteEncoder)
 
 	dump_cbor = to_cbor
 
@@ -155,8 +155,15 @@ class RoutingTable(object):
 
 	def load_cbor(self, data):
 		import flynn
-		for route in flynn.load(data):
-			self.routes.add(Route.from_dict(route))
+		if hasattr(data, "read"):
+			res = flynn.load(data, cls=_RouteDecoder)
+		else:
+			res = flynn.loads(data, cls=_RouteDecoder)
+		for route in res:
+			if isinstance(route, dict):
+				self.routes.add(Route.from_dict(route))
+			elif isinstance(route, Route):
+				self.routes.add(route)
 
 	@classmethod
 	def from_json(cls, data):
@@ -187,4 +194,53 @@ def format_asn(asn):
 			return "AS" + asn
 	elif isinstance(asn, int):
 		return "AS" + str(asn)
+
+try:
+	import flynn
+
+	class _RouteEncoder(flynn.encoder.Encoder):
+		def encode(self, object):
+			if isinstance(object, Route):
+				self.encode_route(object)
+			elif isinstance(object, netaddr.IPNetwork):
+				self.encode_ipnetwork(object)
+				pass
+			elif isinstance(object, netaddr.IPAddress):
+				self.encode_ipaddress(object)
+			else:
+				flynn.encoder.Encoder.encode(self, object)
+
+		def encode_route(self, route):
+			self.encode_tagging(flynn.Tagging(33000, [
+				route.prefix,
+				list(route.nexthop),
+				route.metric,
+				route.annotations]))
+		
+		def encode_ipnetwork(self, ipnetwork):
+			self.encode_tagging(flynn.Tagging(33001, [
+				bytes(ipnetwork.ip.packed), ipnetwork.prefixlen]))
+
+		def encode_ipaddress(self, ipaddress):
+			self.encode_tagging(flynn.Tagging(33002, ipaddress.packed))
+
+	class _RouteDecoder(flynn.decoder.StandardDecoder):
+		def __init__(self, *args, **kwargs):
+			flynn.decoder.StandardDecoder.__init__(self, *args, **kwargs)
+			self.register_tagging(33000, self.decode_route_tag)
+			self.register_tagging(33001, self.decode_ipnetwork_tag)
+			self.register_tagging(33002, self.decode_ipaddress_tag)
+
+		def decode_route_tag(self, tag, object):
+			route = Route(object[0], tuple(object[1]), object[2])
+			route.annotations.update(object[3])
+			return route
+
+		def decode_ipnetwork_tag(self, tag, object):
+			return netaddr.IPNetwork((int.from_bytes(object[0], "big"), object[1]))
+
+		def decode_ipaddress_tag(self, tag, object):
+			return netaddr.IPAddress(int.from_bytes(object, "big"))
+except ImportError:
+	pass
 
