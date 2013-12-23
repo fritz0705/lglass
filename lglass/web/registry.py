@@ -4,103 +4,93 @@ import functools
 
 import bottle
 
-import lglass.database.file
-import lglass.database.redis
-import lglass.database.cache
-import lglass.database.schema
-import lglass.database.cidr
-import lglass.rpsl
+import lglass.database
+import lglass.web.helpers
+obj_urlize = lglass.web.helpers.obj_urlize
 
-from lglass.web.helpers import render_template, with_config
+class RegistryApp(lglass.web.helpers.BaseApp):
+	DEFAULT_CONFIG = {
+		"database": [
+			"whois+lglass.database.file+file:.",
+			"whois+lglass.database.cidr+cidr:",
+			"whois+lglass.database.schema+schema:?types-include=person,aut-num"
+		]
+	}
 
-@with_config
-def get_database(config):
-	if isinstance(config["registry"], list):
-		db = lglass.database.base.build_chain(config["registry"])
-		if "registry.types" in config:
-			db.object_types = set(config["registry.types"])
-		return db
-	db = lglass.database.file.FileDatabase(config["registry.database"])
-	if config["registry.cidr"]:
-		db = lglass.database.cidr.CIDRDatabase(db)
-	if config["registry.inverse"]:
-		db = lglass.database.schema.InverseDatabase(db)
-		if config["registry.inverse.types"]:
-			db.inverse_type_filter = lambda key: key in config["registry.inverse.types"]
-	if config["registry.caching"]:
-		if config["registry.caching.type"] == "redis":
-			db = lglass.database.redis.RedisDatabase(db,
-				config["registry.caching.url"],
-				timeout=config["registry.caching.timeout"],
-				prefix=config["registry.caching.prefix"])
+	def __init__(self, config=None):
+		lglass.web.helpers.BaseApp.__init__(self, config=config)
+		self.route("/search", "POST", self.handle_whois_query)
+		self.route("/search/<query>", "GET", self.handle_whois_query)
+		self.route("/objects", "GET", self.handle_show_object_types)
+		self.route("/objects/<type>", "GET", self.handle_show_objects)
+		self.route("/objects/<type>/<primary_key>", "GET", self.handle_show_object)
+		self.route("/flush", "POST", self.handle_flush_cache)
+
+	_database = None
+
+	@property
+	def database(self):
+		if self._database is None:
+			self.database = self.config.get("database", self.DEFAULT_CONFIG["database"])
+		return self._database
+
+	@database.setter
+	def database(self, new_value):
+		if isinstance(new_value, list):
+			self._database = lglass.database.build_chain(new_value)
+		elif isinstance(new_value, str):
+			self._database = lglass.database.from_url(new_value)
 		else:
-			db = lglass.database.cache.CachedDatabase(db)
-	if "registry.types" in config:
-		db.object_types = set(config["registry.types"])
-	return db
+			self._database = new_value
 
-def with_db(func):
-	@functools.wraps(func)
-	def wrapper(*args, **kwargs):
-		db = bottle.request.app.config.get("lglass.database")
-		if db is None:
-			db = get_database()
-			bottle.request.app.config["lglass.database"] = db
-		return func(db=db, *args, **kwargs)
-	return wrapper
-
-@with_db
-def whois_query(db, query=None):
-	if bottle.request.method == "POST":
-		query = bottle.request.forms["query"]
-
-	objs = db.find(query)
-	if len(objs):
-		if len(objs) > 1:
-			return render_template("registry/whois_query.html", objects=objs)
+	def handle_whois_query(self, query=None):
+		if bottle.request.method == "POST":
+			query = bottle.request.forms["query"]
+		objects = self.database.find(query)
+		if len(objects):
+			if len(objects) > 1:
+				return self.render_template("registry/whois_query.html", objects=objects)
+			else:
+				object = objects.pop()
+				bottle.redirect("/registry/objects/{}/{}".format(object.real_type, obj_urlize(object.real_primary_key)))
 		else:
-			obj = objs.pop()
-			bottle.redirect("/obj/{type}/{key}".format(type=obj.real_type,
-				key=lglass.web.helpers.obj_urlize(obj.real_primary_key)))
-	else:
-		bottle.abort(404, "Nothing found")
+			bottle.abort(404, "Nothing found")
+	
+	def handle_show_object(self, type, primary_key):
+		try:
+			object = self.database.get(type, primary_key)
+		except KeyError:
+			bottle.abort(404, "Object not found")
 
-@with_db
-def show_object(type, primary_key, db):
-	try:
-		obj = db.get(type, primary_key)
-	except KeyError:
-		bottle.abort(404, "Object not found")
+		try:
+			schema = self.database.schema(object.type)
+		except KeyError:
+			pass
 
-	try:
-		schema = db.schema(obj.type)
-	except KeyError:
-		pass
+		items = []
+		for key, value in object:
+			if schema is not None:
+				inverse = list(schema.find_inverse(self.database, key, value))
+			else:
+				inverse = []
+			if inverse:
+				inverse = inverse[0].type
+			else:
+				inverse = None
+			items.append((key, value, inverse))
 
-	# (key, value, reference) => ("origin", "AS64712", "aut-num")
-	items = []
-	for key, value in obj:
-		inverse = list(schema.find_inverse(db, key, value))
-		if inverse:
-			inverse = inverse[0].type
-		else:
-			inverse = None
-		items.append((key, value, inverse))
+		return self.render_template("registry/show_object.html", items=items, object=object)
 
-	return render_template("registry/show_object.html", items=items, object=obj)
+	def handle_show_objects(self, type):
+		objects = [self.database.get(*spec) for spec in sorted(self.database.list())
+				if spec[0] == type]
+		return self.render_template("registry/show_objects.html", objects=objects, type=type)
 
-@with_db
-def show_objects(type, db):
-	objs = [db.get(*spec) for spec in sorted(db.list()) if spec[0] == type]
-	return render_template("registry/show_objects.html", objects=objs, type=type)
+	def handle_show_object_types(self):
+		types = sorted(self.database.object_types)
+		return self.render_template("registry/show_object_types.html", types=types)
 
-@with_db
-def show_object_types(db):
-	types = sorted(db.object_types)
-	return render_template("registry/show_object_types.html", types=types)
-
-@with_db
-def flush_cache(db):
-	if getattr(db, "flush") and callable(db.flush):
-		db.flush()
+	def handle_flush_cache(self):
+		if getattr(self.database, "flush") and callable(self.database.flush):
+			self.database.flush()
 
