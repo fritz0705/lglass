@@ -1,26 +1,26 @@
 # coding: utf-8
 
 import json
+import io
 
 import netaddr
 
 class Route(object):
-	""" Simple object which holds all relevant routing information """
-
-	def __init__(self, prefix, nexthop=None, metric=100):
+	def __init__(self, prefix, nexthop=None, priority=100, annotations={}):
 		if isinstance(prefix, str):
 			prefix = netaddr.IPNetwork(prefix)
 		elif isinstance(prefix, netaddr.IPNetwork):
 			pass
 		elif isinstance(prefix, netaddr.IPAddress):
-			prefix = netaddr.IPNetwork(prefix)
+			prefix = netaddr.IPAddress(prefix)
 		else:
 			raise TypeError("Expected prefix to be str, netaddr.IPNetwork, or netaddr.IPAddress, got {}".format(type(prefix)))
-		
+
 		self.prefix = prefix
 		self.nexthop = nexthop
-		self.metric = 100
-		self.annotations = {}
+		self.priority = priority
+		self.annotations = annotations.copy()
+		self.internal_metric = 0
 
 	def __getitem__(self, key):
 		return self.annotations[key]
@@ -35,39 +35,57 @@ class Route(object):
 		return key in self.annotations
 
 	def __hash__(self):
-		return hash(self.prefix) ^ hash(self.nexthop)
+		return hash(self.prefix) ^ hash(self.priority) ^ hash(self.nexthop)
+
+	def __eq__(self, other):
+		return self.prefix == other.prefix and self.priority == other.priority and \
+				self.nexthop == other.nexthop
+	
+	def __lt__(self, greater):
+		if self.prefix.prefixlen >= greater.prefixlen:
+			return False
+		if self.priority >= greater.priority:
+			return False
+		if self.internal_metric >= greater.internal_metric:
+			return False
+		return False
+
+	def __gt__(self, lower):
+		if self.prefix.prefixlen <= lower.prefixlen:
+			return False
+		if self.priority <= lower.priority:
+			return False
+		if self.internal_metric <= lower.internal_metric:
+			return False
+		return False
+
+	def get(self, key, default=None):
+		return self.annotations.get(key, default)
+
+	def items(self):
+		return self.annotations.items()
+
+	def keys(self):
+		return self.annotations.keys()
+
+	def values(self):
+		return self.annotations.values()
+
+	def update(self, *args):
+		self.annotations.update(*args)
+	
+	def sort_key(self):
+		return (self.priority, self.prefix.prefixlen, self.internal_metric)
+
+	def __iter__(self):
+		return iter(self.items())
 
 	def __repr__(self):
-		return "Route({self.prefix!r}, nexthop={self.nexthop!r})".format(self=self)
-
-	def lpm_sort_key(self):
-		return (self.prefix.prefixlen, self.metric)
-
-	def to_dict(self):
-		return {
-			"prefix": str(self.prefix),
-			"nexthop": [str(p) for p in self.nexthop] if self.nexthop else None,
-			"metric": self.metric,
-			"annotations": self.annotations
-		}
-
-	def dump(self):
-		return self.to_dict()
-
+		return "Route({!r}, {!r}, {!r})".format(self.prefix, self.nexthop, self.priority)
+	
 	@property
 	def type(self):
 		return self["Type"].split()[0].lower()
-	
-	@classmethod
-	def from_dict(cls, d):
-		self = cls(d["prefix"])
-		if d["nexthop"]:
-			self.nexthop = (netaddr.IPAddress(d["nexthop"][0]), d["nexthop"][1])
-		self.annotations = d["annotations"].copy()
-		self.metric = d["metric"]
-		return self
-
-	load = from_dict
 
 class RoutingTable(object):
 	""" Simple collection type, which holds routes and supports longest prefix
@@ -103,7 +121,7 @@ class RoutingTable(object):
 			raise TypeError("Expected addr to be str or netaddr.IPAddress, got {}".format(type(addr)))
 
 		return sorted((route for route in self if addr in route.prefix),
-			key=Route.lpm_sort_key, reverse=True)
+			key=Route.sort_key, reverse=True)
 
 	def match(self, addr):
 		try:
@@ -127,64 +145,21 @@ class RoutingTable(object):
 	def load(self, iterable):
 		for route in iterable:
 			self.routes.add(Route.load(iterable))
-
-	def to_json(self, fh=None):
-		if fh is None:
-			return json.dumps(list(self.dump()))
+	
+	def to_cbor(self, io=None):
+		import lglass.cbor
+		if io is not None:
+			return lglass.cbor.dump(io, self)
 		else:
-			return json.dump(list(self.dump()), fh)
-
-	dump_json = to_json
-
-	def to_cbor(self, fh=None):
-		import flynn
-		if fh is None:
-			return flynn.dumps(self.routes, cls=_RouteEncoder)
-		else:
-			return flynn.dump(self.routes, fh, cls=_RouteEncoder)
-
-	dump_cbor = to_cbor
-
-	def load_json(self, data):
-		if hasattr(data, "read"):
-			routes = json.load(data)
-		else:
-			routes = json.loads(data)
-		for route in routes:
-			self.routes.add(Route.from_dict(route))
-
-	def load_cbor(self, data):
-		import flynn
-		if hasattr(data, "read"):
-			res = flynn.load(data, cls=_RouteDecoder)
-		else:
-			res = flynn.loads(data, cls=_RouteDecoder)
-		for route in res:
-			if isinstance(route, dict):
-				self.routes.add(Route.from_dict(route))
-			elif isinstance(route, Route):
-				self.routes.add(route)
-
-	@classmethod
-	def from_json(cls, data):
-		self = cls()
-		self.load_json(data)
-		return self
-
+			return lglass.cbor.dumps(self)
+	
 	@classmethod
 	def from_cbor(cls, data):
-		self = cls()
-		self.load_cbor(data)
-		return self
-
-	@classmethod
-	def from_data(cls, data, format):
-		if format == "json":
-			return cls.from_json(data)
-		elif format == "cbor":
-			return cls.from_cbor(data)
+		import lglass.cbor
+		if isinstance(data, IOBase):
+			return cls(lglass.cbor.load(data))
 		else:
-			raise ValueError("Invalid serialization format {}".format(format))
+			return cls(lglass.cbor.loads(data))
 
 def format_asn(asn):
 	if isinstance(asn, str):
@@ -194,53 +169,4 @@ def format_asn(asn):
 			return "AS" + asn
 	elif isinstance(asn, int):
 		return "AS" + str(asn)
-
-try:
-	import flynn
-
-	class _RouteEncoder(flynn.encoder.Encoder):
-		def encode(self, object):
-			if isinstance(object, Route):
-				self.encode_route(object)
-			elif isinstance(object, netaddr.IPNetwork):
-				self.encode_ipnetwork(object)
-				pass
-			elif isinstance(object, netaddr.IPAddress):
-				self.encode_ipaddress(object)
-			else:
-				flynn.encoder.Encoder.encode(self, object)
-
-		def encode_route(self, route):
-			self.encode_tagging(flynn.Tagging(33000, [
-				route.prefix,
-				list(route.nexthop),
-				route.metric,
-				route.annotations]))
-		
-		def encode_ipnetwork(self, ipnetwork):
-			self.encode_tagging(flynn.Tagging(33001, [
-				bytes(ipnetwork.ip.packed), ipnetwork.prefixlen]))
-
-		def encode_ipaddress(self, ipaddress):
-			self.encode_tagging(flynn.Tagging(33002, ipaddress.packed))
-
-	class _RouteDecoder(flynn.decoder.StandardDecoder):
-		def __init__(self, *args, **kwargs):
-			flynn.decoder.StandardDecoder.__init__(self, *args, **kwargs)
-			self.register_tagging(33000, self.decode_route_tag)
-			self.register_tagging(33001, self.decode_ipnetwork_tag)
-			self.register_tagging(33002, self.decode_ipaddress_tag)
-
-		def decode_route_tag(self, tag, object):
-			route = Route(object[0], tuple(object[1]), object[2])
-			route.annotations.update(object[3])
-			return route
-
-		def decode_ipnetwork_tag(self, tag, object):
-			return netaddr.IPNetwork((int.from_bytes(object[0], "big"), object[1]))
-
-		def decode_ipaddress_tag(self, tag, object):
-			return netaddr.IPAddress(int.from_bytes(object, "big"))
-except ImportError:
-	pass
 

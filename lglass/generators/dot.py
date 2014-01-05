@@ -257,7 +257,7 @@ def main_network(args):
 
 	for _rt in args.rtables:
 		with open(_rt, "rb") as fh:
-			rtable.update(lglass.route.RoutingTable.from_data(fh, args.format))
+			rtable.update(lglass.route.RoutingTable.from_cbor(fh))
 	
 	print(network_graph(rtable))
 
@@ -268,7 +268,7 @@ def main_peering(args):
 
 	for _rt in args.rtables:
 		with open(_rt, "rb") as fh:
-			rtable.update(lglass.route.RoutingTable.from_data(fh, args.format))
+			rtable.update(lglass.route.RoutingTable.from_cbor(fh))
 	
 	print(peering_graph(rtable))
 
@@ -279,7 +279,7 @@ def main_routing(args):
 
 	for _rt in args.rtables:
 		with open(_rt, "rb") as fh:
-			rtable.update(lglass.route.RoutingTable.from_data(fh, args.format))
+			rtable.update(lglass.route.RoutingTable.from_cbor(fh))
 	
 	print(routing_graph(rtable, args.destination, args.local_ip, args.local_as))
 
@@ -301,13 +301,10 @@ def main(args=sys.argv[1:]):
 	argparser_db.add_argument("-d", "--database", default=".")
 	argparser_db.add_argument("objects", nargs="*")
 
-	argparser_peerings.add_argument("-f", "--format", choices=["cbor", "json"], default="json")
 	argparser_peerings.add_argument("rtables", nargs="+")
 
-	argparser_network.add_argument("-f", "--format", choices=["cbor", "json"], default="json")
 	argparser_network.add_argument("rtables", nargs="+")
 
-	argparser_routing.add_argument("-f", "--format", choices=["cbor", "json"], default="json")
 	argparser_routing.add_argument("destination")
 	argparser_routing.add_argument("local_ip")
 	argparser_routing.add_argument("local_as")
