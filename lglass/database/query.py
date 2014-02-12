@@ -16,6 +16,9 @@ class ResultSet(object):
 	@property
 	def result(self):
 		return self.exact.get(0)
+
+	def __len__(self):
+		return len(self.exact)
 	
 	def __iter__(self):
 		for exact in self.exact:
@@ -38,6 +41,10 @@ class Query(object):
 		self.inverse_level = inverse_level
 		self.related = related
 		self.inverse = inverse
+
+	def copy(self):
+		return Query(self.term, self.source, self.types, self.inverse_level,
+			self.related, self.inverse)
 	
 	@property
 	def query_type(self):
@@ -60,6 +67,7 @@ class Query(object):
 		else:
 			return "ip-lookup"
 		if re.match("AS[0-9]+$", self.term):
+			# this won't match objects like AS64712:AS-PEERS
 			return "as-number"
 		return "primary"
 		pass
@@ -78,9 +86,14 @@ class DefaultCollector(object):
 		except KeyError:
 			raise QueryError()
 		# Get exact results
-		rs.exact = source.query_exact(query)
+		rs.exact = list(source.query(query))
 		if query.related:
-			rs.related = source.query_related(query)
+			if query.query_type == "ip-lookup":
+				rs.related = list(source.query_ipaddress(query))
+			elif query.query_type == "as-number":
+				rs.related = list(source.query_autnum(query))
 		# TODO implement inverse search
+		if query.inverse:
+			pass
 		return rs
 
