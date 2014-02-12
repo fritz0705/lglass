@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os.path
+import netaddr
 
 import lglass.rpsl
 
@@ -75,11 +76,11 @@ class BaseBackend(object):
 				pass
 	
 	def query_ipaddress(self, query):
-		ipaddr = netaddr.IPNetwork(query)
+		ipaddr = netaddr.IPNetwork(query.term)
 		for supernet in ipaddr.supernet():
 			new_query = query.copy()
 			new_query.term = str(supernet)
-			yield self.query(new_query)
+			yield from self.query(new_query)
 	
 	def query_autnum(self, query):
 		return []
@@ -91,7 +92,7 @@ class FileSystemBackend(BaseBackend):
 	def get_object(self, type, primary_key):
 		try:
 			with open(self._path(type, primary_key)) as fh:
-				obj = lglass.rpsl.parse_rpsl(fh)
+				obj = lglass.rpsl.Object(lglass.rpsl.parse_rpsl(fh))
 				obj.real_spec = (type, primary_key.replace("/", "_"))
 				return obj
 		except FileNotFoundError:
