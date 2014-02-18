@@ -6,3 +6,6 @@ from lglass.object import Object as RawObject, SchemaValidationError, SchemaObje
 class Object(RawObject):
 	pass
 
+if __name__ == "__main__":
+	main()
+
