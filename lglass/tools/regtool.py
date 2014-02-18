@@ -13,9 +13,7 @@ import socket
 import pkg_resources
 
 import lglass.rpsl
-import lglass.database
-import lglass.database.cidr
-import lglass.database.schema
+import lglass.database.backends
 import lglass.generators.roa
 import lglass.whoisd
 
@@ -27,7 +25,7 @@ def _edit_object(editor, obj):
 		fh.seek(0)
 		return lglass.rpsl.Object.from_iterable(fh)
 
-def main_create_object(args, config, database):
+def main_create_object(args, config, backend):
 	obj = lglass.rpsl.Object()
 	obj.add(args.type, args.primary_key)
 	kvpair_iter = iter(args.kvpairs)
@@ -40,7 +38,7 @@ def main_create_object(args, config, database):
 	
 	if args.fill:
 		try:
-			schema = database.schema(args.type)
+			schema = backend.get_schema(args.type)
 			for constraint in schema.constraints():
 				if constraint.mandatory and constraint.key_name not in obj:
 					obj.add(constraint.key_name, "# please insert {}".format(constraint.key_name))
@@ -52,7 +50,7 @@ def main_create_object(args, config, database):
 
 	if args.validate:
 		try:
-			schema = database.schema(obj.type)
+			schema = backend.get_schema(obj.type)
 			schema.validate(obj)
 		except KeyError:
 			print("Schema for {} not found".format(obj.type), file=sys.stderr)
@@ -62,21 +60,21 @@ def main_create_object(args, config, database):
 				e.key, e.message))
 			exit(1)
 
-	database.save(obj)
+	backend.persist_object(obj)
 
-def main_show_object(args, config, database):
+def main_show_object(args, config, backend):
 	try:
-		obj = database.get(args.type, args.primary_key)
+		obj = backend.get_object(args.type, args.primary_key)
 	except KeyError:
 		print("{} {} not found".format(args.type, args.primary_key), file=sys.stderr)
 		exit(1)
 	else:
 		sys.stdout.write(obj.pretty_print(kv_padding=args.padding))
 
-def main_validate_object(args, config, database):
+def main_validate_object(args, config, backend):
 	try:
-		obj = database.get(args.type, args.primary_key)
-		schema = database.schema(args.type)
+		obj = backend.get_object(args.type, args.primary_key)
+		schema = backend.get_schema(args.type)
 	except KeyError:
 		print("{} {} not found".format(args.type, args.primary_key))
 		exit(111)
@@ -91,9 +89,9 @@ def main_validate_object(args, config, database):
 			print("{} {} is valid".format(args.type, args.primary_key))
 			exit(0)
 
-def main_edit_object(args, config, database):
+def main_edit_object(args, config, backend):
 	try:
-		obj = database.get(args.type, args.primary_key)
+		obj = backend.get_object(args.type, args.primary_key)
 	except KeyError:
 		print("{} {} not found".format(args.type, args.primary_key))
 		exit(111)
@@ -102,7 +100,7 @@ def main_edit_object(args, config, database):
 
 	if args.validate:
 		try:
-			schema = database.schema(obj.type)
+			schema = backend.get_schema(obj.type)
 			schema.validate(obj)
 		except KeyError:
 			print("Schema for {} not found".format(obj.type), file=sys.stderr)
@@ -112,13 +110,13 @@ def main_edit_object(args, config, database):
 				e.key, e.message))
 			exit(1)
 
-	database.save(obj)
+	backend.persist_object(obj)
 
-def main_delete_object(args, config, database):
-	database.delete(args.type, args.primary_key)
+def main_delete_object(args, config, backend):
+	backend.delete_object(args.type, args.primary_key)
 
-def main_list_objects(args, config, database):
-	for spec in database.list():
+def main_list_objects(args, config, backend):
+	for spec in backend.list_all_objects():
 		if args.types and spec[0] not in args.types:
 			continue
 		print("\t".join(spec))
@@ -163,32 +161,32 @@ def main_whoisd(args, config, database):
 	lglass.whoisd.WhoisdServer(sock, handler)
 	asyncore.loop()
 
-def main_roagen(args, config, database):
+def main_roagen(args, config, backend):
 	if args.protocol == 4:
-		routes = (database.get(*spec) for spec in database.list() if spec[0] == "route")
+		routes = (backend.get_object("route", spec) for spec in backend.list_objects("route"))
 	elif args.protocol == 6:
-		routes = (database.get(*spec) for spec in database.list() if spec[0] == "route6")
+		routes = (backend.get_object("route6", spec) for spec in backend.list_objects("route6"))
 	if args.flush:
 		print("flush roa table {table}".format(table=args.table))
 	print("\n".join(lglass.generators.roa.roa_table(routes, args.table)))
 
-def main_install_schemas(args, config, database):
+def main_install_schemas(args, config, backend):
 	basedir = pkg_resources.resource_filename("lglass", "schemas")
 	for schema in os.listdir(basedir):
 		if schema[0] == ".":
 			continue
 		with open(os.path.join(basedir, schema)) as fh:
 			obj = lglass.rpsl.Object.from_iterable(fh)
-			database.save(obj)
+			backend.persist_object(obj)
 
-def main_format_object(args, config, database):
+def main_format_object(args, config, backend):
 	try:
-		obj = database.get(args.type, args.primary_key)
+		obj = backend.get_object(args.type, args.primary_key)
 	except KeyError:
 		print("{} {} not found".format(args.type, args.primary_key), file=sys.stderr)
 		exit(1)
 	else:
-		database.save(obj)
+		backend.persist_object(obj)
 
 def main(args=sys.argv[1:]):
 	argparser = argparse.ArgumentParser(description="Registry management tool")
@@ -305,12 +303,12 @@ def main(args=sys.argv[1:]):
 	}
 
 	if args.database is not None:
-		database = lglass.database.from_url(args.database)
+		backend = lglass.database.backends.FileSystemBackend(args.database)
 	else:
-		database = lglass.database.build_chain(config["database"])
+		backend = lglass.database.backends.FileSystemBackend(".")
 
 	if args.command in commands:
-		commands[args.command](args, config, database)
+		commands[args.command](args, config, backend)
 	else:
 		argparser.print_help()
 

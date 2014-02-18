@@ -6,7 +6,7 @@ import argparse
 import netaddr
 
 import lglass.generators.dns
-import lglass.database.file
+import lglass.database.backends
 
 def build_argparser():
 	argparser = argparse.ArgumentParser(description="Generator for delegating zones")
@@ -36,7 +36,7 @@ def main(argv=sys.argv[1:]):
 	argparser = build_argparser()
 	args = argparser.parse_args(argv)
 
-	db = lglass.database.file.FileDatabase(args.database)
+	backend = lglass.database.backends.FileSystemBackend(args.database)
 	master_nameserver = args.master
 	if master_nameserver is None:
 		if args.nameservers:
@@ -46,14 +46,14 @@ def main(argv=sys.argv[1:]):
 	args.master = master_nameserver
 
 	if args.type == "dns":
-		return main_dns(args, db)
+		return main_dns(args, backend)
 	elif args.type == "rdns4":
-		return main_rdns4(args, db)
+		return main_rdns4(args, backend)
 	elif args.type == "rdns6":
-		return main_rdns6(args, db)
+		return main_rdns6(args, backend)
 
-def main_dns(args, db):
-	domains = (db.get(*spec) for spec in db.list()
+def main_dns(args, backend):
+	domains = (backend.get_object(*spec) for spec in backend.list_all_objects()
 		if (spec[0] == "dns" or spec[0] == "domain")
 		and spec[1].endswith("." + args.zone))
 
@@ -72,8 +72,8 @@ def main_dns(args, db):
 
 	print("\n".join(map(str, zone)))
 
-def main_rdns4(args, db):
-	inetnums = (db.get(*spec) for spec in db.list() if spec[0] == "inetnum")
+def main_rdns4(args, backend):
+	inetnums = (backend.get_object("inetnum", spec) for spec in backend.list_objects("inetnum"))
 
 	network = netaddr.IPNetwork(args.network)
 	zone = lglass.generators.dns.rdns_domain(network)
@@ -91,8 +91,8 @@ def main_rdns4(args, db):
 
 	print("\n".join(map(str, zone)))
 
-def main_rdns6(args, db):
-	inet6nums = (db.get(*spec) for spec in db.list() if spec[0] == "inet6num")
+def main_rdns6(args, backend):
+	inet6nums = (backend.get_object("inet6num", spec) for spec in backend.list_objects("inet6num"))
 
 	network = netaddr.IPNetwork(args.network)
 	zone = lglass.generators.dns.rdns_domain(network)

@@ -70,6 +70,11 @@ class BaseBackend(object):
 	def list_objects(self, type):
 		raise NotImplementedError("list_objects")
 
+	def list_all_objects(self):
+		for type in self.object_types:
+			for primary_key in self.list_objects(type):
+				yield type, primary_key
+
 	def query(self, query):
 		types = self.object_types if query.types is None else query.types
 		for type_ in types:

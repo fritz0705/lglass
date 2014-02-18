@@ -183,7 +183,7 @@ def peering_graph(rtable, join=True):
 	else:
 		return builder
 
-def database_graph(database, subset=None):
+def database_graph(backend, subset=None):
 	"""Return database graph for given :py:class:`lglass.database.base.BaseDatabase`
 	database object, optionally using subset provided in ``subset`` as iterable."""
 	def _spec_id(spec):
@@ -195,19 +195,19 @@ def database_graph(database, subset=None):
 
 	if subset is not None:
 		if isinstance(subset, tuple):
-			nodes.add(database.get(*subset))
+			nodes.add(backend.get_object(*subset))
 		elif isinstance(subset, list):
 			for elem in subset:
 				if isinstance(elem, tuple):
-					nodes.add(database.get(*elem))
+					nodes.add(backend.get_object(*elem))
 				else:
 					nodes.add(elem)
 	else:
-		nodes.update(map(lambda l: database.get(*l), database.list()))
+		nodes.update(map(lambda l: backend.get_object(*l), backend.list_all_objects()))
 	while True:
 		new_nodes = set()
 		for node in nodes:
-			for inverse in node.inverses(database):
+			for inverse in node.inverses(backend):
 				edges.add((node.spec, inverse.spec))
 				new_nodes.add(inverse)
 		if new_nodes <= nodes:
@@ -231,9 +231,9 @@ def database_graph(database, subset=None):
 	return "\n".join(builder)
 
 def main_database(args):
-	import lglass.database.file
+	import lglass.databaes.backends
 
-	db = lglass.database.file.FileDatabase(args.database)
+	backend = lglass.database.backends.FileSystemBackend(args.database)
 
 	subset_objs = []
 
@@ -241,14 +241,14 @@ def main_database(args):
 	try:
 		for first in obj_iter:
 			second = next(obj_iter)
-			subset_objs.append(db.get(first, second))
+			subset_objs.append(backend.get_object(first, second))
 	except StopIteration:
 		pass
 	
 	if subset_objs:
-		print(database_graph(db, subset_objs))
+		print(database_graph(backend, subset_objs))
 	else:
-		print(database_graph(db))
+		print(database_graph(backend))
 
 def main_network(args):
 	import lglass.route
