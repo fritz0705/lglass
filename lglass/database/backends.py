@@ -83,7 +83,11 @@ class BaseBackend(object):
 			yield from self.query(new_query)
 	
 	def query_autnum(self, query):
-		return []
+		for primary_key in self.list_objects("as-block"):
+			primary_key = primary_key.relace("_", "-")
+			begin, end = map(int, map(str.strip, primary_key.split("-", 1)))
+			if self.autnum >= begin and self.autnum <= end:
+				yield self.get_object("as-block", primary_key)
 
 class FileSystemBackend(BaseBackend):
 	def __init__(self, path):
@@ -91,9 +95,10 @@ class FileSystemBackend(BaseBackend):
 
 	def get_object(self, type, primary_key):
 		try:
+			primary_key = primary_key.replace("/", "_")
 			with open(self._path(type, primary_key)) as fh:
 				obj = lglass.rpsl.Object(lglass.rpsl.parse_rpsl(fh))
-				obj.real_spec = (type, primary_key.replace("/", "_"))
+				obj.real_spec = (type, primary_key)
 				return obj
 		except FileNotFoundError:
 			raise NotFoundError(self, type, primary_key)

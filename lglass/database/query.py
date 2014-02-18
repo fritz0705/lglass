@@ -45,6 +45,12 @@ class Query(object):
 	def copy(self):
 		return Query(self.term, self.source, self.types, self.inverse_level,
 			self.related, self.inverse)
+
+	@property
+	def autnum(self):
+		if self.query_type != "as-number":
+			return None
+		return int(self.term[2:])
 	
 	@property
 	def query_type(self):
