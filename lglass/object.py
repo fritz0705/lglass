@@ -785,7 +785,7 @@ def main(argv=None):
 	import traceback
 	import warnings
 	import pkg_resources
-	import lglass.database.file
+	import lglass.database.backends
 
 	if argv is None:
 		argv = sys.argv[1:]
