@@ -133,6 +133,12 @@ class Object(object):
 		"""Get all values for given key."""
 		return [kvpair for kvpair in self.data if kvpair[0] == key]
 
+	def getfirst(self, key, default=None):
+		try:
+			return self[key]
+		except KeyError:
+			return default
+
 	def add(self, k, v):
 		"""Add new entry at the end with given key and value."""
 		return self.data.append((k, v))
