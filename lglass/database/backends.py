@@ -55,6 +55,9 @@ class BaseBackend(object):
 		"rtr-set"
 	}
 
+	def get_schema(self, type):
+		return lglass.rpsl.SchemaObject(self.get_object("schema", type.upper() + "-SCHEMA"))
+
 	def get_object(self, type, primary_key):
 		raise NotImplementedError("get_object")
 

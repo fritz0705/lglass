@@ -809,7 +809,7 @@ def main(argv=None):
 
 	args = argparser.parse_args(argv)
 
-	database = lglass.database.file.FileDatabase(args.database)
+	backends = lglass.database.backends.FileSystemDatabase(args.database)
 
 	pragmas = {
 		"whitespace-preserve": args.whitespace_preserve,
@@ -827,7 +827,7 @@ def main(argv=None):
 					continue
 				if args.validate:
 					try:
-						schema = database.schema(obj.type)
+						schema = backends.get_schema(obj.type)
 						schema.validate(obj)
 					except lglass.object.SchemaValidationError as e:
 						print("{spec}: Validation failed: Key {key}: {message}".format(
@@ -842,7 +842,7 @@ def main(argv=None):
 		obj = Object.from_iterable(sys.stdin, pragmas=pragmas)
 		if args.validate:
 			try:
-				schema = database.schema(obj.type)
+				schema = backends.get_schema(obj.type)
 				schema.validate(obj)
 			except lglass.object.SchemaValidationError as e:
 				print("{spec}: Validation failed: Key {key}: {message}".format(
