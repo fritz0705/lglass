@@ -46,6 +46,12 @@ class Query(object):
 		return Query(self.term, self.source, self.types, self.inverse_level,
 			self.related, self.inverse)
 
+	def __hash__(self):
+		return (hash(Query) ^ hash(self.term) ^ hash(self.types)) + hash(self.inverse_level) + hash(self.related) + hash(self.inverse)
+
+	def __eq__(self, other):
+		return hash(self) == hash(other)
+
 	@property
 	def autnum(self):
 		if self.query_type != "as-number":
@@ -79,13 +85,18 @@ class Query(object):
 		pass
 
 class DefaultCollector(object):
-	def __init__(self, source):
+	def __init__(self, source, cache=None):
 		self.sources = {None: source}
+		self.cache = cache
 
 	def query(self, *args, **kwargs):
 		return self.execute(Query(*args, **kwargs))
 
 	def execute(self, query):
+		if self.cache:
+			rs = self.cache.fetch_query(query)
+			if rs is not None:
+				return rs
 		rs = ResultSet(query)
 		try:
 			source = self.sources[query.source]
