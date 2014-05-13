@@ -98,6 +98,10 @@ class QueryEngine(object):
 		self.sources = {None: source}
 		self.cache = cache
 
+	def get(self, type, primary_key):
+	  res = self.query(primary_key, types={type}, inverse_level=0, related=False)
+	  return res.result
+
 	def query(self, *args, **kwargs):
 		return self.execute(Query(*args, **kwargs))
 
