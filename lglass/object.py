@@ -235,22 +235,22 @@ class Object(object):
 	def schema(self, engine):
 		"""Return schema object or None."""
 		obj = engine.get("schema", self.type)
-    if obj is not None:
-      return SchemaObject(obj)
-    return None
+	  if obj is not None:
+	    return SchemaObject(obj)
+	  return None
 
 	def inverses(self, engine):
 		"""Returns a generator which yields any related object."""
 		found = set()
 		schema = self.schema(engine)
-    if schema is None:
-      return
-    for key, value in self[1:]:
-      inverse = schema.find_inverse(engine, key, value):
-        for inv in inverse:
-          if inv not in found:
-            yield inv
-            found.add(inv)
+	  if schema is None:
+	    return
+	  for key, value in self[1:]:
+	    inverse = schema.find_inverse(engine, key, value):
+	      for inv in inverse:
+	        if inv not in found:
+	          yield inv
+	          found.add(inv)
 
 	@property
 	def type(self):
@@ -388,9 +388,9 @@ class SchemaObject(Object):
 		if constraint is None or constraint.inverse is None:
 			return
 		for inverse in constraint.inverse:
-		  obj = yield engine.get(inverse, value)
-      if obj is not None:
-        yield obj
+			obj = yield engine.get(inverse, value)
+	    if obj is not None:
+	      yield obj
 	
 	def lookup_keys(self):
 		for c in self.constraints():

@@ -52,16 +52,16 @@ class Query(object):
 		return hash(self) == hash(other)
 
 	@property
-  def inverse(self):
-    return self.inverse_level > 0
+	def inverse(self):
+	  return self.inverse_level > 0
 
-  @inverse.setter
-  def inverse(self, value):
-    if value:
-      if not self.inverse:
-        self.inverse_level = 1
-    else:
-      self.inverse_level = 0
+	@inverse.setter
+	def inverse(self, value):
+	  if value:
+	    if not self.inverse:
+	      self.inverse_level = 1
+	  else:
+	    self.inverse_level = 0
 
 	@property
 	def autnum(self):
@@ -99,23 +99,23 @@ class QueryEngine(object):
 		self.cache = cache
 
 	def get(self, type, primary_key):
-	  res = self.query(primary_key, types={type}, inverse_level=0, related=False)
-	  return res.result
+		res = self.query(primary_key, types={type}, inverse_level=0, related=False)
+		return res.result
 
 	def query(self, *args, **kwargs):
 		return self.execute(Query(*args, **kwargs))
 
-  def _execute_inverse_search(self, query, rs):
-    found_objs = set(rs.exact)
+	def _execute_inverse_search(self, query, rs):
+	  found_objs = set(rs.exact)
 
-    for n in range(query.inverse_level):
-      new_objs = set()
-      for obj in found_objs:
-        for inverse in obj.inverses(self):
-          if inverse not in found_objs and inverse not in new_objs:
-            rs.inverse.append(inverse)
-            new_found.add(inverse)
-      found_objs.update(new_found)
+	  for n in range(query.inverse_level):
+	    new_objs = set()
+	    for obj in found_objs:
+	      for inverse in obj.inverses(self):
+	        if inverse not in found_objs and inverse not in new_objs:
+	          rs.inverse.append(inverse)
+	          new_found.add(inverse)
+	    found_objs.update(new_found)
 
 	def execute(self, query):
 		if self.cache:
@@ -135,7 +135,7 @@ class QueryEngine(object):
 			elif query.query_type == "as-number":
 				rs.related = list(source.query_autnum(query))
 		if query.inverse:
-		  # Execute inverse search when requested
-		  self._execute_inverse_search(rs)
+			# Execute inverse search when requested
+			self._execute_inverse_search(rs)
 		return rs
 
