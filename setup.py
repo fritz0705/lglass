@@ -8,7 +8,7 @@ import setuptools
 
 setuptools.setup(
 	name="lglass",
-	version="1.0c1",
+	version="1.0",
 	packages=[
 		"lglass",
 		"lglass.database",
@@ -32,11 +32,11 @@ setuptools.setup(
 	],
 	long_description=__doc__,
 	install_requires=[
-		"Jinja2==2.7.1",
-		"bottle==0.11.6",
-		"redis==2.8.0",
-		"netaddr==0.7.10",
-		"flynn==1.0.0b1"
+		"Jinja2==2.7.3",
+		"bottle==0.12.8",
+		"redis==2.10.3",
+		"netaddr==0.7.13",
+		"flynn==1.0.0b2"
 	],
 	entry_points={
 		"console_scripts": [

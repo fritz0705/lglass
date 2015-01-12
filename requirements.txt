@@ -1,5 +1,6 @@
-Jinja2==2.7.1
-bottle==0.11.6
-redis==2.8.0
-netaddr==0.7.10
+Jinja2==2.7.3
+MarkupSafe==0.23
+bottle==0.12.8
 flynn==1.0.0b2
+netaddr==0.7.13
+redis==2.10.3
