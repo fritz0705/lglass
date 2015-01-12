@@ -32,7 +32,7 @@ class Query(object):
 	_query_type = None
 
 	def __init__(self, term, source=None, types=None, inverse_level=1,
-			related=True, inverse=True):
+			related=True):
 		self.term = str(term)
 		self.source = source
 		if self.source is None and "@" in self.term:
@@ -40,7 +40,6 @@ class Query(object):
 		self.types = set(types) if types is not None else None
 		self.inverse_level = inverse_level
 		self.related = related
-		self.inverse = inverse
 
 	def copy(self):
 		return Query(self.term, self.source, self.types, self.inverse_level,
@@ -51,6 +50,18 @@ class Query(object):
 
 	def __eq__(self, other):
 		return hash(self) == hash(other)
+
+	@property
+	def inverse(self):
+	  return self.inverse_level > 0
+
+	@inverse.setter
+	def inverse(self, value):
+	  if value:
+	    if not self.inverse:
+	      self.inverse_level = 1
+	  else:
+	    self.inverse_level = 0
 
 	@property
 	def autnum(self):
@@ -67,9 +78,8 @@ class Query(object):
 	@query_type.setter
 	def query_type(self, value):
 		if value not in {None, "ip-lookup", "as-number", "primary", "lookup"}:
-			raise QueryError()
+			raise QueryError("Invalid query type {}".format(value))
 		self._query_type = value
-		pass
 
 	def _guess_query_type(self):
 		try:
@@ -82,15 +92,30 @@ class Query(object):
 			# this won't match objects like AS64712:AS-PEERS
 			return "as-number"
 		return "primary"
-		pass
 
-class DefaultCollector(object):
+class QueryEngine(object):
 	def __init__(self, source, cache=None):
 		self.sources = {None: source}
 		self.cache = cache
 
+	def get(self, type, primary_key):
+		res = self.query(primary_key, types={type}, inverse_level=0, related=False)
+		return res.result
+
 	def query(self, *args, **kwargs):
 		return self.execute(Query(*args, **kwargs))
+
+	def _execute_inverse_search(self, query, rs):
+	  found_objs = set(rs.exact)
+
+	  for n in range(query.inverse_level):
+	    new_objs = set()
+	    for obj in found_objs:
+	      for inverse in obj.inverses(self):
+	        if inverse not in found_objs and inverse not in new_objs:
+	          rs.inverse.append(inverse)
+	          new_found.add(inverse)
+	    found_objs.update(new_found)
 
 	def execute(self, query):
 		if self.cache:
@@ -101,7 +126,7 @@ class DefaultCollector(object):
 		try:
 			source = self.sources[query.source]
 		except KeyError:
-			raise QueryError()
+			raise QueryError("Unknown database source {}".format(query.source))
 		# Get exact results
 		rs.exact = list(source.query(query))
 		if query.related:
@@ -109,8 +134,8 @@ class DefaultCollector(object):
 				rs.related = list(source.query_ipaddress(query))
 			elif query.query_type == "as-number":
 				rs.related = list(source.query_autnum(query))
-		# TODO implement inverse search
 		if query.inverse:
-			pass
+			# Execute inverse search when requested
+			self._execute_inverse_search(rs)
 		return rs
 

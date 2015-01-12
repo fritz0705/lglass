@@ -232,24 +232,25 @@ class Object(object):
 			items.append((":json-real-primary-key", self.real_primary_key))
 		return items
 
-	def schema(self, database):
+	def schema(self, engine):
 		"""Return schema object or None."""
-		try:
-			return database.schema(self.type)
-		except KeyError:
-			return None
+		obj = engine.get("schema", self.type)
+	  if obj is not None:
+	    return SchemaObject(obj)
+	  return None
 
-	def inverses(self, database):
+	def inverses(self, engine):
 		"""Returns a generator which yields any related object."""
 		found = set()
-		schema = self.schema(database)
-		if schema is None: return
-		for key, value in self[1:]:
-			inverse = schema.find_inverse(database, key, value)
-			for inv in inverse:
-				if inv not in found:
-					yield inv
-					found.add(inv)
+		schema = self.schema(engine)
+	  if schema is None:
+	    return
+	  for key, value in self[1:]:
+	    inverse = schema.find_inverse(engine, key, value):
+	      for inv in inverse:
+	        if inv not in found:
+	          yield inv
+	          found.add(inv)
 
 	@property
 	def type(self):
@@ -381,16 +382,15 @@ class SchemaObject(Object):
 		validator = SchemaValidator(self)
 		return validator.validate(obj)
 
-	def find_inverse(self, db, key, value):
+	def find_inverse(self, engine, key, value):
 		"""Return generator which yields all inverse objects."""
 		constraint = self.constraint_for(key)
 		if constraint is None or constraint.inverse is None:
 			return
 		for inverse in constraint.inverse:
-			try:
-				yield db.get(inverse, value)
-			except KeyError:
-				pass
+			obj = yield engine.get(inverse, value)
+	    if obj is not None:
+	      yield obj
 	
 	def lookup_keys(self):
 		for c in self.constraints():
