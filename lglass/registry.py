@@ -69,6 +69,30 @@ class FileRegistry(object):
 			return lglass.rpsl.SchemaObject(self.lookup(specs))
 		except KeyError:
 			raise KeyError("schema({})".format(type))
+	
+	def related(self, obj):
+		s = set()
+		schema = self.schema(obj.type)
+		for key, value in obj[1:]:
+			constraint = schema.constraint_for(key)
+			if constraint is None or constraint.inverse is None:
+				continue
+			for inverse in constraint.inverse:
+				if (inverse, value) in s:
+					continue
+				try:
+					yield self.get(inverse, value)
+					s.add((inverse, value))
+				except KeyError:
+					pass
+	
+	def graph(self):
+		for obj in self:
+			try:
+				for robj in self.related(obj):
+					yield (obj.spec, robj.spec)
+			except KeyError:
+				pass
 
 	def __path_for(self, type, primary_key):
 		return os.path.join(self.root_dir, type, primary_key.replace("/", "_"))
