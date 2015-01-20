@@ -35,9 +35,9 @@ class Object(object):
 					elif not isinstance(kvpair[1], str):
 						raise ValueError("offset {}: expected value to be str, got {}".format(off, type(kvpair[0])))
 
-					if kvpair[0] == ":json-real-type":
+					if kvpair[0] == ":json-real-type" or kvpair[0] == ':real-type':
 						self.real_type = kvpair[1]
-					elif kvpair[0] == ":json-real-primary-key":
+					elif kvpair[0] == ":json-real-primary-key" or kvpair[0] == ':real-primary-key':
 						self.real_primary_key = kvpair[1]
 					else:
 						self.data.append((kvpair[0], kvpair[1]))
