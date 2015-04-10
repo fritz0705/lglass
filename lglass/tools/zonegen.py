@@ -6,12 +6,13 @@ import argparse
 import netaddr
 
 import lglass.generators.dns
+import lglass.registry
 import lglass.database.file
 
 def build_argparser():
 	argparser = argparse.ArgumentParser(description="Generator for delegating zones")
-	argparser.add_argument("--database", "--db", "-d", help="Whois database",
-			type=str, default=".")
+	argparser.add_argument("--registry", "-r", help="Registry path", type=str,
+			default=".")
 	argparser.add_argument("--nameserver", "-n", dest="nameservers", action="append",
 			help="Nameserver")
 	argparser.add_argument("--master", "-m", help="Master nameserver")
@@ -36,7 +37,7 @@ def main(argv=sys.argv[1:]):
 	argparser = build_argparser()
 	args = argparser.parse_args(argv)
 
-	db = lglass.database.file.FileDatabase(args.database)
+	reg = lglass.registry.FileRegistry(args.registry)
 	master_nameserver = args.master
 	if master_nameserver is None:
 		if args.nameservers:
@@ -46,14 +47,14 @@ def main(argv=sys.argv[1:]):
 	args.master = master_nameserver
 
 	if args.type == "dns":
-		return main_dns(args, db)
+		return main_dns(args, reg)
 	elif args.type == "rdns4":
-		return main_rdns4(args, db)
+		return main_rdns4(args, reg)
 	elif args.type == "rdns6":
-		return main_rdns6(args, db)
+		return main_rdns6(args, reg)
 
-def main_dns(args, db):
-	domains = (db.get(*spec) for spec in db.list()
+def main_dns(args, reg):
+	domains = (reg.get(*spec) for spec in reg.list()
 		if (spec[0] == "dns" or spec[0] == "domain")
 		and spec[1].endswith("." + args.zone))
 
@@ -72,8 +73,8 @@ def main_dns(args, db):
 
 	print("\n".join(map(str, zone)))
 
-def main_rdns4(args, db):
-	inetnums = (db.get(*spec) for spec in db.list() if spec[0] == "inetnum")
+def main_rdns4(args, reg):
+	inetnums = (reg.get(*spec) for spec in reg.list() if spec[0] == "inetnum")
 
 	network = netaddr.IPNetwork(args.network)
 	zone = lglass.generators.dns.rdns_domain(network)
@@ -91,8 +92,8 @@ def main_rdns4(args, db):
 
 	print("\n".join(map(str, zone)))
 
-def main_rdns6(args, db):
-	inet6nums = (db.get(*spec) for spec in db.list() if spec[0] == "inet6num")
+def main_rdns6(args, reg):
+	inet6nums = (reg.get(*spec) for spec in reg.list() if spec[0] == "inet6num")
 
 	network = netaddr.IPNetwork(args.network)
 	zone = lglass.generators.dns.rdns_domain(network)
