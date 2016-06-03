@@ -7,8 +7,8 @@ import lglass.rpsl
 
 class FileRegistry(object):
 	object_types = {"as-block", "as-set", "aut-num", "domain", "inet6num",
-			"inetnum", "mntner", "organisation", "person", "route", "route6",
-			"route-set", "schema"}
+			"inetnum", "mntner", "organisation", "person", "route",
+			"route6", "route-set", "schema", "dns"}
 
 	def __init__(self, root_dir='.'):
 		self.root_dir = root_dir
