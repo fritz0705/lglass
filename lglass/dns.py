@@ -10,7 +10,7 @@ def rdns_domain(network):
         return ".".join(map(str, reversed(list("".join(hex(n)[2:].rjust(4, "0") for n in network.ip.words))[:network.prefixlen // 4]))) + ".ip6.arpa"
 
 def rdns_network(domain):
-    if domain.endswith("ip6.arpa"):
+    if domain.endswith(".ip6.arpa"):
         domain = domain[:-9]
         prefixlen = (domain.count(".") + 1) * 4
 
@@ -29,7 +29,7 @@ def rdns_network(domain):
         except StopIteration:
             pass
         return netaddr.IPNetwork(network[:-1] + "/{}".format(prefixlen))
-    elif domain.endswith("in-addr.arpa"):
+    elif domain.endswith(".in-addr.arpa"):
         domain = domain[:-13]
         prefixlen = (domain.count(".") + 1) * 8
         network = ""
@@ -71,7 +71,7 @@ def generate_delegation(domain, comments=False):
     for nserver_record in domain.get("nserver"):
         server, *glues = nserver_record.split()
         yield ns_delegation(domain["domain"], server)
-        if glues and server.endswith(domain["domain"]):
+        if glues and server.endswith("." + domain["domain"]):
             for glue in glues:
                 yield glue_record(server, glue)
     for ds_rrdata in domain.get("ds-rrdata"):
