@@ -45,15 +45,19 @@ def canonicalize_name(name):
     return name
 
 def glue_record(domain, glue):
+    domain = canonicalize_name(domain)
     if ":" in glue:
         return "{domain}. IN AAAA {glue}".format(domain=domain, glue=glue)
     return "{domain}. IN A {glue}".format(domain=domain, glue=glue)
 
 def ns_delegation(domain, nserver):
+    domain = canonicalize_name(domain)
+    nserver = canonicalize_name(nserver)
     # TODO sanitize nserver
     return "{domain}. IN NS {nserver}.".format(domain=domain, nserver=nserver)
 
 def ds_delegation(domain, rrdata):
+    domain = canonicalize_name(domain)
     # TODO sanitize rrdata
     return "{domain}. IN DS {rrdata}.".format(domain=domain, rrdata=rrdata)
 
