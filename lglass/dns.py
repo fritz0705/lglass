@@ -61,9 +61,9 @@ def generate_delegation(domain, comments=False):
     if comments:
         yield "; {domain} ZONE-C {zonec} ADMIN-C {adminc} TECH-C {techc}".format(
                 domain=domain["domain"],
-                zonec=domain.getfirst("zone-c", "(unknown)"),
-                adminc=domain.getfirst("admin-c", "(unknown)"),
-                techc=domain.getfirst("tech-c", "(unknown)"))
+                zonec=",".join(domain.get("zone-c")) or "(unknown)",
+                adminc=",".join(domain.get("admin-c")) or "(unknown)",
+                techc=",".join(domain.get("tech-c")) or "(unknown)")
     for nserver_record in domain.get("nserver"):
         server, *glues = nserver_record.split()
         yield ns_delegation(domain["domain"], server)
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     domains = set(db.lookup(types="domain"))
     for _, domain_name in domains:
-        if not domain_name.endswith(args.zone) or domain_name == args.zone:
+        if not domain_name.endswith("." + args.zone) or domain_name == args.zone:
             continue
         try:
             domain = db.fetch("domain", domain_name)
