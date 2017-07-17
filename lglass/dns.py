@@ -59,7 +59,7 @@ def ns_delegation(domain, nserver):
 def ds_delegation(domain, rrdata):
     domain = canonicalize_name(domain)
     # TODO sanitize rrdata
-    return "{domain}. IN DS {rrdata}.".format(domain=domain, rrdata=rrdata)
+    return "{domain}. IN DS {rrdata}".format(domain=domain, rrdata=rrdata)
 
 def generate_delegation(domain, comments=False):
     if comments:
