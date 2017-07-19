@@ -30,7 +30,7 @@ primary_key_rules = {
         "route": ["route", "origin"],
         "route6": ["route6", "origin"],
         "person": ["nic-hdl"],
-        "inetnum": range_to_network,
+        "inetnum": lglass.object.cidr_key,
         "as-block": normalize_as_block}
 
 def intrinsic_type(typ, type_synonyms=type_synonyms, object_types=object_types):
@@ -109,6 +109,12 @@ class SimpleDatabase(object):
             raise KeyError(repr((typ, key)))
         except ValueError as verr:
             raise ValueError((typ, key), *verr.args)
+
+    def try_fetch(self, typ, key):
+        try:
+            return self.fetch(typ, key)
+        except KeyError:
+            pass
 
     def fetch_spec(self, spec):
         return self.fetch(*spec)

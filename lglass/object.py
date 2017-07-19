@@ -274,6 +274,19 @@ def parse_object(lines, pragmas={}):
 
 	return result
 
+def cidr_key(obj):
+    import netaddr
+
+    if obj.type in {"inet6num", "route", "route6"}:
+        return netaddr.IPNetwork(obj.key)
+    elif obj.type == "inetnum":
+        try:
+            lower, upper = map(lambda x: x.strip(), obj.key.split("-", 1))
+            return netaddr.IPRange(lower, upper).cidrs()[0]
+        except (ValueError, IndexError, netaddr.core.AddrFormatError):
+            pass
+    return obj.key
+
 if __name__ == "__main__":
     import argparse
     import sys

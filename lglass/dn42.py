@@ -18,14 +18,13 @@ class DN42Object(lglass.object.Object):
     @property
     def key(self):
         if self.type == "inet6num":
-            return range_to_network(self.data[0][1])
+            lower, upper = map(lambda x: x.strip(), self.data[0][1].split("-", 1))
+            return str(netaddr.IPRange(lower, upper).cidrs()[0])
         return self.data[0][1]
 
     @property
     def cidr(self):
-        if self.type in {"inetnum", "route"}:
-            return netaddr.IPNetwork(range_to_network(self.key))
-        return netaddr.IPNetwork(self.key)
+        return lglass.object.cidr_key(self)
 
     def to_domain_objects(self):
         if self.type not in {"inetnum", "inet6num"}:
@@ -130,6 +129,4 @@ class DN42Database(lglass.database.SimpleDatabase):
                         yield ("dns", domain.key)
             except netaddr.core.AddrFormatError:
                 pass
-
-range_to_network = lglass.database.range_to_network
 
