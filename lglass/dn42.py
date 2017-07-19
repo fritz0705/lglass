@@ -17,7 +17,7 @@ class DN42Object(lglass.object.Object):
 
     @property
     def key(self):
-        if self.type in {"inet6num", "route6"}:
+        if self.type == "inet6num":
             return range_to_network(self.data[0][1])
         return self.data[0][1]
 
@@ -35,10 +35,9 @@ class DN42Object(lglass.object.Object):
             # TODO handle sub-/24 allocations
             pass
         else:
-            next_prefixlen = 8 * ((network.prefixlen - 1) // 8 + 1) if network.version == 4 else 4 * ((network.prefixlen - 1) // 4 + 1)
-            for subnet in network.subnet(next_prefixlen):
-                obj = DN42Object([("domain", lglass.dns.rdns_domain(subnet))])
-                obj.extend(list(self.items()))
+            for subnet, domain in lglass.dns.rdns_subnets(network):
+                obj = DN42Object([("domain", domain)])
+                obj.extend((k, v) for k, v in self.items() if k in {"zone-c", "admin-c", "tech-c", "mnt-by", "nserver", "ds-rrdata"})
                 yield obj
 
 class DN42Database(lglass.database.SimpleDatabase):
@@ -51,19 +50,25 @@ class DN42Database(lglass.database.SimpleDatabase):
     def reload(self):
         try:
             with open(os.path.join(self._path, "DatabaseVersion")) as fh:
-                version = 1
+                self.version = int(fh.read())
         except FileNotFoundError:
-            version = 0
-        if version == 0:
+            self.version = 0
+        except ValueError:
+            self.version = 1
+        if self.version == 0:
             self.object_types = set(self.object_types)
             self.object_types.remove("domain")
             self.object_types.add("dns")
+            self.primary_key_rules = dict(self.primary_key_rules)
+            del self.primary_key_rules["route"]
+            del self.primary_key_rules["route6"]
 
     def fetch(self, typ, key):
-        if self.version == 0 and typ == "domain" and key.endswith("ip6.arpa") or key.endswith("in-addr.arpa"):
+        typ = self._intrinsic_type(typ)
+        if self.version == 0 and typ == "dns" and key.endswith("ip6.arpa") or key.endswith("in-addr.arpa"):
             return self._fetch_rdns_domain(key)
         obj = super().fetch(typ, key)
-        if self.version == 0 and self._intrinsic_type(obj.type) in {"inet6num", "route6", "dns", "inetnum"}:
+        if self.version == 0 and self._intrinsic_type(obj.type) in {"inet6num", "route", "route6", "dns", "inetnum"}:
             return DN42Object(obj)
         return obj
 
@@ -72,9 +77,10 @@ class DN42Database(lglass.database.SimpleDatabase):
             return super().fetch("dns", key)
         except KeyError:
             pass
-        net = lglass.dns.rdns_network(key)
         try:
-            # First, do a CIDR lookup for our determined network
+            net = lglass.dns.rdns_network(key)
+            if not net: raise KeyError
+            # First, do a CIDR lookup for our destined network
             inetnums = lglass.database.cidr_lookup(self, net, allowed_types={"inetnum", "inet6num"})
             # Then, sort by prefix length
             inetnums = map(lambda x: (x[0], netaddr.IPNetwork(x[1])), inetnums)
@@ -94,6 +100,14 @@ class DN42Database(lglass.database.SimpleDatabase):
 
     def save(self, obj):
         if isinstance(obj, DN42Object) and self.version > 0:
+            if obj.type in {"route", "route6"} \
+                    and len(list(obj.get("origin"))) > 1:
+                for origin in obj.get("origin"):
+                    nobj = lglass.object.Object(obj)
+                    nobj.remove("origin")
+                    nobj.add("origin", origin, index=1)
+                    self.save(nobj)
+                return
             # TODO handle database updates
             pass
         super().save(obj)
@@ -101,6 +115,10 @@ class DN42Database(lglass.database.SimpleDatabase):
     def _lookup_type(self, typ, keys):
         if self.version == 0 and typ == "dns":
             yield from self._lookup_domain(keys)
+        elif self.version == 0 and typ == "as-block":
+            for typ, key in super()._lookup_type(typ, keys):
+                yield (typ, self._mangle_key(key))
+            return
         yield from super()._lookup_type(typ, keys)
 
     def _lookup_domain(self, keys):
@@ -113,9 +131,5 @@ class DN42Database(lglass.database.SimpleDatabase):
             except netaddr.core.AddrFormatError:
                 pass
 
-def range_to_network(rng):
-    lower, upper = rng.split("-", 1)
-    lower = lower.strip()
-    upper = upper.strip()
-    return str(netaddr.IPRange(lower, upper).cidrs()[0])
+range_to_network = lglass.database.range_to_network
 

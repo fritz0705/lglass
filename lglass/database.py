@@ -1,15 +1,37 @@
 # coding: utf-8
 
 import os
+import re
 
 import netaddr
 
 import lglass.object
 
+def range_to_network(rng):
+    if isinstance(rng, lglass.object.Object):
+        rng = rng.key
+    if "-" not in rng:
+        return rng
+    lower, upper = rng.split("-", 1)
+    lower = lower.strip()
+    upper = upper.strip()
+    return str(netaddr.IPRange(lower, upper).cidrs()[0])
+
+def normalize_as_block(asb):
+    if isinstance(asb, lglass.object.Object):
+        asb = asb.key
+    return "-".join(s.strip() for s in asb.split("-"))
+
 object_types = {"as-block", "as-set", "aut-num", "domain", "inet6num",
         "inetnum", "key-cert", "mntner", "organisation", "person", "route",
         "route6", "route-set"}
 type_synonyms = [{"dns", "domain"}]
+primary_key_rules = {
+        "route": ["route", "origin"],
+        "route6": ["route6", "origin"],
+        "person": ["nic-hdl"],
+        "inetnum": range_to_network,
+        "as-block": normalize_as_block}
 
 def intrinsic_type(typ, type_synonyms=type_synonyms, object_types=object_types):
     for synonym_group in type_synonyms:
@@ -19,9 +41,26 @@ def intrinsic_type(typ, type_synonyms=type_synonyms, object_types=object_types):
                     return synonyme
     return typ
 
+def primary_key(obj, primary_key_rules=primary_key_rules, intrinsic_type=intrinsic_type):
+    typ = intrinsic_type(obj.type)
+    try:
+        rule = primary_key_rules[typ]
+    except KeyError:
+        return obj.key
+    if callable(rule):
+        return rule(obj)
+    def _components():
+        for component in rule:
+            if intrinsic_type(component) == typ:
+                yield obj.key
+            else:
+                yield obj.getfirst(component, default="")
+    return "".join(_components())
+
 class SimpleDatabase(object):
     object_types = object_types
     type_synonyms = type_synonyms
+    primary_key_rules = primary_key_rules
 
     def __init__(self, path):
         self._path = path
@@ -33,13 +72,17 @@ class SimpleDatabase(object):
             types = {self._intrinsic_type(types)}
         else:
             types = map(self._intrinsic_type, types)
-        if isinstance(keys, str):
-            keys = {keys}
         for typ in types:
             try:
                 yield from self._lookup_type(typ, keys)
             except FileNotFoundError:
                 pass
+    
+    def find(self, filter=None, types=None, keys=None):
+        for typ, key in self.lookup(types=types, keys=keys):
+            obj = self.fetch(typ, key)
+            if not filter or filter(obj):
+                yield obj
 
     def _lookup_type(self, typ, keys):
         for key in os.listdir(os.path.join(self._path, typ)):
@@ -53,13 +96,16 @@ class SimpleDatabase(object):
     def _mangle_key(self, key):
         return key.replace("/", "_")
 
+    def _object_key(self, obj):
+        pass
+
     def fetch(self, typ, key):
         typ = self._intrinsic_type(typ)
         key = self._mangle_key(key)
         try:
             with open(os.path.join(self._path, typ, key)) as fh:
                 return lglass.object.Object.from_file(fh)
-        except FileNotFoundError:
+        except (FileNotFoundError, IsADirectoryError):
             raise KeyError(repr((typ, key)))
         except ValueError as verr:
             raise ValueError((typ, key), *verr.args)
@@ -68,13 +114,21 @@ class SimpleDatabase(object):
         return self.fetch(*spec)
 
     def save(self, obj, **options):
-        typ, key = obj.type, self._mangle_key(obj.key)
+        typ, key = self._intrinsic_type(obj.type), self._mangle_key(self._primary_key(obj))
+        try:
+            os.mkdir(os.path.join(self._path, typ))
+        except FileExistsError:
+            pass
         with open(os.path.join(self._path, typ, key), "w") as fh:
-            fh.write(obj.pretty_print(**options))
+            fh.write("".join(obj.pretty_print(**options)))
 
     def _intrinsic_type(self, typ):
         return intrinsic_type(typ, type_synonyms=self.type_synonyms,
                 object_types=self.object_types)
+
+    def _primary_key(self, typ):
+        return primary_key(typ, primary_key_rules=self.primary_key_rules,
+                intrinsic_type=self._intrinsic_type)
 
 def whois_lookup(db, term):
     if term.startswith("AS") and "-" in term:
