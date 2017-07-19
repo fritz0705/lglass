@@ -20,6 +20,10 @@ class Object(object):
     def key(self):
         return self.data[0][1]
 
+    @property
+    def primary_key(self):
+        return self.data[0][1]
+
     def extend(self, ex):
         if isinstance(ex, list):
             for offset, item in enumerate(ex):
@@ -55,6 +59,8 @@ class Object(object):
             self.extend(parse_object(ex.splitlines()))
         elif isinstance(ex, Object):
             self.extend(ex.data)
+        elif hasattr(ex, "__iter__"):
+            self.extend(list(ex))
         else:
             raise TypeError("Expected ex to be dict, list, str, or lglass.object.Object, got {}".format(type(ex)))
 
@@ -84,7 +90,7 @@ class Object(object):
             return self._data.insert(index, (key, value))
 
     def remove(self, key, nth=None):
-        self._data = [kvpair for kvpair in self._data if kvpair[0] != k]
+        self._data = [kvpair for kvpair in self._data if kvpair[0] != key]
 
     def items(self):
         return iter(self.data)
@@ -98,14 +104,14 @@ class Object(object):
     def pretty_print(self, min_padding=0, add_padding=8):
         padding = max(max((len(k) for k in self.keys()), default=0), min_padding) + add_padding
         for key, value in self:
-            value_lines = value.splitlines()
+            value_lines = value.splitlines() or [""]
             record = "{key}:{pad}{value}\n".format(
                     key=key,
-                    pad=" " * (padding - len(key) - 1),
+                    pad=" " * (padding - len(key)),
                     value=value_lines[0])
             for line in value_lines[1:]:
                 record += "{pad}{value}\n".format(
-                        pad=" " * padding,
+                        pad=" " * (padding + 1),
                         value=line)
             yield record
 
@@ -267,4 +273,28 @@ def parse_object(lines, pragmas={}):
 		result.append((key, value))
 
 	return result
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    argparser = argparse.ArgumentParser(description="Pretty-print objects")
+    argparser.add_argument("--min-padding", help="Minimal padding between key and value", type=int, default=0)
+    argparser.add_argument("--add-padding", help="Additional padding between key and value", type=int, default=8)
+    argparser.add_argument("files", nargs='*', help="Input files")
+
+    args = argparser.parse_args()
+
+    options = dict(
+            min_padding=args.min_padding,
+            add_padding=args.add_padding)
+
+    if not args.files:
+        obj = Object.from_file(sys.stdin)
+        print("".join(obj.pretty_print(**options)))
+    else:
+        for f in args.files:
+            with open(f) as fh:
+                obj = Object.from_file(fh)
+                print("".join(obj.pretty_print(**options)))
 
