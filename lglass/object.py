@@ -125,7 +125,7 @@ class Object(object):
         if hash(self) != hash(other):
             return false
         try:
-            self.data == other.data
+            return self.data == other.data
         except AttributeError:
             return False
 
