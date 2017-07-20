@@ -119,7 +119,7 @@ class Object(object):
         return "".join(self.pretty_print())
 
     def __hash__(self):
-        return hash(self.data)
+        return hash((self.type, self.key))
 
     def __eq__(self, other):
         if hash(self) != hash(other):
