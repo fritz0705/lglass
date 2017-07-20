@@ -17,7 +17,7 @@ class DN42Object(lglass.object.Object):
 
     @property
     def key(self):
-        if self.type == "inet6num":
+        if self.type == "inet6num" and not "/" in self.data[0][1]:
             lower, upper = map(lambda x: x.strip(), self.data[0][1].split("-", 1))
             return str(netaddr.IPRange(lower, upper).cidrs()[0])
         return self.data[0][1]
@@ -47,6 +47,7 @@ class DN42Database(lglass.database.SimpleDatabase):
         self.reload()
 
     def reload(self):
+        self._domain_cache = {}
         try:
             with open(os.path.join(self._path, "DatabaseVersion")) as fh:
                 self.version = int(fh.read())
@@ -76,6 +77,8 @@ class DN42Database(lglass.database.SimpleDatabase):
             return super().fetch("dns", key)
         except KeyError:
             pass
+        if key in self._domain_cache:
+            return self._domain_cache[key]
         try:
             net = lglass.dns.rdns_network(key)
             if not net: raise KeyError
@@ -107,6 +110,11 @@ class DN42Database(lglass.database.SimpleDatabase):
                     nobj.add("origin", origin, index=1)
                     self.save(nobj)
                 return
+            elif obj.type == "inet6num" and "/" not in obj.key:
+                pass
+            if obj.type in {"inetnum", "inet6num"}:
+                obj.remove("nserver")
+                obj.remove("ds-rrdata")
             # TODO handle database updates
             pass
         super().save(obj)
@@ -121,10 +129,21 @@ class DN42Database(lglass.database.SimpleDatabase):
         yield from super()._lookup_type(typ, keys)
 
     def _lookup_domain(self, keys):
+        if isinstance(keys, str) and \
+                not keys.endswith(("in-addr.arpa", "ip6.arpa")):
+            return
+        cache_hit = False
+        for key, domain in self._domain_cache:
+            if lglass.database.perform_key_match(keys, domain.key):
+                yield ("dns", domain.key)
+                cache_hit = True
+        if cache_hit:
+            return
         for inetnum in self.lookup(types={"inetnum", "inet6num"}):
             try:
                 inetnum = self.fetch(*inetnum)
                 for domain in inetnum.to_domain_objects():
+                    self._domain_cache[domain.key] = domain
                     if lglass.database.perform_key_match(keys, domain.key):
                         yield ("dns", domain.key)
             except netaddr.core.AddrFormatError:
