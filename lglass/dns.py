@@ -4,6 +4,8 @@ import netaddr
 
 def rdns_domain(network):
     """Transform :py:class:`netaddr.IPNetwork` object to rDNS zone name"""
+    if network.prefixlen == 0:
+        return "ip6.arpa" if network.version == 6 else "in-addr.arpa"
     if network.version == 4:
         return ".".join(map(str, reversed(network.ip.words[:network.prefixlen // 8]))) + ".in-addr.arpa"
     elif network.version == 6:
