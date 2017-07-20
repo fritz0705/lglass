@@ -27,11 +27,6 @@ class WhoisEngine(object):
             less_specific_levels=1, exact_match=False):
         primary_results = self.query_primary(query, types=types)
 
-        if exact_match:
-            def _filter_exacts(obj):
-                pass
-            primary_results = filter(_filter_exacts, primary_results)
-
         def _reverse_domains(p):
             for obj in p:
                 yield obj
@@ -44,12 +39,16 @@ class WhoisEngine(object):
             results[obj] = [obj]
 
         for obj in results.keys():
+            if less_specific_levels != 0:
+                for ls in self.query_less_specifics(obj,
+                        levels=less_specific_levels):
+                    results[obj].append(ls)
             # Perform secondary lookups
             pass
         
         return results
 
-    def query_primary(self, query, types=None):
+    def query_primary(self, query, types=None, exact_match=False):
         if types is None:
             types = self.database.object_types
         else:
@@ -85,22 +84,26 @@ class WhoisEngine(object):
             # TODO fix
             for inetnum_type in inetnum_types:
                 inetnum = self.database.try_fetch(inetnum_type, net_str)
-                if not inetnum:
+                if not inetnum and not exact_match:
                     for snet in net.supernet()[::-1]:
                         inetnum = self.database.try_fetch(inetnum_type, str(snet))
                         if inetnum:
                             yield inetnum
                             break
-                else:
+                elif inetnum:
                     yield inetnum
             if route_types:
-                yield from self.database.find(filter=lambda o: o.key == net_str,
+                routes = list(self.database.find(filter=lambda o: o.key == net_str,
                         keys=lambda k: k.startswith(net_str),
-                        types=route_types)
-                for snet in supernets:
-                    yield from self.database.find(filter=lambda o: o.key == str(snet),
-                            keys=lambda k: k.startswith(str(snet)),
-                            types=route_types)
+                        types=route_types))
+                if not routes:
+                    for snet in supernets:
+                        routes = list(self.database.find(filter=lambda o: o.key == str(snet),
+                                keys=lambda k: k.startswith(str(snet)),
+                                types=route_types))
+                        if routes:
+                            break
+                yield from routes
             return
         except netaddr.core.AddrFormatError:
             pass
@@ -118,8 +121,18 @@ class WhoisEngine(object):
             except KeyError:
                 pass
 
-    def query_less_specific(self, obj):
-        pass
+    def query_less_specifics(self, obj, levels=1):
+        if obj.type not in {"inetnum", "inet6num"}:
+            return
+
+        found = 0
+        for supernet in lglass.object.cidr_key(obj).supernet()[::-1]:
+            res = self.database.try_fetch(obj.type, str(supernet))
+            if res:
+                yield res
+                found += 1
+            if found == levels:
+                break
 
     def _as_blocks(self):
         for typ, key in self.database.lookup(types="as-block"):
@@ -131,6 +144,7 @@ class WhoisEngine(object):
 
 if __name__ == "__main__":
     import argparse
+    import time
 
     import lglass.dn42
 
@@ -138,6 +152,8 @@ if __name__ == "__main__":
     argparser.add_argument("--database", "-d", help="Path to database", default=".")
     argparser.add_argument("--domains", "-D", help="Include reverse domains", action="store_true", default=False)
     argparser.add_argument("--types", "-T", help="Comma-separated list of types", default="")
+    argparser.add_argument("--levels", "-L", help="Maximum number of less specific matches", dest="levels", type=int, default=1)
+    argparser.add_argument("--exact", "-x", help="Only exact number matches", action="store_true", default=False)
     argparser.add_argument("terms", nargs="+")
 
     args = argparser.parse_args()
@@ -147,11 +163,20 @@ if __name__ == "__main__":
 
     types = args.types.split(",") if args.types else db.object_types
 
+    query_args = dict(
+            reverse_domain=args.domains,
+            types=types,
+            less_specific_levels=args.levels,
+            exact_match=args.exact)
+
+    start_time = time.time()
     for term in args.terms:
         print("% Results for query '{query}'".format(query=term))
         print()
-        for obj in eng.query(term, reverse_domain=args.domains, types=types).keys():
-            print("% Information related to '{obj}'".format(obj=db._primary_key(obj)))
+        for pobj, related in eng.query(term, **query_args).items():
+            print("% Information related to '{obj}'".format(obj=db._primary_key(pobj)))
             print()
-            print(obj)
+            for obj in related:
+                print(obj)
+    print("% Query took {} seconds".format(time.time() - start_time))
 
