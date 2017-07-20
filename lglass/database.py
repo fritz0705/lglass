@@ -23,14 +23,15 @@ def normalize_as_block(asb):
     return "-".join(s.strip() for s in asb.split("-"))
 
 object_types = {"as-block", "as-set", "aut-num", "domain", "inet6num",
-        "inetnum", "key-cert", "mntner", "organisation", "person", "route",
-        "route6", "route-set"}
+        "inetnum", "key-cert", "mntner", "organisation", "person", "role",
+        "route", "route6", "route-set"}
 type_synonyms = [{"dns", "domain"}]
 primary_key_rules = {
         "route": ["route", "origin"],
         "route6": ["route6", "origin"],
         "person": ["nic-hdl"],
-        "inetnum": lglass.object.cidr_key,
+        "role": ["nic-hdl"],
+        "inetnum": lambda x: str(lglass.object.cidr_key(x)),
         "as-block": normalize_as_block}
 
 def intrinsic_type(typ, type_synonyms=type_synonyms, object_types=object_types):
