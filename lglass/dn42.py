@@ -111,12 +111,13 @@ class DN42Database(lglass.database.SimpleDatabase):
                     self.save(nobj)
                 return
             elif obj.type == "inet6num" and "/" not in obj.key:
-                pass
+                obj.data[0] = ("inet6num", obj.key)
+            elif obj.type == "as-block":
+                low, up = lglass.whois.engine.parse_as_block(obj.key)
+                obj.data[0] = ("as-block", "AS{} - AS{}".format(low, up))
             if obj.type in {"inetnum", "inet6num"}:
                 obj.remove("nserver")
                 obj.remove("ds-rrdata")
-            # TODO handle database updates
-            pass
         super().save(obj)
 
     def _lookup_type(self, typ, keys):
