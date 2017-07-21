@@ -27,14 +27,21 @@ def _uniq(it):
         s.add(v)
         yield v
 
+def _hint_match(hint, query):
+    return re.match(hint, query)
+
 class WhoisEngine(object):
     _schema_cache = None
 
-    def __init__(self, database=None, use_schemas=True, allow_wildcards=False):
+    def __init__(self, database=None, use_schemas=False, allow_wildcards=False,
+            type_hints=None):
         self.database = database
         self.use_schemas = use_schemas
         self.allow_wildcards = allow_wildcards
         self._schema_cache = {}
+        self.type_hints = {}
+        if type_hints is not None:
+            self.type_hints.update(type_hints)
 
     @property
     def _schemas(self):
@@ -58,14 +65,13 @@ class WhoisEngine(object):
             results[obj] = [obj]
 
         for obj in results.keys():
+            # Perform secondary lookups
             if less_specific_levels != 0:
                 for ls in self.query_less_specifics(obj,
                         levels=less_specific_levels):
                     results[obj].append(ls)
             if recursive:
                 results[obj].extend(self.query_inverse(obj))
-            # Perform secondary lookups
-            pass
 
         for obj in results.keys():
             results[obj] = _uniq(results[obj])
@@ -104,6 +110,11 @@ class WhoisEngine(object):
             return
         except netaddr.core.AddrFormatError:
             pass
+        
+        for hint, typ in self.type_hints.items():
+            if _hint_match(hint, query):
+                yield from self.database.find(keys=query, types=typ)
+                return
         
         yield from self.database.find(keys=query, types=types)
 
@@ -147,7 +158,40 @@ class WhoisEngine(object):
             for key, _, _, inverse in schema.schema_keys():
                 for value in obj.get(key):
                     yield from self.database.find(types=inverse, keys=value)
-        return
+        else:
+            # Use default rules
+            inverse_objects = set()
+            inverse_objects.update(obj.get("admin-c"))
+            inverse_objects.update(obj.get("tech-c"))
+            inverse_objects.update(obj.get("zone-c"))
+            inverse_objects.update(obj.get("org"))
+            for inverse in inverse_objects:
+                yield from self.database.find(types={"person", "role", "organisation"},
+                        keys=inverse)
+
+    def query_abuse(self, obj):
+        if obj.type not in {"inetnum", "inet6num", "aut-num"}:
+            return
+        abuse_contact_key = None
+        if "abuse-c" in obj:
+            abuse_contact_key = obj["abuse-c"]
+        elif "org" in obj:
+            org = self.database.fetch("organisation", obj["org"])
+            if "abuse-c" in org:
+                abuse_contact_key = org["abuse-c"]
+            elif "abuse-mailbox" in org:
+                return org["abuse-mailbox"]
+        if not abuse_contact_key:
+            return
+        try:
+            abuse_contact = next(self.database.find(types={"role", "person", "organisation"},
+                    keys=abuse_contact_key))
+        except IndexError:
+            return
+        if not abuse_contact:
+            return
+        if "abuse-mailbox" in abuse_contact:
+            return abuse_contact["abuse-mailbox"]
 
     def query_reverse_domains(self, obj):
         cidr = lglass.object.cidr_key(obj)
@@ -216,21 +260,32 @@ if __name__ == "__main__":
             exact_match=args.exact,
             recursive=args.recursive)
 
+    pretty_print_options = dict(
+            min_padding=16,
+            add_padding=0)
+
     start_time = time.time()
     for term in args.terms:
         print("% Results for query '{query}'".format(query=term))
         print()
         results = eng.query(term, **query_args)
         for primary in sorted(results.keys(), key=lambda k: k.type):
-            related = results[primary]
+            related = list(results[primary])[1:]
             print("% Information related to '{obj}'".format(obj=db._primary_key(primary)))
             print()
+            abuse_contact = eng.query_abuse(primary)
+            if abuse_contact:
+                print("% Abuse contact for '{obj}' is '{abuse}'".format(
+                    obj=db._primary_key(primary),
+                    abuse=abuse_contact))
+                print()
             if args.primary_keys:
                 print("{}: {}".format(primary.type, primary.key))
                 print()
                 continue
-            for obj in related:
-                print(obj)
+            print("".join(primary.pretty_print(**pretty_print_options)))
+            for obj in sorted(related, key=lambda k: (k.type, k.key)):
+                print("".join(obj.pretty_print(**pretty_print_options)))
     print("% Query took {} seconds".format(time.time() - start_time))
 
     #print(eng._schemas)
