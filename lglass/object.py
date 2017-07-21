@@ -73,6 +73,9 @@ class Object(object):
         elif isinstance(key, (int, slice)):
             return self.data[key]
         raise TypeError("Expected key to be str or int, got {}".format(type(key)))
+    
+    def __contains__(self, key):
+        return bool(self.getfirst(key))
 
     def __len__(self):
         return len(self.data)
