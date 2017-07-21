@@ -87,6 +87,7 @@ class SimpleDatabase(object):
 
     def _lookup_type(self, typ, keys):
         for key in os.listdir(os.path.join(self._path, typ)):
+            if key[0] == '.': continue
             key = self._mangle_filename(key)
             if perform_key_match(keys, key):
                 yield (typ, key)
@@ -129,13 +130,15 @@ class SimpleDatabase(object):
         with open(os.path.join(self._path, typ, key), "w") as fh:
             fh.write("".join(obj.pretty_print(**options)))
 
-    def _intrinsic_type(self, typ):
+    def intrinsic_type(self, typ):
         return intrinsic_type(typ, type_synonyms=self.type_synonyms,
                 object_types=self.object_types)
+    _intrinsic_type = intrinsic_type
 
-    def _primary_key(self, typ):
+    def primary_key(self, typ):
         return primary_key(typ, primary_key_rules=self.primary_key_rules,
                 intrinsic_type=self._intrinsic_type)
+    _primary_key = primary_key
 
 def whois_lookup(db, term):
     if term.startswith("AS") and "-" in term:
