@@ -50,7 +50,7 @@ class WhoisEngine(object):
         return self._schema_cache
 
     def query(self, query, types=None, reverse_domain=False, recursive=True,
-            less_specific_levels=1, exact_match=False):
+            less_specific_levels=0, exact_match=False):
         primary_results = set(self.query_primary(query, types=types))
 
         def _reverse_domains(p):
@@ -260,6 +260,9 @@ if __name__ == "__main__":
             exact_match=args.exact,
             recursive=args.recursive)
 
+    if args.primary_keys:
+        query_args["recursive"] = False
+
     pretty_print_options = dict(
             min_padding=16,
             add_padding=0)
@@ -271,6 +274,14 @@ if __name__ == "__main__":
         results = eng.query(term, **query_args)
         for primary in sorted(results.keys(), key=lambda k: k.type):
             related = list(results[primary])[1:]
+            if args.primary_keys:
+                if isinstance(db.primary_key_rules.get(primary.type), list):
+                    for key in db.primary_key_rules[primary.type]:
+                        print("{}: {}".format(key, primary[key]))
+                else:
+                    print("{}: {}".format(primary.type, primary.key))
+                print()
+                continue
             print("% Information related to '{obj}'".format(obj=db._primary_key(primary)))
             print()
             abuse_contact = eng.query_abuse(primary)
@@ -279,10 +290,6 @@ if __name__ == "__main__":
                     obj=db._primary_key(primary),
                     abuse=abuse_contact))
                 print()
-            if args.primary_keys:
-                print("{}: {}".format(primary.type, primary.key))
-                print()
-                continue
             print("".join(primary.pretty_print(**pretty_print_options)))
             for obj in sorted(related, key=lambda k: (k.type, k.key)):
                 print("".join(obj.pretty_print(**pretty_print_options)))
