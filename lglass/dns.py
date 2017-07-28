@@ -17,38 +17,32 @@ def rdns_subnets(network):
         yield (subnet, rdns_domain(subnet))
 
 def rdns_network(domain):
-    if domain.endswith(".ip6.arpa"):
-        domain = domain[:-9]
-        prefixlen = (domain.count(".") + 1) * 4
-
-        nibbles = domain.split(".")[::-1]
-        while len(nibbles) < 32:
-            nibbles.append("0")
-
-        network = ""
-        nibbles_iter = iter(nibbles)
+    if domain[-1] == '.':
+        domain = domain[:-1]
+    components = domain.split(".")
+    if len(components) < 2 or components[-1] != "arpa":
+        raise
+    if components[-2] == "ip6":
+        prefixlen = (len(components) - 2) * 4
+        nibbles = components[:-2][::-1] + (32 - len(components[:-2])) * ["0"]
+        net = ""
         try:
+            nibbles_iter = iter(nibbles)
             while True:
                 n1, n2, n3, n4 = [next(nibbles_iter) for _ in range(4)]
                 if n1 is None:
                     break
-                network += n1 + n2 + n3 + n4 + ":"
+                net += n1 + n2 + n3 + n4 + ":"
         except StopIteration:
             pass
-        return netaddr.IPNetwork(network[:-1] + "/{}".format(prefixlen))
-    elif domain.endswith(".in-addr.arpa"):
-        domain = domain[:-13]
-        prefixlen = (domain.count(".") + 1) * 8
-        network = ""
-        for octet in domain.split(".")[::-1]:
-            network += octet + "."
-        network += "0." * ((32 - prefixlen) //8)
-        if network[-1] == '.': network = network[:-1]
-        return netaddr.IPNetwork(network + "/{}".format(prefixlen))
-    elif domain == "ip6.arpa":
-        return netaddr.IPNetwork("::/0")
-    elif domain == "in-addr.arpa":
-        return netaddr.IPNetwork("0.0.0.0/0")
+        return netaddr.IPNetwork(net[:-1] + "/{}".format(prefixlen))
+    elif components[-2] == "in-addr":
+        prefixlen = (len(components) - 2) * 8
+        octets = components[:-2][::-1] + (4 - len(components[:-2])) * ["0"]
+        net = ""
+        for octet in octets:
+            net += octet + "."
+        return netaddr.IPNetwork(net[:-1] + "/{}".format(prefixlen))
 
 def canonicalize_name(name):
     if name[-1] == '.':
@@ -57,6 +51,7 @@ def canonicalize_name(name):
 
 def glue_record(domain, glue):
     domain = canonicalize_name(domain)
+    # TODO sanitize glue record
     if ":" in glue:
         return "{domain}. IN AAAA {glue}".format(domain=domain, glue=glue)
     return "{domain}. IN A {glue}".format(domain=domain, glue=glue)
@@ -74,6 +69,7 @@ def ds_delegation(domain, rrdata):
 
 def generate_delegation(domain, comments=False, include_glue=True, include_ds=True):
     if comments:
+        # TODO sanitize zone-c, admin-c, tech-c and domain name
         yield "; {domain} ZONE-C {zonec} ADMIN-C {adminc} TECH-C {techc}".format(
                 domain=domain["domain"],
                 zonec=",".join(domain.get("zone-c")) or "(unknown)",
@@ -115,8 +111,8 @@ if __name__ == "__main__":
         import lglass.dn42
         db = lglass.dn42.DN42Database(args.database)
     else:
-        import lglass.database
-        db = lglass.database.SimpleDatabase(args.database)
+        import lglass.nic
+        db = lglass.nic.FileDatabase(args.database)
 
     gendel_kwargs = dict(
             comments=args.include_comments,

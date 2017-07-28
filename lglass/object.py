@@ -13,16 +13,24 @@ class Object(object):
         return self._data
 
     @property
-    def type(self):
+    def object_class(self):
         return self.data[0][0]
 
     @property
-    def key(self):
+    def object_key(self):
         return self.data[0][1]
 
     @property
+    def type(self):
+        return self.object_class
+
+    @property
+    def key(self):
+        return self.object_key
+
+    @property
     def primary_key(self):
-        return self.data[0][1]
+        return self.object_key
 
     def extend(self, ex):
         if isinstance(ex, list):
@@ -141,6 +149,13 @@ class Object(object):
     @classmethod
     def from_file(cls, fh):
         return cls(fh.read())
+
+def parse_object_tokens(tokens):
+    pass
+
+def parse_object(string):
+    for tok, content in tokenize_object(string):
+        pass
 
 # TODO rewrite object parser
 def parse_object(lines, pragmas={}):

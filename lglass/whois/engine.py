@@ -67,9 +67,9 @@ class WhoisEngine(object):
         for obj in results.keys():
             # Perform secondary lookups
             if less_specific_levels != 0:
-                for ls in self.query_less_specifics(obj,
-                        levels=less_specific_levels):
-                    results[obj].append(ls)
+                ls = list(self.query_less_specifics(obj, levels=less_specific_levels))
+                for o in sorted(ls, key=lambda o: o.ip_network.prefixlen)[::-1]:
+                    results[obj].append(o)
             if recursive:
                 results[obj].extend(self.query_inverse(obj))
 
@@ -80,20 +80,19 @@ class WhoisEngine(object):
 
     def query_primary(self, query, types=None, exact_match=False):
         if types is None:
-            types = self.database.object_types
+            types = self.database.object_classes
         else:
-            types = set(types).intersection(self.database.object_types)
+            types = set(types).intersection(self.database.object_classes)
 
         if re.match(r"AS[0-9]+$", query):
             # aut-num lookup
             if "aut-num" in types:
                 yield from self.database.find(keys=query, types="aut-num")
+            asn = lglass.nic.parse_asn(query)
             if "as-block" in types:
-                aut_num = int(query[2:])
-                for block, key in self._as_blocks():
-                    if aut_num in block:
-                        yield self.database.fetch("as-block", key)
-            return
+                for as_block in self.database.find(types="as-block"):
+                    if asn in as_block:
+                        yield as_block
         elif parse_as_block(query) and "as-block" in types:
             yield from self.database.find(keys=query, types="as-block")
             return
@@ -194,8 +193,7 @@ class WhoisEngine(object):
             return abuse_contact["abuse-mailbox"]
 
     def query_reverse_domains(self, obj):
-        cidr = lglass.object.cidr_key(obj)
-        for subnet, domain in lglass.dns.rdns_subnets(cidr):
+        for subnet, domain in lglass.dns.rdns_subnets(obj.ip_network):
             try:
                 yield self.database.fetch("domain", domain)
             except KeyError:
@@ -204,23 +202,17 @@ class WhoisEngine(object):
     def query_less_specifics(self, obj, levels=1):
         if obj.type not in {"inetnum", "inet6num"}:
             return
-
         found = 0
-        for supernet in lglass.object.cidr_key(obj).supernet()[::-1]:
-            res = self.database.try_fetch(obj.type, str(supernet))
+        for supernet in obj.ip_network.supernet()[::-1]:
+            try:
+                res = self.database.fetch(obj.type, str(supernet))
+            except KeyError:
+                continue
             if res:
                 yield res
                 found += 1
             if found == levels:
                 break
-
-    def _as_blocks(self):
-        for typ, key in self.database.lookup(types="as-block"):
-            try:
-                lower, upper = parse_as_block(key)
-                yield (range(lower, upper), key)
-            except ValueError:
-                pass
 
     def _load_schema(self, typ):
         try:
@@ -251,7 +243,7 @@ if __name__ == "__main__":
     db = lglass.dn42.DN42Database(args.database)
     eng = WhoisEngine(db)
 
-    types = args.types.split(",") if args.types else db.object_types
+    types = args.types.split(",") if args.types else db.object_classes
 
     query_args = dict(
             reverse_domain=args.domains,
@@ -282,16 +274,17 @@ if __name__ == "__main__":
                     print("{}: {}".format(primary.type, primary.key))
                 print()
                 continue
-            print("% Information related to '{obj}'".format(obj=db._primary_key(primary)))
+            print("% Information related to '{obj}'".format(
+                obj=db.primary_key(primary)))
             print()
             abuse_contact = eng.query_abuse(primary)
             if abuse_contact:
                 print("% Abuse contact for '{obj}' is '{abuse}'".format(
-                    obj=db._primary_key(primary),
+                    obj=db.primary_key(primary),
                     abuse=abuse_contact))
                 print()
             print("".join(primary.pretty_print(**pretty_print_options)))
-            for obj in sorted(related, key=lambda k: (k.type, k.key)):
+            for obj in sorted(related, key=lambda k: k.type):
                 print("".join(obj.pretty_print(**pretty_print_options)))
     print("% Query took {} seconds".format(time.time() - start_time))
 
