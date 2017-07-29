@@ -150,13 +150,6 @@ class Object(object):
     def from_file(cls, fh):
         return cls(fh.read())
 
-def parse_object_tokens(tokens):
-    pass
-
-def parse_object(string):
-    for tok, content in tokenize_object(string):
-        pass
-
 # TODO rewrite object parser
 def parse_object(lines, pragmas={}):
 	r'''This is a simple RPSL parser which expects an iterable which yields lines.
