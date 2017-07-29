@@ -253,13 +253,3 @@ def cidr_lookup(db, prefix, allowed_types={"route6", "route", "inet6num", "inetn
     keys.add(str(prefix))
     yield from db.lookup(types=types, keys=keys)
 
-def range_to_network(rng):
-    if isinstance(rng, lglass.object.Object):
-        rng = rng.key
-    if "-" not in rng:
-        return rng
-    lower, upper = rng.split("-", 1)
-    lower = lower.strip()
-    upper = upper.strip()
-    return str(netaddr.IPRange(lower, upper).cidrs()[0])
-
