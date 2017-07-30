@@ -82,8 +82,21 @@ class Object(object):
             return self.data[key]
         raise TypeError("Expected key to be str or int, got {}".format(type(key)))
     
+    def __setitem__(self, key, value):
+        if isinstance(key, int):
+            pass
+        elif isinstance(key, str):
+            if key not in self:
+                self.append(key, value)
+
+    def __delitem__(self, key):
+        return self.remove(key)
+    
     def __contains__(self, key):
-        return bool(self.getfirst(key))
+        for key1 in self.keys():
+            if key1 == key:
+                return True
+        return False
 
     def __len__(self):
         return len(self.data)
@@ -95,10 +108,18 @@ class Object(object):
         return next(self.get(key), default)
 
     def add(self, key, value, index=None):
-        if index is None:
-            return self._data.append((key, value))
-        else:
-            return self._data.insert(index, (key, value))
+        if index is not None:
+            return self.insert(index, key, value)
+        return self.append(key, value)
+
+    def append(self, key, value):
+        return self._data.append((key, value))
+
+    def insert(self, index, key, value):
+        return self._data.insert(index, (key, value))
+
+    def indices(self, key):
+        return [i for i, (k, v) in enumerate(self.data) if k == key]
 
     def remove(self, key, nth=None):
         self._data = [kvpair for kvpair in self._data if kvpair[0] != key]
@@ -284,19 +305,6 @@ def parse_object(lines, pragmas={}):
 		result.append((key, value))
 
 	return result
-
-def cidr_key(obj):
-    import netaddr
-
-    if obj.type in {"inet6num", "route", "route6"}:
-        return netaddr.IPNetwork(obj.key)
-    elif obj.type == "inetnum":
-        try:
-            lower, upper = map(lambda x: x.strip(), obj.key.split("-", 1))
-            return netaddr.IPRange(lower, upper).cidrs()[0]
-        except (ValueError, IndexError, netaddr.core.AddrFormatError):
-            pass
-    return obj.key
 
 if __name__ == "__main__":
     import argparse
