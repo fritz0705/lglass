@@ -36,12 +36,11 @@ class WhoisEngine(object):
     route_classes = {"route", "route6"}
     handle_classes = {"person", "role", "organisation"}
     network_classes = cidr_classes | route_classes
+    abuse_classes = {"inetnum", "inet6num", "aut-num"}
 
-    def __init__(self, database=None, use_schemas=False, allow_wildcards=False,
-            type_hints=None):
+    def __init__(self, database=None, use_schemas=False, type_hints=None):
         self.database = database
         self.use_schemas = use_schemas
-        self.allow_wildcards = allow_wildcards
         self._schema_cache = {}
         self.type_hints = {}
         if type_hints is not None:
@@ -111,6 +110,24 @@ class WhoisEngine(object):
         elif query.endswith("-MNT") and "mntner" in classes:
             yield from self.database.find(keys=query, types="mntner")
             return
+        elif query.startswith("AS-") and "as-set" in classes:
+            yield from self.database.find(keys=query, types="as-set")
+            return
+        elif query.startswith("RS-") and "route-set" in classes:
+            yield from self.database.find(keys=query, types="route-set")
+            return
+        elif query.startswith("RTRS-") and "rtr-set" in classes:
+            yield from self.database.find(keys=query, types="rtr-set")
+            return
+        elif query.startswith("FLTR-") and "filter-set" in classes:
+            yield from self.database.find(keys=query, types="filter-set")
+            return
+        elif query.startswith("PRNG-") and "peering-set" in classes:
+            yield from self.database.find(keys=query, types="peering-set")
+            return
+        elif query.startswith("IRT-") and "irt" in classes:
+            yield from self.database.find(keys=query, types="irt")
+            return
 
         try:
             net = netaddr.IPNetwork(query)
@@ -148,11 +165,11 @@ class WhoisEngine(object):
                 reverse=True)
         if inetnums:
             inetnum = self.database.fetch(*inetnums[0])
-            if not exact_match or lglass.object.cidr_key(inetnum) == net:
+            if not exact_match or inetnum.ip_network == net:
                 yield inetnum
         for route_spec in routes:
             route = self.database.fetch(*route_spec)
-            if net in lglass.object.cidr_key(route):
+            if net in route.ip_network:
                 yield route
 
     def query_inverse(self, obj):
@@ -177,7 +194,7 @@ class WhoisEngine(object):
                         keys=inverse)
 
     def query_abuse(self, obj):
-        if obj.type not in {"inetnum", "inet6num", "aut-num"}:
+        if obj.object_class not in self.abuse_classes:
             return
         abuse_contact_key = None
         if "abuse-c" in obj:
@@ -208,7 +225,7 @@ class WhoisEngine(object):
                 pass
 
     def query_less_specifics(self, obj, levels=1):
-        if obj.type not in {"inetnum", "inet6num"}:
+        if obj.type not in self.cidr_classes:
             return
         found = 0
         for supernet in obj.ip_network.supernet()[::-1]:
