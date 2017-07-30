@@ -113,7 +113,7 @@ class ASBlockObject(NicObject):
     @property
     def range(self):
         start, end = self.object_key.split("-", 1)
-        start, end = parse_asn(start), parse_asn(end)
+        start, end = parse_asn(start.strip()), parse_asn(end.strip())
         return range(start, end + 1)
 
     @property
