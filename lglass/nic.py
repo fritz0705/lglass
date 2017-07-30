@@ -221,8 +221,9 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             path = self._build_path(object_class, object_key)
             with open(path) as fh:
                 obj = self.object_class_type(object_class).from_file(fh)
-            st = os.stat(path)
-            obj.last_modified = st.st_mtime
+            if obj.last_modified is None:
+                st = os.stat(path)
+                obj.last_modified = st.st_mtime
             return obj
         except (FileNotFoundError, IsADirectoryError):
             raise KeyError(repr((object_class, object_key)))
