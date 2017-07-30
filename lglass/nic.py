@@ -1,8 +1,10 @@
 # coding: utf-8
 
+import datetime
 import os
 import re
 
+import dateutil.parser
 import netaddr
 
 import lglass.database
@@ -43,6 +45,14 @@ class NicObject(lglass.object.Object):
             return self["last-modified"]
         except KeyError:
             pass
+
+    @last_modified.setter
+    def last_modified(self, new_date):
+        if isinstance(new_date, (int, float)):
+            new_date = datetime.datetime.fromtimestamp(new_date, tz=datetime.timezone.utc)
+        elif isinstance(new_date, str):
+            new_date = dateutil.parser.parse(new_date)
+        self["last-modified"] = new_date.astimezone(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 class HandleObject(NicObject):
     @property
@@ -162,7 +172,7 @@ object_class_types = {
         "as-block": ASBlockObject
 }
 
-class NicDatabase(object):
+class NicDatabaseMixin(object):
     def __init__(self):
         self.object_classes = object_classes
         self.class_synonyms = class_synonyms
@@ -175,13 +185,15 @@ class NicDatabase(object):
         except KeyError:
             return NicObject
 
-class FileDatabase(lglass.database.Database, NicDatabase):
+class FileDatabase(lglass.database.Database, NicDatabaseMixin):
     def __init__(self, path):
-        NicDatabase.__init__(self)
+        NicDatabaseMixin.__init__(self)
         self._path = path
 
-    def _build_path(self, object_class, object_key):
-        return os.path.join(self._path, object_class, object_key)
+    def _build_path(self, object_class, object_key=None):
+        if object_key is None:
+            return os.path.join(self._path, object_class)
+        return os.path.join(self._path, object_class, object_key.replace("/", "_"))
 
     def lookup(self, types=None, keys=None):
         if types is None:
@@ -199,22 +211,19 @@ class FileDatabase(lglass.database.Database, NicDatabase):
     def _lookup_class(self, object_class, object_keys):
         for key in os.listdir(os.path.join(self._path, object_class)):
             if key[0] == '.': continue
-            key = self._mangle_filename(key)
+            key = key.replace("_", "/")
             if lglass.database.perform_key_match(object_keys, key):
                 yield (object_class, key)
 
-    def _mangle_filename(self, key):
-        return key.replace("_", "/")
-
-    def _mangle_key(self, key):
-        return key.replace("/", "_")
-
     def fetch(self, object_class, object_key):
         object_class = self.primary_class(object_class)
-        object_key = self._mangle_key(object_key)
         try:
-            with open(self._build_path(object_class, object_key)) as fh:
-                return self.object_class_type(object_class).from_file(fh)
+            path = self._build_path(object_class, object_key)
+            with open(path) as fh:
+                obj = self.object_class_type(object_class).from_file(fh)
+            st = os.stat(path)
+            obj.last_modified = st.st_mtime
+            return obj
         except (FileNotFoundError, IsADirectoryError):
             raise KeyError(repr((object_class, object_key)))
         except ValueError as verr:
@@ -222,34 +231,14 @@ class FileDatabase(lglass.database.Database, NicDatabase):
 
     def save(self, obj, **options):
         object_class = self.primary_class(obj)
-        object_key = self._mangle_key(self.primary_key(obj))
+        object_key = self.primary_key(obj).replace("/", "_")
         try:
             os.mkdir(os.path.join(self._path, object_class))
         except FileExistsError:
             pass
         with open(self._build_path(object_class, object_key), "w") as fh:
+            obj = NicObject(obj.data)
+            obj.remove("last-modified")
+            obj.remove("source")
             fh.write("".join(obj.pretty_print(**options)))
-
-def whois_lookup(db, term):
-    if term.startswith("AS") and "-" in term:
-        yield from db.lookup(types="as-block", keys=term)
-    elif term.startswith("AS"):
-        yield from db.lookup(types="aut-num", keys=term)
-    elif term.startswith("ORG-"):
-        yield from db.lookup(types="organisation", keys=term)
-    elif term.endswith("-MNT"):
-        yield from db.lookup(types="mntner", keys=term)
-    else:
-        yield from db.lookup(keys=term)
-
-def cidr_lookup(db, prefix, allowed_types={"route6", "route", "inet6num", "inetnum"}):
-    if not isinstance(prefix, netaddr.IPNetwork):
-        prefix = netaddr.IPNetwork(prefix)
-    types = {"inet6num", "route6"}
-    if prefix.version == 4:
-        types = {"inetnum", "route"}
-    types = types.intersection(allowed_types)
-    keys = set(str(s) for s in prefix.supernet())
-    keys.add(str(prefix))
-    yield from db.lookup(types=types, keys=keys)
 
