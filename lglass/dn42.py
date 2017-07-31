@@ -15,7 +15,8 @@ class InetnumObject(lglass.nic.InetnumObject):
         for _, rdns_domain in self.rdns_domains():
             obj = DomainObject([("domain", rdns_domain)])
             for k, v in self.items():
-                if k in {"zone-c", "admin-c", "tech-c", "mnt-by", "nserver", "ds-rrdata"}:
+                if k in {"zone-c", "admin-c", "tech-c", "mnt-by", "nserver",
+                        "ds-rrdata", "created", "last-modified", "source"}:
                     obj.add(k, v)
             yield obj
 
