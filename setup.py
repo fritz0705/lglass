@@ -30,8 +30,7 @@ setuptools.setup(
     long_description=__doc__,
     install_requires=[
         "netaddr",
-        "dateutil"
-        "flynn==1.0.0b2"
+        "python-dateutil"
     ],
     entry_points={
         "console_scripts": [
