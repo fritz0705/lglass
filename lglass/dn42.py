@@ -10,6 +10,27 @@ import lglass.dns
 def _format_as_block_key(obj):
     return "{}_{}".format(obj.start, obj.end)
 
+def fix_object(obj):
+    if obj.object_class in {"route", "route6"}:
+        for origin in obj.get("origin"):
+            nobj = lglass.nic.RouteObject(obj)
+            nobj.remove("origin")
+            nobj.insert(1, "origin", origin)
+            yield nobj
+    elif obj.object_class == "as-block":
+        nobj = lglass.nic.ASBlockObject(obj)
+        nobj.object_key = nobj.primary_key
+        yield nobj
+    elif obj.object_class in {"inetnum", "inet6num"}:
+        nobj = InetnumObject(obj)
+        if obj.object_class == "inet6num":
+            nobj.object_key = nobj.primary_key
+        nobj.remove("nserver")
+        nobj.remove("ds-rrdata")
+        yield nobj
+    else:
+        yield obj
+
 class InetnumObject(lglass.nic.InetnumObject):
     def to_domain_objects(self):
         for _, rdns_domain in self.rdns_domains():
@@ -39,7 +60,10 @@ class DN42Database(lglass.nic.FileDatabase):
             with open(os.path.join(self._path, "DatabaseVersion")) as fh:
                 self.version = int(fh.read())
         except FileNotFoundError:
-            self.version = 0
+            if "dn42-version" in self.manifest:
+                self.version = int(self.manifest["dn42-version"])
+            else:
+                self.version = 0
         except ValueError:
             self.version = 1
         if force_version is not None:
@@ -122,4 +146,11 @@ class DN42Database(lglass.nic.FileDatabase):
                         yield ("dns", domain.object_key)
             except netaddr.core.AddrFormatError:
                 pass
+
+    def save(self, obj, **options):
+        if self.version == 1:
+            for nobj in fix_object(obj):
+                super().save(nobj, **options)
+            return
+        super().save(nobj, **options)
 
