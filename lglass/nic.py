@@ -254,10 +254,15 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             os.mkdir(os.path.join(self._path, object_class))
         except FileExistsError:
             pass
-        with open(self._build_path(object_class, object_key), "w") as fh:
-            obj = NicObject(obj.data)
-            obj.remove("last-modified")
-            fh.write("".join(obj.pretty_print(**options)))
+        save_obj = NicObject(obj.data)
+        save_obj.remove("last-modified")
+        path = self._build_path(object_class, object_key)
+        with open(path, "w") as fh:
+            fh.write("".join(save_obj.pretty_print(**options)))
+        if obj.last_modified is not None:
+            st = os.stat(path)
+            mtime = obj.last_modified_datetime.timestamp()
+            os.utime(path, times=(st.st_atime, mtime))
 
     def save_manifest(self):
         mf = self.manifest
