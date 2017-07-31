@@ -226,7 +226,7 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
                 pass
 
     def _lookup_class(self, object_class, object_keys):
-        for key in os.listdir(os.path.join(self._path, object_class)):
+        for key in os.listdir(self._build_path(object_class)):
             if key[0] == '.': continue
             key = key.replace("_", "/")
             if lglass.database.perform_key_match(object_keys, key):
@@ -268,6 +268,11 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
         mf = self.manifest
         with open(os.path.join(self._path, "MANIFEST"), "w") as fh:
             fh.write("".join(mf.pretty_print()))
+
+    def delete(self, obj):
+        object_class = self.primary_class(obj.object_class)
+        object_key = self.primary_key(obj).replace("/", "_")
+        os.unlink(self._build_path(object_class, object_key))
 
     @property
     def manifest(self):
