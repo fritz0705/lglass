@@ -101,6 +101,7 @@ class WhoisEngine(object):
                 for as_block in self.database.find(types="as-block"):
                     if asn in as_block:
                         yield as_block
+            return
         elif parse_as_block(query) and "as-block" in classes:
             yield from self.database.find(keys=query, types="as-block")
             return
