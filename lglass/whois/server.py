@@ -97,7 +97,7 @@ if __name__ == "__main__":
     server = SimpleWhoisServer(engine)
 
     loop = asyncio.get_event_loop()
-    coro = asyncio.start_server(server.handle, args.address, args.port, loop=loop)
+    coro = asyncio.start_server(server.handle, args.address.split(","), args.port, loop=loop)
     s = loop.run_until_complete(coro)
 
     try:
