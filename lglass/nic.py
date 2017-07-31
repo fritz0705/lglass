@@ -133,7 +133,7 @@ class ASBlockObject(NicObject):
 
     @property
     def end(self):
-        return self.range.stop
+        return self.range.stop - 1
 
     @property
     def range(self):
