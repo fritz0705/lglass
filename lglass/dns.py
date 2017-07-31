@@ -21,7 +21,7 @@ def rdns_network(domain):
         domain = domain[:-1]
     components = domain.split(".")
     if len(components) < 2 or components[-1] != "arpa":
-        raise
+        return None
     if components[-2] == "ip6":
         prefixlen = (len(components) - 2) * 4
         nibbles = components[:-2][::-1] + (32 - len(components[:-2])) * ["0"]
