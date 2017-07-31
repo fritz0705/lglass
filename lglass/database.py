@@ -45,6 +45,12 @@ class Database(object):
     def fetch(self, typ, key):
         pass
 
+    def try_fetch(self, typ, key):
+        try:
+            return self.fetch(typ, key)
+        except KeyError:
+            return None
+
     def save(self, obj, **options):
         pass
 
