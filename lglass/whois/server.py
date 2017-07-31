@@ -73,7 +73,7 @@ class SimpleWhoisServer(object):
                     response += "% Abuse contact for '{}' is '{}'\n\n".format(
                             primary_key, abuse_contact)
             if primary_keys:
-                response += "{}: {}\n".format(primary.object_class, primary_key)
+                response += "{}: {}\n\n".format(primary.object_class, primary_key)
                 continue
             response += "% Information related to '{}'\n\n".format(
                     self.database.primary_key(primary))
