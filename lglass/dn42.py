@@ -106,6 +106,8 @@ class DN42Database(lglass.nic.FileDatabase):
         if object_key in self._domain_cache:
             return self._domain_cache[object_key]
         network = lglass.dns.rdns_network(object_key)
+        if network is None:
+            raise KeyError(repr(("dns", object_key)))
         object_class = "inetnum" if network.version == 4 else "inet6num"
         for net in [network] + network.supernet()[::-1]:
             try:
