@@ -14,8 +14,9 @@ class SolidArgumentParser(argparse.ArgumentParser):
         pass
 
 class SimpleWhoisServer(object):
-    def __init__(self, engine):
+    def __init__(self, engine, primer=None):
         self.engine = engine
+        self.primer = primer
 
     @property
     def database(self):
@@ -33,6 +34,9 @@ class SimpleWhoisServer(object):
         return argparser
 
     async def handle(self, reader, writer):
+        if self.primer is not None:
+            writer.write(self.primer.encode())
+
         request = await reader.readline()
 
         request = request.decode()
@@ -87,7 +91,8 @@ class SimpleWhoisServer(object):
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="Simple whois server")
     argparser.add_argument("--port", "-p", default=4343)
-    argparser.add_argument("--address", "-a", default="::")
+    argparser.add_argument("--address", "-a", default="::1,127.0.0.1")
+    argparser.add_argument("--primer", "-P")
     argparser.add_argument("database")
 
     args = argparser.parse_args()
@@ -95,6 +100,10 @@ if __name__ == "__main__":
     db = lglass.nic.FileDatabase(args.database)
     engine = lglass.whois.engine.WhoisEngine(db)
     server = SimpleWhoisServer(engine)
+
+    if args.primer is not None:
+        with open(args.primer) as fh:
+            server.primer = fh.read()
 
     loop = asyncio.get_event_loop()
     coro = asyncio.start_server(server.handle, args.address.split(","), args.port, loop=loop)
