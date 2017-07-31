@@ -201,7 +201,9 @@ class WhoisEngine(object):
         if "abuse-c" in obj:
             abuse_contact_key = obj["abuse-c"]
         elif "org" in obj:
-            org = self.database.fetch("organisation", obj["org"])
+            org = self.database.try_fetch("organisation", obj["org"])
+            if not org:
+                return
             if "abuse-c" in org:
                 abuse_contact_key = org["abuse-c"]
             elif "abuse-mailbox" in org:
