@@ -33,11 +33,19 @@ class NicObject(lglass.object.Object):
         return list(self.get("mnt-by"))
 
     @property
-    def created_at(self):
+    def created(self):
         try:
             return self["created"]
         except KeyError:
             pass
+
+    @created.setter
+    def created(self, new_date):
+        if isinstance(new_date, (int, float)):
+            new_date = datetime.datetime.fromtimestamp(new_date, tz=datetime.timezone.utc)
+        elif isinstance(new_date, str):
+            new_date = dateutil.parser.parse(new_date)
+        self["created"] = new_date.astimezone(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @property
     def last_modified(self):
@@ -53,6 +61,13 @@ class NicObject(lglass.object.Object):
         elif isinstance(new_date, str):
             new_date = dateutil.parser.parse(new_date)
         self["last-modified"] = new_date.astimezone(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @property
+    def last_modified_datetime(self):
+        if self.last_modified is not None:
+            return dateutil.parser.parse(self.last_modified)
+        else:
+            return datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
 
 class HandleObject(NicObject):
     @property
@@ -186,6 +201,8 @@ class NicDatabaseMixin(object):
             return NicObject
 
 class FileDatabase(lglass.database.Database, NicDatabaseMixin):
+    _manifest = None
+
     def __init__(self, path):
         NicDatabaseMixin.__init__(self)
         self._path = path
@@ -231,7 +248,7 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             raise ValueError((object_class, object_key), *verr.args)
 
     def save(self, obj, **options):
-        object_class = self.primary_class(obj)
+        object_class = self.primary_class(obj.object_class)
         object_key = self.primary_key(obj).replace("/", "_")
         try:
             os.mkdir(os.path.join(self._path, object_class))
@@ -240,6 +257,26 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
         with open(self._build_path(object_class, object_key), "w") as fh:
             obj = NicObject(obj.data)
             obj.remove("last-modified")
-            obj.remove("source")
             fh.write("".join(obj.pretty_print(**options)))
+
+    def save_manifest(self):
+        mf = self.manifest
+        with open(os.path.join(self._path, "MANIFEST"), "w") as fh:
+            fh.write("".join(mf.pretty_print()))
+
+    @property
+    def manifest(self):
+        if self._manifest is not None:
+            return self._manifest
+        try:
+            with open(os.path.join(self._path, "MANIFEST")) as fh:
+                obj = NicObject.from_file(fh)
+        except FileNotFoundError:
+            obj = NicObject([("database", os.path.basename(self._path))])
+        self._manifest = obj
+        return obj
+
+    @property
+    def database_name(self):
+        return self.manifest.object_key
 
