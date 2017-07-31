@@ -16,9 +16,17 @@ class Object(object):
     def object_class(self):
         return self.data[0][0]
 
+    @object_class.setter
+    def object_class(self, new_class):
+        self.data[0] = (new_class, self.object_key)
+
     @property
     def object_key(self):
         return self.data[0][1]
+
+    @object_key.setter
+    def object_key(self, new_key):
+        self.data[0] = (self.object_class, new_key)
 
     @property
     def type(self):
@@ -122,6 +130,9 @@ class Object(object):
         return [i for i, (k, v) in enumerate(self.data) if k == key]
 
     def remove(self, key, nth=None):
+        if isinstance(key, int):
+            del self._data[key]
+            return
         self._data = [kvpair for kvpair in self._data if kvpair[0] != key]
 
     def items(self):
