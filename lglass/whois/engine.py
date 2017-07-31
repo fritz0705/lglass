@@ -268,7 +268,7 @@ if __name__ == "__main__":
 
     args = argparser.parse_args()
 
-    db = lglass.dn42.DN42Database(args.database)
+    db = lglass.nic.FileDatabase(args.database)
     eng = WhoisEngine(db)
 
     classes = args.classes.split(",") if args.classes else db.object_classes
@@ -315,6 +315,4 @@ if __name__ == "__main__":
             for obj in sorted(related, key=lambda k: k.type):
                 print("".join(obj.pretty_print(**pretty_print_options)))
     print("% Query took {} seconds".format(time.time() - start_time))
-
-    #print(eng._schemas)
 
