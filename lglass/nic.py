@@ -226,6 +226,26 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
                 pass
 
     def _lookup_class(self, object_class, object_keys):
+        if isinstance(object_keys, str):
+            object_keys = object_keys.replace("_", "/")
+            try:
+                os.stat(self._build_path(object_class, object_keys))
+                yield (object_class, object_keys)
+            except FileNotFoundError:
+                pass
+            return
+        try:
+            keys_iter = iter(object_keys)
+            for key in keys_iter:
+                key = key.replace("_", "/")
+                try:
+                    os.stat(self._build_path(object_class, key))
+                    yield (object_class, key)
+                except FileNotFoundError:
+                    pass
+            return
+        except TypeError:
+            pass
         for key in os.listdir(self._build_path(object_class)):
             if key[0] == '.': continue
             key = key.replace("_", "/")
@@ -255,11 +275,14 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
         except FileExistsError:
             pass
         save_obj = NicObject(obj.data)
-        save_obj.remove("last-modified")
+        remove_last_modified = self.database_name in save_obj.get("source") or \
+                not save_obj.get("source")
+        if remove_last_modified:
+            save_obj.remove("last-modified")
         path = self._build_path(object_class, object_key)
         with open(path, "w") as fh:
             fh.write("".join(save_obj.pretty_print(**options)))
-        if obj.last_modified is not None:
+        if isinstance(obj, NicObject) and obj.last_modified is not None:
             st = os.stat(path)
             mtime = obj.last_modified_datetime.timestamp()
             os.utime(path, times=(st.st_atime, mtime))
