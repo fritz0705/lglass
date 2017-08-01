@@ -91,14 +91,21 @@ class Object(object):
         raise TypeError("Expected key to be str or int, got {}".format(type(key)))
     
     def __setitem__(self, key, value):
-        if isinstance(key, int):
-            pass
+        if isinstance(key, (int, slice)):
+            self.data[key] = value
         elif isinstance(key, str):
             if key not in self:
                 self.append(key, value)
+            else:
+                index = self.indices(key)[0]
+                self.remove(key)
+                self.insert(index, key, value)
 
     def __delitem__(self, key):
-        return self.remove(key)
+        if isinstance(key, (int, slice)):
+            del self.data[key]
+        else:
+            self.remove(key)
     
     def __contains__(self, key):
         for key1 in self.keys():
@@ -129,7 +136,7 @@ class Object(object):
     def indices(self, key):
         return [i for i, (k, v) in enumerate(self.data) if k == key]
 
-    def remove(self, key, nth=None):
+    def remove(self, key):
         if isinstance(key, int):
             del self._data[key]
             return
@@ -178,144 +185,164 @@ class Object(object):
     def __bool__(self):
         return bool(self.data)
 
+    def copy(self):
+        return self.__class__(self.data)
+
     @classmethod
     def from_file(cls, fh):
         return cls(fh.read())
 
+def parse_objects(lines, pragmas=None):
+    if pragmas is None:
+        pragmas = {}
+    else:
+        pragmas = dict(pragmas)
+    pragmas["stop-at-empty-line"] = True
+    lines_iter = iter(lines)
+    try:
+        while True:
+            obj = parse_object(lines_iter, pragmas=pragmas)
+            if obj:
+                yield obj
+            else:
+                next(lines_iter)
+    except StopIteration:
+        pass
+
 # TODO rewrite object parser
 def parse_object(lines, pragmas={}):
-	r'''This is a simple RPSL parser which expects an iterable which yields lines.
-	This parser processes the object format, not the policy format. The object
-	format used by this parser is similar to the format described by the RFC:
-	Each line consists of key and value, which are separated by a colon ':'.
-	The ':' can be surrounded by whitespace characters including line breaks,
-	because this parser doesn't split the input into lines; it's newline unaware.
-	The format also supports line continuations by beginning a new line of input
-	with a whitespace character. This whitespace character is stripped, but the
-	parser will produce a '\n' in the resulting value. Line continuations are
-	only possible for the value part, which means, that the key and ':' must be
-	on the same line of input.
+    r'''This is a simple RPSL parser which expects an iterable which yields lines.
+    This parser processes the object format, not the policy format. The object
+    format used by this parser is similar to the format described by the RFC:
+    Each line consists of key and value, which are separated by a colon ':'.
+    The ':' can be surrounded by whitespace characters including line breaks,
+    because this parser doesn't split the input into lines; it's newline unaware.
+    The format also supports line continuations by beginning a new line of input
+    with a whitespace character. This whitespace character is stripped, but the
+    parser will produce a '\n' in the resulting value. Line continuations are
+    only possible for the value part, which means, that the key and ':' must be
+    on the same line of input.
 
-	We also support an extended format using pragmas, which can define the
-	processing rules like line-break type, and whitespace preservation. Pragmas
-	are on their own line, which must begin with "%!", followed by any
-	amount of whitespace, "pragma", at least one whitespace, followed by the
-	pragma-specific part.
-	
-	The following pragmas are supported:
+    We also support an extended format using pragmas, which can define the
+    processing rules like line-break type, and whitespace preservation. Pragmas
+    are on their own line, which must begin with "%!", followed by any
+    amount of whitespace, "pragma", at least one whitespace, followed by the
+    pragma-specific part.
+    
+    The following pragmas are supported:
 
-		``%! pragma whitespace-preserve [on|off]``
-				Preserve any whitespace of input in keys and values and don't strip
-				whitespace.
+        ``%! pragma whitespace-preserve [on|off]``
+                Preserve any whitespace of input in keys and values and don't strip
+                whitespace.
 
-		``%! pragma newline-type [cr|lf|crlf|none]``
-				Define type of newline by choosing between cr "Mac OS 9", lf "Unix",
-				crlf "Windows" and none.
+        ``%! pragma newline-type [cr|lf|crlf|none]``
+                Define type of newline by choosing between cr "Mac OS 9", lf "Unix",
+                crlf "Windows" and none.
 
-		``%! pragma rfc``
-				Reset all pragmas to the RFC-conform values.
+        ``%! pragma rfc``
+                Reset all pragmas to the RFC-conform values.
 
-		``%! pragma stop-at-empty-line [on|off]``
-				Enforces the parser to stop at an empty line
+        ``%! pragma stop-at-empty-line [on|off]``
+                Enforces the parser to stop at an empty line
 
-		``%! pragma condense-whitespace [on|off]``
-				Replace any sequence of whitespace characters with simple space (' ')
+        ``%! pragma condense-whitespace [on|off]``
+                Replace any sequence of whitespace characters with simple space (' ')
 
-		``%! pragma strict-ripe [on|off]``
-				Do completely RIPE database compilant parsing, e.g. don't allow any
-				space between key and the colon.
+        ``%! pragma strict-ripe [on|off]``
+                Do completely RIPE database compilant parsing, e.g. don't allow any
+                space between key and the colon.
 
-		``%! pragma hash-comment [on|off]``
-				Recognize hash '#' as beginning of comment
-	'''
-	result = []
-	default_pragmas = {
-		"whitespace-preserve": False,
-		"newline-type": "lf",
-		"stop-at-empty-line": False,
-		"condense-whitespace": False,
-		"strict-ripe": False,
-		"hash-comment": False
-	}
-	_pragmas = dict(default_pragmas)
-	_pragmas.update(pragmas)
-	pragmas = _pragmas
+        ``%! pragma hash-comment [on|off]``
+                Recognize hash '#' as beginning of comment
+    '''
+    result = []
+    default_pragmas = {
+        "whitespace-preserve": False,
+        "newline-type": "lf",
+        "stop-at-empty-line": False,
+        "condense-whitespace": False,
+        "strict-ripe": False,
+        "hash-comment": False
+    }
+    _pragmas = dict(default_pragmas)
+    _pragmas.update(pragmas)
+    pragmas = _pragmas
 
-	for line in lines:
-		if line.startswith("%!"):
-			# this line defines a parser instruction, which should be a pragma
-			values = line[2:].strip().split()
-			if len(values) <= 1:
-				raise ValueError("Syntax error: Expected pragma type after 'pragma'")
-			if values[0] != "pragma":
-				raise ValueError("Syntax error: Only pragmas are allowed as parser instructions")
-			if values[1] == "rfc":
-				pragmas.update(default_pragmas)
-			elif values[1] in {"whitespace-preserve", "stop-at-empty-line",
-				"condense-whitespace", "strict-ripe", "hash-comment"}:
-				try:
-					if values[2] not in {"on", "off"}:
-						raise ValueError("Syntax error: Expected 'on' or 'off' as value for '{}' pragma".format(values[1]))
-					pragmas[values[1]] = True if values[2] == "on" else False
-				except IndexError:
-					raise ValueError("Syntax error: Expected value after '{}'".format(values[1]))
-			elif values[1] == "newline-type":
-				try:
-					if values[2] not in ["cr", "lf", "crlf", "none"]:
-						raise ValueError("Syntax error: Expected 'cr', 'lf', 'crlf' or 'none' as value for 'newline-type' pragma")
-					pragmas["newline-type"] = values[2]
-				except IndexError:
-					raise ValueError("Syntax error: Expected value after 'newline-type'")
-			else:
-				raise ValueError("Syntax error: Unknown pragma: {}".format(values))
-			continue
+    for line in lines:
+        if line.startswith("%!"):
+            # this line defines a parser instruction, which should be a pragma
+            values = line[2:].strip().split()
+            if len(values) <= 1:
+                raise ValueError("Syntax error: Expected pragma type after 'pragma'")
+            if values[0] != "pragma":
+                raise ValueError("Syntax error: Only pragmas are allowed as parser instructions")
+            if values[1] == "rfc":
+                pragmas.update(default_pragmas)
+            elif values[1] in {"whitespace-preserve", "stop-at-empty-line",
+                "condense-whitespace", "strict-ripe", "hash-comment"}:
+                try:
+                    if values[2] not in {"on", "off"}:
+                        raise ValueError("Syntax error: Expected 'on' or 'off' as value for '{}' pragma".format(values[1]))
+                    pragmas[values[1]] = True if values[2] == "on" else False
+                except IndexError:
+                    raise ValueError("Syntax error: Expected value after '{}'".format(values[1]))
+            elif values[1] == "newline-type":
+                try:
+                    if values[2] not in ["cr", "lf", "crlf", "none"]:
+                        raise ValueError("Syntax error: Expected 'cr', 'lf', 'crlf' or 'none' as value for 'newline-type' pragma")
+                    pragmas["newline-type"] = values[2]
+                except IndexError:
+                    raise ValueError("Syntax error: Expected value after 'newline-type'")
+            else:
+                raise ValueError("Syntax error: Unknown pragma: {}".format(values))
+            continue
 
-		# remove any comments (text after % and #)
-		line = line.split("%")[0]
-		if pragmas["hash-comment"]:
-			line = line.split("#")[0]
+        # remove any comments (text after % and #)
+        line = line.split("%")[0]
+        if pragmas["hash-comment"]:
+            line = line.split("#")[0]
 
-		# continue if line is empty
-		if not line.strip():
-			if pragmas["stop-at-empty-line"] and len(result) != 0:
-				break
-			continue
+        # continue if line is empty
+        if not line.strip():
+            if pragmas["stop-at-empty-line"]:
+                break
+            continue
 
-		# check for line continuations
-		if line[0] in [' ', '\t', "+"]:
-			line = line[1:]
-			if not pragmas["whitespace-preserve"]:
-				line = line.strip()
-			entry = result.pop()
-			value = ({
-				"cr": "\r",
-				"lf": "\n",
-				"crlf": "\r\n",
-				"none": ""
-			}[pragmas["newline-type"]]).join([entry[1], line])
-			result.append((entry[0], value))
-			continue
+        # check for line continuations
+        if line[0] in [' ', '\t', "+"]:
+            line = line[1:]
+            if not pragmas["whitespace-preserve"]:
+                line = line.strip()
+            entry = result.pop()
+            value = ({
+                "cr": "\r",
+                "lf": "\n",
+                "crlf": "\r\n",
+                "none": ""
+            }[pragmas["newline-type"]]).join([entry[1], line])
+            result.append((entry[0], value))
+            continue
 
-		try:
-			key, value = line.split(":", 1)
-		except ValueError:
-			raise ValueError("Syntax error: Missing value")
+        try:
+            key, value = line.split(":", 1)
+        except ValueError:
+            raise ValueError("Syntax error: Missing value")
 
-		if pragmas["strict-ripe"]:
-			if not re.match("^[a-zA-Z0-9-]+$", key):
-				raise ValueError("Syntax error: Key doesn't match RIPE database requirements")
+        if pragmas["strict-ripe"]:
+            if not re.match("^[a-zA-Z0-9-]+$", key):
+                raise ValueError("Syntax error: Key doesn't match RIPE database requirements")
 
-		if not pragmas["whitespace-preserve"]:
-			key = key.strip()
-			value = value.strip()
+        if not pragmas["whitespace-preserve"]:
+            key = key.strip()
+            value = value.strip()
 
-		if pragmas["condense-whitespace"]:
-			import re
-			value = re.sub(r"[\s]+", " ", value, flags=re.M|re.S)
+        if pragmas["condense-whitespace"]:
+            import re
+            value = re.sub(r"[\s]+", " ", value, flags=re.M|re.S)
 
-		result.append((key, value))
+        result.append((key, value))
 
-	return result
+    return result
 
 if __name__ == "__main__":
     import argparse
