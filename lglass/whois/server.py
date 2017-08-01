@@ -30,22 +30,16 @@ class SimpleWhoisServer(object):
         argparser.add_argument("--exact", "-x", action="store_true", default=False)
         argparser.add_argument("--no-recurse", "-r", action="store_true", default=False)
         argparser.add_argument("--primary-keys", "-K", action="store_true", default=False)
-        argparser.add_argument("terms", nargs="+")
+        argparser.add_argument("--persistent-connection", "-k", action="store_true", default=False)
+        argparser.add_argument("terms", nargs="*")
         return argparser
 
-    async def handle(self, reader, writer):
-        if self.primer is not None:
-            writer.write(self.primer.encode())
-
-        request = await reader.readline()
-
-        request = request.decode()
+    def query(self, request, writer):
         argparser = self._build_argparser()
         args = argparser.parse_args(request.split())
 
         classes = args.types.split(",") if args.types \
                 else self.database.object_classes
-
         query_args = dict(
                 reverse_domain=args.domains,
                 classes=classes,
@@ -63,6 +57,30 @@ class SimpleWhoisServer(object):
                     "min_padding": 16,
                     "add_padding": 0}).encode())
 
+        writer.write(b"\n")
+
+        return args.persistent_connection
+
+    async def handle_persistent(self, reader, writer):
+        while True:
+            if self.primer is not None:
+                writer.write(self.primer.encode())
+            request = await reader.readline()
+            request = request.decode()
+            k = self.query(request, writer)
+            if k:
+                break
+
+    async def handle(self, reader, writer):
+        if self.primer is not None:
+            writer.write(self.primer.encode())
+        request = await reader.readline()
+        request = request.decode()
+        persistent_connection = self.query(request, writer)
+        if persistent_connection:
+            await self.handle_persistent(reader, writer)
+            writer.close()
+            return
         writer.close()
 
     def format_results(self, results, primary_keys=False,
