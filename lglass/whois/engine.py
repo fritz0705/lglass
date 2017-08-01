@@ -274,7 +274,7 @@ class WhoisEngine(object):
                 else self.ipv6_more_specific_prefixlens
         if prefixlen not in more_specific_prefixlens:
             return
-        prefixlens = set(range(prefixlen, max_prefixlen + 1)) & self.more_specific_prefixlens
+        prefixlens = set(range(prefixlen, max_prefixlen + 1)) & more_specific_prefixlens
         found_levels = 0
         for prefixlen in prefixlens:
             found = 0
