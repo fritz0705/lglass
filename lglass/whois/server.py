@@ -46,7 +46,7 @@ class SimpleWhoisServer(object):
             if args.q == "version":
                 writer.write(self.version_string)
             elif args.q == "types":
-                writer.write("\n".join(self.database.object_classes).encode())
+                writer.write("\n".join(sorted(self.database.object_classes)).encode())
                 writer.write(b"\n\n")
             await writer.drain()
             return args.persistent_connection
