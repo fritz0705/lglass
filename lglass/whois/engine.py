@@ -53,7 +53,7 @@ class WhoisEngine(object):
         if ipv4_more_specific_prefixlens is None:
             ipv4_more_specific_prefixlens = set(range(20, 33))
         if ipv6_more_specific_prefixlens is None:
-            ipv6_more_specific_prefixlens = set(range(48, 65))
+            ipv6_more_specific_prefixlens = set()
         self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
         self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
 
