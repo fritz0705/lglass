@@ -9,6 +9,7 @@ import netaddr
 import lglass.database
 import lglass.dns
 import lglass.schema
+import lglass.proxy
 
 def parse_aut_num(aut_num):
     m = re.match(r"(AS)?([0-9]+)$", aut_num)
@@ -38,13 +39,20 @@ class WhoisEngine(object):
     network_classes = cidr_classes | route_classes
     abuse_classes = {"inetnum", "inet6num", "aut-num"}
 
-    def __init__(self, database=None, use_schemas=False, type_hints=None):
+    def __init__(self, database=None, use_schemas=False, type_hints=None,
+            global_cache=None, query_cache=True):
         self.database = database
         self.use_schemas = use_schemas
         self._schema_cache = {}
         self.type_hints = {}
         if type_hints is not None:
             self.type_hints.update(type_hints)
+        self.query_cache = query_cache
+
+    def new_query_database(self):
+        if self.query_cache:
+            return lglass.proxy.CacheProxyDatabase(self.database)
+        return self.database
 
     def filter_classes(self, classes):
         if classes is None:
@@ -54,97 +62,104 @@ class WhoisEngine(object):
         classes = set(classes).intersection(self.database.object_classes)
         return classes
 
-    @property
-    def _schemas(self):
-        if self._schema_cache is None:
-            self._schema_cache = {obj.key: obj for obj in self.database.find(types="schema")}
-        return self._schema_cache
+    def reverse_domains(objects):
+        for obj in objects:
+            if obj.object_class in self.cidr_classes:
+                yield from self.query_reverse_domains(obj)
 
     def query(self, query, classes=None, reverse_domain=False, recursive=True,
-            less_specific_levels=0, exact_match=False):
-        primary_results = set(self.query_primary(query, classes=classes))
+            less_specific_levels=0, exact_match=False, database=None):
+        if database is None:
+            database = self.new_query_database()
 
-        def _reverse_domains(p):
-            for obj in p:
-                yield obj
-                if reverse_domain and obj.object_class in self.cidr_classes:
-                    yield from self.query_reverse_domains(obj)
-        primary_results = _reverse_domains(primary_results)
+        primary_results = set(self.query_primary(query, classes=classes,
+                database=database))
 
-        results = {}
-        for obj in primary_results:
-            results[obj] = [obj]
+        if reverse_domain:
+            for obj in frozenset(primary_results):
+                if obj.object_class in self.cidr_classes:
+                    primary_results.update(self.query_reverse_domains(obj,
+                        database=database))
+        
+        if less_specific_levels > 0:
+            for obj in frozenset(primary_results):
+                if obj.object_class in self.cidr_classes:
+                    primary_results.update(self.query_less_specifics(obj,
+                        levels=less_specific_levels, database=database))
+
+        results = {obj: [obj] for obj in primary_results}
 
         for obj in results.keys():
-            # Perform secondary lookups
-            if less_specific_levels != 0:
-                ls = list(self.query_less_specifics(obj, levels=less_specific_levels))
-                for o in sorted(ls, key=lambda o: o.ip_network.prefixlen)[::-1]:
-                    results[obj].append(o)
             if recursive:
-                results[obj].extend(self.query_inverse(obj))
-
-        for obj in results.keys():
-            results[obj] = _uniq(results[obj])
+                results[obj].extend(self.query_inverse(obj, database=database))
         
         return results
 
-    def query_primary(self, query, classes=None, exact_match=False):
+    def query_primary(self, query, classes=None, exact_match=False,
+            database=None):
+        if database is None:
+            database = self.new_query_database()
+
         classes = self.filter_classes(classes)
 
         if re.match(r"AS[0-9]+$", query):
             # aut-num lookup
             if "aut-num" in classes:
-                yield from self.database.find(keys=query, types="aut-num")
+                yield from database.find(keys=query, types="aut-num")
             asn = lglass.nic.parse_asn(query)
             if "as-block" in classes:
-                for as_block in self.database.find(types="as-block"):
+                for as_block in database.find(types="as-block"):
                     if asn in as_block:
                         yield as_block
             return
         elif parse_as_block(query) and "as-block" in classes:
-            yield from self.database.find(keys=query, types="as-block")
+            yield from database.find(keys=query, types="as-block")
             return
         elif query.startswith("ORG-") and "organisation" in classes:
-            yield from self.database.find(keys=query, types="organisation")
+            yield from database.find(keys=query, types="organisation")
             return
         elif query.endswith("-MNT") and "mntner" in classes:
-            yield from self.database.find(keys=query, types="mntner")
+            yield from database.find(keys=query, types="mntner")
             return
         elif query.startswith("AS-") and "as-set" in classes:
-            yield from self.database.find(keys=query, types="as-set")
+            yield from database.find(keys=query, types="as-set")
             return
         elif query.startswith("RS-") and "route-set" in classes:
-            yield from self.database.find(keys=query, types="route-set")
+            yield from database.find(keys=query, types="route-set")
             return
         elif query.startswith("RTRS-") and "rtr-set" in classes:
-            yield from self.database.find(keys=query, types="rtr-set")
+            yield from database.find(keys=query, types="rtr-set")
             return
         elif query.startswith("FLTR-") and "filter-set" in classes:
-            yield from self.database.find(keys=query, types="filter-set")
+            yield from database.find(keys=query, types="filter-set")
             return
         elif query.startswith("PRNG-") and "peering-set" in classes:
-            yield from self.database.find(keys=query, types="peering-set")
+            yield from database.find(keys=query, types="peering-set")
             return
         elif query.startswith("IRT-") and "irt" in classes:
-            yield from self.database.find(keys=query, types="irt")
+            yield from database.find(keys=query, types="irt")
             return
 
         try:
             net = netaddr.IPNetwork(query)
-            yield from self.query_network(net, classes=classes, exact_match=False)
+            yield from self.query_network(net, classes=classes,
+                    exact_match=False, database=database)
             return
         except netaddr.core.AddrFormatError:
             pass
         
         for hint, typ in self.type_hints.items():
             if _hint_match(hint, query):
-                yield from self.database.find(keys=query, types=typ)
+                yield from database.find(keys=query, types=typ)
                 return
         
-        yield from self.database.find(keys=query, types=classes)
+        yield from database.find(keys=query, types=classes)
 
-    def query_network(self, net, classes=None, exact_match=False):
+    def query_network(self, net, classes=None, exact_match=False,
+            database=None):
+        if database is None:
+            database = self.new_query_database()
+
         if classes is None:
             classes = self.network_classes
         else:
@@ -155,25 +170,28 @@ class WhoisEngine(object):
 
         if not isinstance(net, netaddr.IPNetwork):
             net = netaddr.IPNetwork(net)
-        desired_nets = {str(n) for n in net.supernet()} | {str(net)}
+        supernets = {str(n) for n in net.supernet()} | {str(net)}
 
-        inetnums = self.database.lookup(types=inetnum_classes, keys=desired_nets)
-        routes = self.database.lookup(types=route_classes,
-                keys=lambda k: k.startswith(tuple(desired_nets)))
+        inetnums = database.lookup(types=inetnum_classes, keys=supernets)
+        routes = database.lookup(types=route_classes,
+                keys=lambda k: k.startswith(tuple(supernets)))
 
+        # Sort inetnum objects by prefix length
         inetnums = sorted(list(inetnums),
                 key=lambda s: netaddr.IPNetwork(s[1]).prefixlen,
                 reverse=True)
         if inetnums:
-            inetnum = self.database.fetch(*inetnums[0])
+            inetnum = database.fetch(*inetnums[0])
             if not exact_match or inetnum.ip_network == net:
                 yield inetnum
         for route_spec in routes:
-            route = self.database.fetch(*route_spec)
+            route = database.fetch(*route_spec)
             if net in route.ip_network:
                 yield route
 
-    def query_inverse(self, obj):
+    def query_inverse(self, obj, database=None):
+        if database is None:
+            database = self.new_query_database()
         if self.use_schemas:
             try:
                 schema = self._load_schema(obj.type)
@@ -182,7 +200,7 @@ class WhoisEngine(object):
             inverse_objects = []
             for key, _, _, inverse in schema.schema_keys():
                 for value in obj.get(key):
-                    yield from self.database.find(types=inverse, keys=value)
+                    yield from database.find(types=inverse, keys=value)
         else:
             # Use default rules
             inverse_objects = set()
@@ -191,10 +209,10 @@ class WhoisEngine(object):
             inverse_objects.update(obj.get("zone-c"))
             inverse_objects.update(obj.get("org"))
             for inverse in inverse_objects:
-                yield from self.database.find(types=self.handle_classes,
+                yield from database.find(types=self.handle_classes,
                         keys=inverse)
 
-    def query_abuse(self, obj):
+    def query_abuse(self, obj, database=None):
         if obj.object_class not in self.abuse_classes:
             return
         abuse_contact_key = None
@@ -220,14 +238,18 @@ class WhoisEngine(object):
         if "abuse-mailbox" in abuse_contact:
             return abuse_contact["abuse-mailbox"]
 
-    def query_reverse_domains(self, obj):
+    def query_reverse_domains(self, obj, database=None):
+        if database is None:
+            database = self.new_query_database()
         for subnet, domain in lglass.dns.rdns_subnets(obj.ip_network):
             try:
                 yield self.database.fetch("domain", domain)
             except KeyError:
                 pass
 
-    def query_less_specifics(self, obj, levels=1):
+    def query_less_specifics(self, obj, levels=1, database=None):
+        if database is None:
+            database = self.new_query_database()
         if obj.type not in self.cidr_classes:
             return
         found = 0
@@ -269,6 +291,7 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     db = lglass.nic.FileDatabase(args.database)
+    db = lglass.nic.RemoteWhoisDatabase("whois.flhb.de")
     eng = WhoisEngine(db)
 
     classes = args.classes.split(",") if args.classes else db.object_classes
