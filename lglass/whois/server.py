@@ -34,7 +34,7 @@ class SimpleWhoisServer(object):
         argparser.add_argument("terms", nargs="*")
         return argparser
 
-    def query(self, request, writer):
+    async def query(self, request, writer):
         argparser = self._build_argparser()
         args = argparser.parse_args(request.split())
 
@@ -58,29 +58,28 @@ class SimpleWhoisServer(object):
                     "add_padding": 0}).encode())
 
         writer.write(b"\n")
+        await writer.drain()
 
         return args.persistent_connection
 
     async def handle_persistent(self, reader, writer):
         while True:
             if self.primer is not None:
-                writer.write(self.primer.encode())
+                await writer.write(self.primer.encode())
             request = await reader.readline()
             request = request.decode()
-            k = self.query(request, writer)
+            k = await self.query(request, writer)
             if k:
                 break
 
     async def handle(self, reader, writer):
         if self.primer is not None:
-            writer.write(self.primer.encode())
+            await writer.write(self.primer.encode())
         request = await reader.readline()
         request = request.decode()
-        persistent_connection = self.query(request, writer)
+        persistent_connection = await self.query(request, writer)
         if persistent_connection:
             await self.handle_persistent(reader, writer)
-            writer.close()
-            return
         writer.close()
 
     def format_results(self, results, primary_keys=False,
