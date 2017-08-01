@@ -289,7 +289,7 @@ class WhoisEngine(object):
                     found += 1
             if found:
                 found_levels += 1
-            if found_levels == levels:
+            if found == found_levels:
                 break
 
     def query_less_specifics(self, obj, levels=1, database=None):
