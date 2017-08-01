@@ -40,7 +40,9 @@ class WhoisEngine(object):
     abuse_classes = {"inetnum", "inet6num", "aut-num"}
 
     def __init__(self, database=None, use_schemas=False, type_hints=None,
-            global_cache=None, query_cache=True):
+            global_cache=None, query_cache=True,
+            ipv4_more_specific_prefixlens=None,
+            ipv6_more_specific_prefixlens=None):
         self.database = database
         self.use_schemas = use_schemas
         self._schema_cache = {}
@@ -48,6 +50,12 @@ class WhoisEngine(object):
         if type_hints is not None:
             self.type_hints.update(type_hints)
         self.query_cache = query_cache
+        if ipv4_more_specific_prefixlens is None:
+            ipv4_more_specific_prefixlens = set(range(24, 33))
+        if ipv6_more_specific_prefixlens is None:
+            ipv6_more_specific_prefixlens = set(range(48, 65))
+        self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
+        self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
 
     def new_query_database(self):
         if self.query_cache:
@@ -68,24 +76,31 @@ class WhoisEngine(object):
                 yield from self.query_reverse_domains(obj)
 
     def query(self, query, classes=None, reverse_domain=False, recursive=True,
-            less_specific_levels=0, exact_match=False, database=None):
+            less_specific_levels=0, exact_match=False, database=None,
+            more_specific_levels=0):
         if database is None:
             database = self.new_query_database()
 
-        primary_results = set(self.query_primary(query, classes=classes,
+        primary_results = list(self.query_primary(query, classes=classes,
                 database=database))
 
         if reverse_domain:
-            for obj in frozenset(primary_results):
+            for obj in list(primary_results):
                 if obj.object_class in self.cidr_classes:
-                    primary_results.update(self.query_reverse_domains(obj,
+                    primary_results.extend(self.query_reverse_domains(obj,
                         database=database))
         
-        if less_specific_levels > 0:
+        if less_specific_levels != 0:
+            for obj in list(primary_results):
+                if obj.object_class in self.cidr_classes:
+                    primary_results.extend(self.query_less_specifics(obj,
+                        levels=less_specific_levels, database=database))
+
+        if more_specific_levels != 0:
             for obj in frozenset(primary_results):
                 if obj.object_class in self.cidr_classes:
-                    primary_results.update(self.query_less_specifics(obj,
-                        levels=less_specific_levels, database=database))
+                    primary_results.extend(self.query_more_specifics(obj,
+                        levels=more_specific_levels, database=database))
 
         results = {obj: [obj] for obj in primary_results}
 
@@ -246,6 +261,35 @@ class WhoisEngine(object):
                 yield self.database.fetch("domain", domain)
             except KeyError:
                 pass
+
+    def query_more_specifics(self, obj, levels=1, database=None):
+        if database is None:
+            database = self.new_query_database()
+        if obj.type not in self.cidr_classes:
+            return
+        max_prefixlen = 128 if obj.ip_network.version == 6 else 32
+        prefixlen = obj.ip_network.prefixlen
+        more_specific_prefixlens = self.ipv4_more_specific_prefixlens \
+                if obj.ip_network.version == 4 \
+                else self.ipv6_more_specific_prefixlens
+        if prefixlen not in more_specific_prefixlens:
+            return
+        prefixlens = set(range(prefixlen, max_prefixlen + 1)) & self.more_specific_prefixlens
+        found_levels = 0
+        for prefixlen in prefixlens:
+            found = 0
+            for subnet in obj.ip_network.subnet(prefixlen):
+                try:
+                    res = self.database.fetch(obj.type, str(subnet))
+                except KeyError:
+                    continue
+                if res:
+                    yield res
+                    found += 1
+            if found:
+                found_levels += 1
+            if found_levels == levels:
+                break
 
     def query_less_specifics(self, obj, levels=1, database=None):
         if database is None:
