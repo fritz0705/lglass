@@ -199,15 +199,13 @@ def parse_objects(lines, pragmas=None):
         pragmas = dict(pragmas)
     pragmas["stop-at-empty-line"] = True
     lines_iter = iter(lines)
-    try:
-        while True:
-            obj = parse_object(lines_iter, pragmas=pragmas)
-            if obj:
-                yield obj
-            else:
-                next(lines_iter)
-    except StopIteration:
-        pass
+    obj = []
+    for line in lines_iter:
+        if not line.strip() and obj:
+            yield parse_object(obj)
+            obj = []
+        else:
+            obj.append(line)
 
 # TODO rewrite object parser
 def parse_object(lines, pragmas={}):
@@ -297,15 +295,18 @@ def parse_object(lines, pragmas={}):
                 raise ValueError("Syntax error: Unknown pragma: {}".format(values))
             continue
 
-        # remove any comments (text after % and #)
-        line = line.split("%")[0]
-        if pragmas["hash-comment"]:
-            line = line.split("#")[0]
-
         # continue if line is empty
         if not line.strip():
             if pragmas["stop-at-empty-line"]:
                 break
+            continue
+
+        # remove any comments (text after % and #)
+        line = line.split("%")[0]
+        if pragmas["hash-comment"]:
+            line = line.split("#")[0]
+        
+        if not line.strip():
             continue
 
         # check for line continuations
