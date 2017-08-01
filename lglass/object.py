@@ -193,11 +193,6 @@ class Object(object):
         return cls(fh.read())
 
 def parse_objects(lines, pragmas=None):
-    if pragmas is None:
-        pragmas = {}
-    else:
-        pragmas = dict(pragmas)
-    pragmas["stop-at-empty-line"] = True
     lines_iter = iter(lines)
     obj = []
     for line in lines_iter:
