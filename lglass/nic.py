@@ -121,6 +121,22 @@ class InetnumObject(NicObject):
     def primary_key(self):
         return str(self.ip_network)
 
+    @property
+    def route_maintainers(self):
+        return list(self.get("mnt-routes"))
+
+    @property
+    def irt_maintainers(self):
+        return list(self.get("mnt-irt"))
+
+    @property
+    def domain_maintainers(self):
+        return list(self.get("mnt-domains"))
+    
+    @property
+    def lower_maintainers(self):
+        return list(self.get("mnt-lower"))
+
 class ASBlockObject(NicObject):
     def __contains__(self, number_or_key):
         if isinstance(number_or_key, int):
@@ -170,6 +186,26 @@ class RouteObject(NicObject):
     @property
     def primary_key(self):
         return "{}{}".format(self.ip_network, self.origin)
+    
+    @property
+    def lower_maintainers(self):
+        return list(self.get("mnt-lower"))
+
+    @property
+    def route_maintainers(self):
+        return list(self.get("mnt-routes"))
+
+class AutNumObject(NicObject):
+    @property
+    def lower_maintainers(self):
+        return list(self.get("mnt-lower"))
+
+    @property
+    def route_maintainers(self):
+        return list(self.get("mnt-routes"))
+
+    def __int__(self):
+        return parse_asn(self.object_key)
 
 object_classes = {"as-block", "as-set", "aut-num", "domain", "filter-set",
         "inet-rtr", "inet6num", "inetnum", "irt", "key-cert", "mntner",
@@ -184,7 +220,8 @@ object_class_types = {
         "inet6num": InetnumObject,
         "person": HandleObject,
         "role": HandleObject,
-        "as-block": ASBlockObject
+        "as-block": ASBlockObject,
+        "aut-num": AutNumObject,
 }
 
 class NicDatabaseMixin(object):
@@ -196,16 +233,22 @@ class NicDatabaseMixin(object):
 
     def object_class_type(self, object_class):
         try:
-            return self.object_class_types[object_class]
+            return self.object_class_types[self.primary_class(object_class)]
         except KeyError:
             return NicObject
+
+    def create_object(self, data, object_class=None):
+        if object_class is None:
+            object_class = data[0][0]
+        return self.object_class_type(object_class)(data)
 
 class FileDatabase(lglass.database.Database, NicDatabaseMixin):
     _manifest = None
 
-    def __init__(self, path):
+    def __init__(self, path, read_only=False):
         NicDatabaseMixin.__init__(self)
         self._path = path
+        self.read_only = read_only
 
     def _build_path(self, object_class, object_key=None):
         if object_key is None:
@@ -268,6 +311,10 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             raise ValueError((object_class, object_key), *verr.args)
 
     def save(self, obj, **options):
+        if self.read_only:
+            raise ValueError
+        if isinstance(obj, list):
+            obj = self.create_object(obj)
         object_class = self.primary_class(obj.object_class)
         object_key = self.primary_key(obj).replace("/", "_")
         try:
@@ -288,11 +335,15 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             os.utime(path, times=(st.st_atime, mtime))
 
     def save_manifest(self):
+        if self.read_only:
+            raise ValueError
         mf = self.manifest
         with open(os.path.join(self._path, "MANIFEST"), "w") as fh:
             fh.write("".join(mf.pretty_print()))
 
     def delete(self, obj):
+        if self.read_only:
+            raise ValueError
         object_class = self.primary_class(obj.object_class)
         object_key = self.primary_key(obj).replace("/", "_")
         os.unlink(self._build_path(object_class, object_key))
@@ -312,4 +363,16 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
     @property
     def database_name(self):
         return self.manifest.object_key
+
+    @database_name.setter
+    def database_name(self, new_name):
+        self.manifest.object_key = new_name
+
+    @property
+    def serial(self):
+        return self.manifest.getfirst("serial", default=0)
+
+    @serial.setter
+    def serial(self, new_serial):
+        self.manifest["serial"] = new_serial
 
