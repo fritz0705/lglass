@@ -65,7 +65,7 @@ class SimpleWhoisServer(object):
     async def handle_persistent(self, reader, writer):
         while True:
             if self.primer is not None:
-                await writer.write(self.primer.encode())
+                writer.write(self.primer.encode())
             request = await reader.readline()
             request = request.decode()
             k = await self.query(request, writer)
@@ -74,7 +74,7 @@ class SimpleWhoisServer(object):
 
     async def handle(self, reader, writer):
         if self.primer is not None:
-            await writer.write(self.primer.encode())
+            writer.write(self.primer.encode())
         request = await reader.readline()
         request = request.decode()
         persistent_connection = await self.query(request, writer)
