@@ -51,7 +51,7 @@ class WhoisEngine(object):
             self.type_hints.update(type_hints)
         self.query_cache = query_cache
         if ipv4_more_specific_prefixlens is None:
-            ipv4_more_specific_prefixlens = set(range(24, 33))
+            ipv4_more_specific_prefixlens = set(range(20, 33))
         if ipv6_more_specific_prefixlens is None:
             ipv6_more_specific_prefixlens = set(range(48, 65))
         self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
