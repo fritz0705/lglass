@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 
+import lglass
 import lglass.whois.engine
 import lglass.nic
 
@@ -14,6 +15,8 @@ class SolidArgumentParser(argparse.ArgumentParser):
         pass
 
 class SimpleWhoisServer(object):
+    version_string = "% lglass.whois.server {}\n".format(lglass.version).encode()
+
     def __init__(self, engine, primer=None):
         self.engine = engine
         self.primer = primer
@@ -31,12 +34,22 @@ class SimpleWhoisServer(object):
         argparser.add_argument("--no-recurse", "-r", action="store_true", default=False)
         argparser.add_argument("--primary-keys", "-K", action="store_true", default=False)
         argparser.add_argument("--persistent-connection", "-k", action="store_true", default=False)
+        argparser.add_argument("-q")
         argparser.add_argument("terms", nargs="*")
         return argparser
 
     async def query(self, request, writer):
         argparser = self._build_argparser()
         args = argparser.parse_args(request.split())
+
+        if args.q:
+            if args.q == "version":
+                writer.write(self.version_string)
+            elif args.q == "types":
+                writer.write("\n".join(self.database.object_classes).encode())
+                writer.write(b"\n\n")
+            await writer.drain()
+            return args.persistent_connection
 
         classes = args.types.split(",") if args.types \
                 else self.database.object_classes
@@ -80,6 +93,7 @@ class SimpleWhoisServer(object):
         persistent_connection = await self.query(request, writer)
         if persistent_connection:
             await self.handle_persistent(reader, writer)
+        await writer.drain()
         writer.close()
 
     def format_results(self, results, primary_keys=False,
