@@ -27,13 +27,25 @@ class SimpleWhoisServer(object):
 
     def _build_argparser(self):
         argparser = SolidArgumentParser(add_help=False)
-        argparser.add_argument("--domains", "-d", action="store_true", default=False)
+        argparser.add_argument("--domains", "-d", action="store_true",
+                default=False)
         argparser.add_argument("--types", "-T")
-        argparser.add_argument("--levels", "-l", type=int, default=0)
-        argparser.add_argument("--exact", "-x", action="store_true", default=False)
-        argparser.add_argument("--no-recurse", "-r", action="store_true", default=False)
-        argparser.add_argument("--primary-keys", "-K", action="store_true", default=False)
-        argparser.add_argument("--persistent-connection", "-k", action="store_true", default=False)
+        argparser.add_argument("--one-more", "-m", action="store_const",
+                const=1, dest="more_specific_levels", default=0)
+        argparser.add_argument("--all-more", "-M", action="store_const",
+                const=-1, dest="more_specific_levels")
+        argparser.add_argument("--one-less", "-l", action="store_const",
+                const=1, dest="less_specific_levels", default=0)
+        argparser.add_argument("--all-less", "-L", action="store_const",
+                const=-1, dest="less_specific_levels")
+        argparser.add_argument("--exact", "-x", action="store_true",
+                default=False)
+        argparser.add_argument("--no-recurse", "-r", action="store_true",
+                default=False)
+        argparser.add_argument("--primary-keys", "-K", action="store_true",
+                default=False)
+        argparser.add_argument("--persistent-connection", "-k",
+                action="store_true", default=False)
         argparser.add_argument("-q")
         argparser.add_argument("terms", nargs="*")
         return argparser
@@ -56,7 +68,8 @@ class SimpleWhoisServer(object):
         query_args = dict(
                 reverse_domain=args.domains,
                 classes=classes,
-                less_specific_levels=args.levels,
+                less_specific_levels=args.less_specific_levels,
+                more_specific_levels=args.more_specific_levels,
                 exact_match=args.exact,
                 recursive=not args.no_recurse)
 
