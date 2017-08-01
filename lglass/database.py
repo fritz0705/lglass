@@ -8,6 +8,8 @@ primary_key_rules = {}
 
 def primary_class(object_class, class_synonyms=class_synonyms,
         object_classes=object_classes):
+    if isinstance(object_class, lglass.object.Object):
+        object_class = object_class.object_class
     for synonym_group in class_synonyms:
         if object_class in synonym_group:
             for synonyme in synonym_group:
@@ -72,4 +74,35 @@ def perform_key_match(key_pat, key):
     return (key_pat is None) or (isinstance(key_pat, str) and key == key_pat) \
             or (isinstance(key_pat, (list, set, tuple, frozenset)) and key in key_pat) \
             or (callable(key_pat) and key_pat(key))
+
+class ProxyDatabase(Database):
+    def __init__(self, backend):
+        self.backend = backend
+
+    def lookup(self, *args, **kwargs):
+        return self.backend.lookup(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        return self.backend.save(*args, **kwargs)
+
+    def fetch(self, *args, **kwargs):
+        return self.backend.fetch(*args, **kwargs)
+
+    def primary_class(self, *args, **kwargs):
+        return self.backend.primary_class(*args, **kwargs)
+
+    def primary_key(self, *args, **kwargs):
+        return self.backend.primary_key(*args, **kwargs)
+
+    @property
+    def object_classes(self):
+        return self.backend.object_classes
+
+    @property
+    def class_synonyms(self):
+        return self.backend.class_synonyms
+
+    @property
+    def primary_key_rules(self):
+        return self.backend.primary_key_rules
 
