@@ -93,8 +93,9 @@ class WhoisEngine(object):
         if less_specific_levels != 0:
             for obj in list(primary_results):
                 if obj.object_class in self.cidr_classes:
-                    primary_results.extend(self.query_less_specifics(obj,
-                        levels=less_specific_levels, database=database))
+                    primary_results = list(self.query_less_specifics(obj,
+                        levels=less_specific_levels,
+                        database=database))[::-1] + primary_results
 
         if more_specific_levels != 0:
             for obj in frozenset(primary_results):
