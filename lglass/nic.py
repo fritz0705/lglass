@@ -194,6 +194,10 @@ class RouteObject(NicObject):
     @property
     def route_maintainers(self):
         return list(self.get("mnt-routes"))
+    
+    @property
+    def primary_key_fields(self):
+        return [self.object_class, "origin"]
 
 class AutNumObject(NicObject):
     @property

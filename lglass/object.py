@@ -40,6 +40,10 @@ class Object(object):
     def primary_key(self):
         return self.object_key
 
+    @property
+    def primary_key_fields(self):
+        return [self.object_class]
+
     def extend(self, ex):
         if isinstance(ex, list):
             for offset, item in enumerate(ex):

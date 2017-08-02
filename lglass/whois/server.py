@@ -121,11 +121,9 @@ class SimpleWhoisServer(object):
                     response += "% Abuse contact for '{}' is '{}'\n\n".format(
                             primary_key, abuse_contact)
             if primary_keys:
-                if isinstance(self.database.primary_key_rules.get(primary.type), list):
-                    for key in db.primary_key_rules[primary.type]:
-                        response += "{}: {}\n\n".format(key, primary[key])
-                    continue
-                response += "{}: {}\n\n".format(primary.object_class, primary_key)
+                for key in primary.primary_key_fields:
+                    response += "{}: {}\n".format(key, primary[key])
+                response += "\n"
                 continue
             response += "% Information related to '{}'\n\n".format(
                     self.database.primary_key(primary))
