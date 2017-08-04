@@ -174,6 +174,14 @@ class WhoisEngine(object):
             return
         except netaddr.core.AddrFormatError:
             pass
+        try:
+            netrange = lglass.nic.parse_ip_range(query)
+            for net in netrange.cidrs():
+                yield from self.query_network(net, classes=classes,
+                        exact_match=False, database=database)
+                pass
+        except (netaddr.core.AddrFormatError, IndexError, ValueError):
+            pass
         
         for hint, typ in self.type_hints.items():
             if _hint_match(hint, query):
