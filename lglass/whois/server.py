@@ -18,8 +18,10 @@ class SimpleWhoisServer(object):
     version_string = "% lglass.whois.server {}\n".format(lglass.version).encode()
     not_found_template = "%ERROR:101: no entries found\n" + \
             "%\n" + "% No entries found in source {source}.\n\n"
+    not_allowed_template = "%ERROR:102: not allowed\n\n"
     preamble_template = "% This is the {source} Database query service.\n" + \
             "% The objects are in RPSL format.\n\n"
+    allow_inverse_search = False
 
     def __init__(self, engine):
         self.engine = engine
@@ -48,6 +50,11 @@ class SimpleWhoisServer(object):
     def not_found_message(self):
         if self.not_found_template is not None:
             return self.not_found_template.format(source=self.database_name)
+
+    @property
+    def not_allowed_message(self):
+        if self.not_allowed_template is not None:
+            return self.not_allowed_template.format(source=self.database_name)
 
     @not_found_message.setter
     def not_found_message(self, new_nfm):
@@ -116,8 +123,19 @@ class SimpleWhoisServer(object):
 
         if args.primary_keys: query_args["recursive"] = False
 
+        inverse_fields = None
+        if args.inverse is not None:
+            if not self.allow_inverse_search:
+                if self.not_allowed_message:
+                    writer.write(self.not_allowed_message.encode() + b"\n")
+                await writer.drain()
+                return args.persistent_connection
+            inverse_fields = args.inverse.split(",")
+
         db = self.engine.new_query_database()
         for term in args.terms or []:
+            if inverse_fields is not None:
+                term = {f: term for f in inverse_fields}
             results = self.engine.query(term, database=db, **query_args)
             writer.write(self.format_results(results,
                 primary_keys=args.primary_keys,
