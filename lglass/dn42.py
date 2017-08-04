@@ -131,6 +131,14 @@ class DN42Database(lglass.nic.FileDatabase):
         if isinstance(keys, str) and not keys.endswith(("in-addr.arpa", "ip6.arpa")):
             yield from super()._lookup_class("dns", keys)
             return
+        if isinstance(keys, set):
+            keys = set(keys)
+            for key in frozenset(keys):
+                if not key.endswith(("in-addr.arpa", "ip6.arpa")):
+                    keys.remove(key)
+                    yield from super()._lookup_class("dns", {key})
+        if not keys:
+            return
         found = set()
         for dns in super()._lookup_class("dns", keys):
             found.add(dns)
