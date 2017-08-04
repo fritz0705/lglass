@@ -23,6 +23,17 @@ class SimpleWhoisServer(object):
 
     def __init__(self, engine):
         self.engine = engine
+        self._sources = None
+
+    @property
+    def sources(self):
+        if self._sources is None:
+            return [self.database_name]
+        return self._sources
+
+    @sources.setter
+    def sources(self, new_sources):
+        self._sources = new_sources
 
     @property
     def preamble(self):
@@ -85,6 +96,10 @@ class SimpleWhoisServer(object):
             elif args.q == "types":
                 writer.write("\n".join(sorted(self.database.object_classes)).encode())
                 writer.write(b"\n\n")
+            elif args.q == "sources":
+                for source in self.sources:
+                    writer.write(source.encode() + b":3:N:0-0\n")
+                writer.write(b"\n")
             await writer.drain()
             return args.persistent_connection
 
@@ -166,6 +181,7 @@ if __name__ == "__main__":
     argparser.add_argument("--port", "-p", default=4343)
     argparser.add_argument("--address", "-a", default="::1,127.0.0.1")
     argparser.add_argument("--preamble", "-P")
+    argparser.add_argument("--sources")
     argparser.add_argument("--handle-hint")
     argparser.add_argument("database")
 
@@ -181,6 +197,9 @@ if __name__ == "__main__":
     
     if args.handle_hint is not None:
         engine.type_hints[args.handle_hint] = engine.handle_classes
+
+    if args.sources is not None:
+        server.sources = args.sources.split(",")
 
     loop = asyncio.get_event_loop()
     coro = asyncio.start_server(server.handle, args.address.split(","), args.port, loop=loop)
