@@ -71,13 +71,6 @@ class NicObject(lglass.object.Object):
 
 class HandleObject(NicObject):
     @property
-    def primary_key(self):
-        try:
-            return self["nic-hdl"]
-        except KeyError:
-            pass
-    
-    @property
     def primary_key_fields(self):
         return ["nic-hdl"]
 

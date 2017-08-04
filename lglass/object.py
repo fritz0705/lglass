@@ -38,11 +38,14 @@ class Object(object):
 
     @property
     def primary_key(self):
-        return self.object_key
+        return "".join(self[k] for k in self.primary_key_fields)
 
     @property
     def primary_key_fields(self):
         return [self.object_class]
+
+    def primary_key_object(self):
+        return self.__class__([(k, v) for k, v in self.data if k in self.primary_key_fields])
 
     def extend(self, ex):
         if isinstance(ex, list):

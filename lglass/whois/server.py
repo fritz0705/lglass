@@ -121,8 +121,8 @@ class SimpleWhoisServer(object):
                     response += "% Abuse contact for '{}' is '{}'\n\n".format(
                             primary_key, abuse_contact)
             if primary_keys:
-                for key in primary.primary_key_fields:
-                    response += "{}: {}\n".format(key, primary[key])
+                primary = primary.primary_key_object()
+                response += "".join(primary.pretty_print(**pretty_print_options))
                 response += "\n"
                 continue
             response += "% Information related to '{}'\n\n".format(
