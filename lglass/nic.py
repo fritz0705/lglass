@@ -20,6 +20,12 @@ def parse_asn(asn):
     if m:
         return int(m[1])
 
+def parse_as_block(as_block):
+    m = re.match(r"(AS)?([0-9]+)\s*[-_/]?\s*(AS)?([0-9]+)$", as_block)
+    if not m:
+        return False
+    return int(m[2]), int(m[4])
+
 class NicObject(lglass.object.Object):
     @property
     def source(self):
@@ -150,8 +156,7 @@ class ASBlockObject(NicObject):
 
     @property
     def range(self):
-        start, end = self.object_key.split("-", 1)
-        start, end = parse_asn(start.strip()), parse_asn(end.strip())
+        start, end = parse_as_block(self.object_key)
         return range(start, end + 1)
 
     @property

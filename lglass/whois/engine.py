@@ -11,16 +11,6 @@ import lglass.dns
 import lglass.schema
 import lglass.proxy
 
-def parse_aut_num(aut_num):
-    m = re.match(r"(AS)?([0-9]+)$", aut_num)
-    return int(m[2])
-
-def parse_as_block(as_block):
-    m = re.match(r"(AS)?([0-9]+)\s*[-_]\s*(AS)?([0-9]+)$", as_block)
-    if not m:
-        return False
-    return int(m[2]), int(m[4])
-
 def _uniq(it):
     s = set()
     for v in it:
@@ -128,7 +118,7 @@ class WhoisEngine(object):
                     if asn in as_block:
                         yield as_block
             return
-        elif parse_as_block(query) and "as-block" in classes:
+        elif lglass.nic.parse_as_block(query) and "as-block" in classes:
             k = lglass.nic.ASBlockObject([("as-block", query)])
             yield from database.find(keys=k.primary_key, types="as-block")
             return
