@@ -8,8 +8,8 @@ import dateutil.parser
 import netaddr
 
 import lglass.database
-import lglass.object
 import lglass.dns
+import lglass.object
 
 def parse_asn(asn):
     try:
@@ -26,17 +26,60 @@ def parse_as_block(as_block):
         return False
     return int(m[2]), int(m[4])
 
+def parse_ip_range(string):
+    start, end = map(lambda s: s.strip(), string.split("-", 1))
+    return netaddr.IPRange(start, end)
+
 class NicObject(lglass.object.Object):
     @property
     def source(self):
         try:
-            return self["source"]
+            return self["source"].split("#")[0].strip()
         except KeyError:
             pass
+
+    @source.setter
+    def source(self, new_source):
+        self["source"] = new_source
+
+    @source.deleter
+    def source(self):
+        del self["source"]
+
+    @property
+    def source_flags(self):
+        try:
+            return self["source"].split("#")[1].split()
+        except (KeyError, IndexError):
+            return []
+
+    @source_flags.setter
+    def source_flags(self, new_flags):
+        if new_flags:
+            if isinstance(new_flags, str):
+                new_flags = [new_flags]
+            self["source"] = self.source + " # " + " ".join(new_flags)
+        else:
+            self["source"] = self.source
+
+    @source_flags.deleter
+    def source_flags(self):
+        self["source"] = self.source
 
     @property
     def maintainers(self):
         return list(self.get("mnt-by"))
+
+    @maintainers.setter
+    def maintainers(self, new_maintainers):
+        try:
+            mnt_index = self.indices("mnt-by")[0]
+        except:
+            pass
+
+    @maintainers.deleter
+    def maintainers(self):
+        del self["mnt-by"]
 
     @property
     def created(self):
@@ -84,13 +127,10 @@ class InetnumObject(NicObject):
     @property
     def ip_range(self):
         if self.ip_version == 4:
-            start, end = map(lambda s: s.strip(), self["inetnum"].split("-", 1))
-            return netaddr.IPRange(start, end)
+            return parse_ip_range(self["inetnum"])
         elif self.ip_version == 6:
             if "-" in self["inet6num"]:
-                start, end = self["inet6num"].split("-", 1)
-                start, end = start.strip(), end.strip()
-                return netaddr.IPRange(start, end)
+                return parse_ip_range(self["inet6num"])
             net = self.ip_network
             return netaddr.IPRange(net[0], net[-1])
 
@@ -103,6 +143,24 @@ class InetnumObject(NicObject):
             return self.ip_range.cidrs()[0]
         if self.ip_version == 4:
             return self.ip_range.cidrs()[0]
+
+    @ip_network.setter
+    def ip_network(self, new_ip_network):
+        if isinstance(new_ip_network, str):
+            if "-" in new_ip_network:
+                new_ip_network = parse_ip_range(new_ip_network)
+            else:
+                new_ip_network = netaddr.IPNetwork(new_ip_network)
+        if self.ip_version == 4 and isinstance(new_ip_network, netaddr.IPNetwork):
+            new_ip_network = netaddr.IPRange(new_ip_network[0], new_ip_network[-1])
+        if isinstance(new_ip_network, netaddr.IPRange):
+            self.object_key = "{} - {}".format(new_ip_network[0], new_ip_network[-1])
+        elif isinstance(new_ip_network, netaddr.IPNetwork):
+            self.object_key = str(new_ip_network)
+        if new_ip_network.version == 4:
+            self.object_class = "inetnum"
+        elif new_ip_network.version == 6:
+            self.object_class = "inet6num"
 
     @property
     def ip_version(self):
@@ -311,7 +369,7 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
                 st = os.stat(path)
                 obj.last_modified = st.st_mtime
             if obj.source is None and self.database_name is not None:
-                obj.append("source", self.database_name)
+                obj.source = self.database_name
             return obj
         except (FileNotFoundError, IsADirectoryError):
             raise KeyError(repr((object_class, object_key)))

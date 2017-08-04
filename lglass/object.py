@@ -199,6 +199,10 @@ class Object(object):
     def from_file(cls, fh):
         return cls(fh.read())
 
+    @classmethod
+    def from_str(cls, string):
+        return cls(string)
+
 def parse_objects(lines, pragmas=None):
     lines_iter = iter(lines)
     obj = []
