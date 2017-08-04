@@ -21,6 +21,7 @@ class SimpleWhoisServer(object):
     not_allowed_template = "%ERROR:102: not allowed\n\n"
     preamble_template = "% This is the {source} Database query service.\n" + \
             "% The objects are in RPSL format.\n\n"
+    abuse_template = "% Abuse contact for '{object_key}' is '{contact}'\n"
     allow_inverse_search = False
 
     def __init__(self, engine):
@@ -67,6 +68,9 @@ class SimpleWhoisServer(object):
     @property
     def database(self):
         return self.engine.database
+
+    def abuse_message(self, object_key, contact):
+        return self.abuse_template.format(object_key=object_key, contact=contact)
 
     def _build_argparser(self):
         argparser = SolidArgumentParser(add_help=False)
@@ -183,8 +187,8 @@ class SimpleWhoisServer(object):
                 abuse_contact = self.engine.query_abuse(primary,
                         database=database)
                 if abuse_contact:
-                    response += "% Abuse contact for '{}' is '{}'\n\n".format(
-                            primary_key, abuse_contact)
+                    response += self.abuse_message(primary_key, abuse_contact)
+                    response += "\n"
             if primary_keys:
                 primary = primary.primary_key_object()
                 response += "".join(primary.pretty_print(**pretty_print_options))
