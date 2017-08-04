@@ -409,6 +409,7 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             for k, v in query.items():
                 if v in obj.get(k):
                     yield obj
+                    break
 
     def save_manifest(self):
         if self.read_only:
