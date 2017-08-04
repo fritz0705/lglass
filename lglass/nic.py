@@ -76,6 +76,10 @@ class HandleObject(NicObject):
             return self["nic-hdl"]
         except KeyError:
             pass
+    
+    @property
+    def primary_key_fields(self):
+        return ["nic-hdl"]
 
 class InetnumObject(NicObject):
     @property
