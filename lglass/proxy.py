@@ -6,7 +6,7 @@ import lglass.database
 
 class CacheProxyDatabase(lglass.database.ProxyDatabase):
     def __init__(self, backend, cache_presence=True, cache_objects=True,
-            lifetime=2, cache_backend=dict):
+            lifetime=None, cache_backend=dict):
         super().__init__(backend)
         self.cache_presence = cache_presence
         self.cache_objects = cache_objects
@@ -45,6 +45,10 @@ class CacheProxyDatabase(lglass.database.ProxyDatabase):
         return obj
     
     def lookup(self, types=None, keys=None):
+        if isinstance(types, str):
+            types = {types}
+        if isinstance(keys, str):
+            keys = {keys}
         for object_class, object_key in super().lookup(types=types, keys=keys):
             if (object_class, object_key) not in self._cache and self.cache_presence:
                 expires_at = None
@@ -67,6 +71,14 @@ class CacheProxyDatabase(lglass.database.ProxyDatabase):
     def update(self, other):
         for key, (obj, expires_at) in other.cache_items():
             self._cache[key] = (obj, expires_at)
+
+    @property
+    def manifest(self):
+        return self.backend.manifest
+
+    @property
+    def database_name(self):
+        return self.backend.database_name
 
 class NotifyProxyDatabase(lglass.database.ProxyDatabase):
     def __init__(self, backend, on_update=None):
