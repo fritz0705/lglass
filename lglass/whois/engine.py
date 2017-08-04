@@ -75,9 +75,14 @@ class WhoisEngine(object):
         if self.domain_class in primary_classes:
             primary_classes.update(self.cidr_classes)
 
-        primary_results = list(self.query_primary(query,
-            classes=primary_classes,
-            database=database))
+        if isinstance(query, dict):
+            primary_results = list(self.query_search_inverse(query,
+                    classes=primary_classes,
+                    database=database))
+        else:
+            primary_results = list(self.query_primary(query,
+                classes=primary_classes,
+                database=database))
 
         if reverse_domain:
             for obj in list(primary_results):
@@ -102,13 +107,19 @@ class WhoisEngine(object):
 
         results = {obj: [obj]
                 for obj in primary_results
-                if self.database.primary_class(obj.object_class) in classes}
+                if database.primary_class(obj.object_class) in classes}
 
         for obj in results.keys():
             if recursive:
                 results[obj].extend(self.query_inverse(obj, database=database))
         
         return results
+    
+    def query_search_inverse(self, query, classes=None, database=None):
+        if database is None:
+            database = self.new_query_database()
+        classes = self.filter_classes(classes)
+        yield from database.search(query, classes=classes)
 
     def query_primary(self, query, classes=None, exact_match=False,
             database=None):
@@ -229,13 +240,15 @@ class WhoisEngine(object):
                         keys=inverse)
 
     def query_abuse(self, obj, database=None):
+        if database is None:
+            database = self.new_query_database()
         if obj.object_class not in self.abuse_classes:
             return
         abuse_contact_key = None
         if "abuse-c" in obj:
             abuse_contact_key = obj["abuse-c"]
         elif "org" in obj:
-            org = self.database.try_fetch("organisation", obj["org"])
+            org = database.try_fetch("organisation", obj["org"])
             if not org:
                 return
             if "abuse-c" in org:
@@ -245,7 +258,7 @@ class WhoisEngine(object):
         if not abuse_contact_key:
             return
         try:
-            abuse_contact = next(self.database.find(types=self.handle_classes,
+            abuse_contact = next(database.find(types=self.handle_classes,
                     keys=abuse_contact_key))
         except IndexError:
             return
@@ -266,7 +279,7 @@ class WhoisEngine(object):
             return
         for subnet, domain in lglass.dns.rdns_subnets(net):
             try:
-                yield self.database.fetch(self.domain_class, domain)
+                yield database.fetch(self.domain_class, domain)
             except KeyError:
                 pass
 
@@ -288,7 +301,7 @@ class WhoisEngine(object):
             found = 0
             for subnet in obj.ip_network.subnet(prefixlen):
                 try:
-                    res = self.database.fetch(obj.type, str(subnet))
+                    res = database.fetch(obj.type, str(subnet))
                 except KeyError:
                     continue
                 if res:
@@ -307,7 +320,7 @@ class WhoisEngine(object):
         found = 0
         for supernet in obj.ip_network.supernet()[::-1]:
             try:
-                res = self.database.fetch(obj.type, str(supernet))
+                res = database.fetch(obj.type, str(supernet))
             except KeyError:
                 continue
             if res:
