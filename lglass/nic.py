@@ -310,6 +310,8 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             if obj.last_modified is None:
                 st = os.stat(path)
                 obj.last_modified = st.st_mtime
+            if obj.source is None and self.database_name is not None:
+                obj.append("source", self.database_name)
             return obj
         except (FileNotFoundError, IsADirectoryError):
             raise KeyError(repr((object_class, object_key)))
@@ -332,6 +334,8 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
                 not save_obj.get("source")
         if remove_last_modified:
             save_obj.remove("last-modified")
+        if save_obj.source is not None and save_obj.source == self.database_name:
+            save_obj.remove("source")
         path = self._build_path(object_class, object_key)
         with open(path, "w") as fh:
             fh.write("".join(save_obj.pretty_print(**options)))
