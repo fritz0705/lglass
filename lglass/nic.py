@@ -402,6 +402,12 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             mtime = obj.last_modified_datetime.timestamp()
             os.utime(path, times=(st.st_atime, mtime))
 
+    def search(self, query={}, classes=None, keys=None):
+        for obj in self.find(types=classes, keys=keys):
+            for k, v in query.items():
+                if v in obj.get(k):
+                    yield obj
+
     def save_manifest(self):
         if self.read_only:
             raise ValueError

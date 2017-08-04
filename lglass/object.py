@@ -124,7 +124,7 @@ class Object(object):
         return len(self.data)
 
     def get(self, key):
-        return (v for k, v in self._data if k == key)
+        return [v for k, v in self._data if k == key]
 
     def getfirst(self, key, default=None):
         return next(self.get(key), default)
