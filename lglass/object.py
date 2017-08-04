@@ -180,7 +180,7 @@ class Object(object):
 
     def __eq__(self, other):
         if hash(self) != hash(other):
-            return false
+            return False
         try:
             return self.data == other.data
         except AttributeError:
