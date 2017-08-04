@@ -4,8 +4,8 @@ import os
 
 import netaddr
 
-import lglass.nic
 import lglass.dns
+import lglass.nic
 
 def _format_as_block_key(obj):
     return "{}_{}".format(obj.start, obj.end)
