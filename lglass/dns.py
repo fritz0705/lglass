@@ -103,6 +103,7 @@ if __name__ == "__main__":
     argparser.add_argument("--dnssec", help="Include DS records in generated RRs", action="store_true", dest="include_ds", default=True)
     argparser.add_argument("--no-dnssec", help="Do not include DS records in generated RRs", action="store_false", dest="include_ds")
     argparser.add_argument("--dn42", help="Enable DN42 mode", action="store_true", default=False)
+    argparser.add_argument("--no-dn42", help="Disable DN42 mode", action="store_false", dest="dn42")
     argparser.add_argument("zone", help="Base domain name")
 
     args = argparser.parse_args()
