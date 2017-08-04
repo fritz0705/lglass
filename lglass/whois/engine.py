@@ -47,6 +47,10 @@ class WhoisEngine(object):
         self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
         self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
 
+    @property
+    def domain_class(self):
+        return self.database.primary_class("domain")
+
     def new_query_database(self):
         if self.query_cache:
             return lglass.proxy.CacheProxyDatabase(self.database)
@@ -57,28 +61,31 @@ class WhoisEngine(object):
             classes = self.database.object_classes
         elif isinstance(classes, str):
             classes = {classes}
-        classes = set(classes).intersection(self.database.object_classes)
+        classes = set(self.database.primary_class(c)
+                for c in classes).intersection(self.database.object_classes)
         return classes
-
-    def reverse_domains(objects):
-        for obj in objects:
-            if obj.object_class in self.cidr_classes:
-                yield from self.query_reverse_domains(obj)
 
     def query(self, query, classes=None, reverse_domain=False, recursive=True,
             less_specific_levels=0, exact_match=False, database=None,
             more_specific_levels=0):
         if database is None:
             database = self.new_query_database()
+        classes = self.filter_classes(classes)
+        primary_classes = set(classes)
+        if self.domain_class in primary_classes:
+            primary_classes.update(self.cidr_classes)
 
-        primary_results = list(self.query_primary(query, classes=classes,
-                database=database))
+        primary_results = list(self.query_primary(query,
+            classes=primary_classes,
+            database=database))
 
         if reverse_domain:
             for obj in list(primary_results):
                 if obj.object_class in self.cidr_classes:
-                    primary_results.extend(self.query_reverse_domains(obj,
-                        database=database))
+                    primary_results.extend(self.query_reverse_domains(
+                        obj.ip_network,
+                        database=database,
+                        classes=classes))
         
         if less_specific_levels != 0:
             for obj in list(primary_results):
@@ -93,7 +100,9 @@ class WhoisEngine(object):
                     primary_results.extend(self.query_more_specifics(obj,
                         levels=more_specific_levels, database=database))
 
-        results = {obj: [obj] for obj in primary_results}
+        results = {obj: [obj]
+                for obj in primary_results
+                if self.database.primary_class(obj.object_class) in classes}
 
         for obj in results.keys():
             if recursive:
@@ -245,12 +254,19 @@ class WhoisEngine(object):
         if "abuse-mailbox" in abuse_contact:
             return abuse_contact["abuse-mailbox"]
 
-    def query_reverse_domains(self, obj, database=None):
+    def query_reverse_domains(self, term, classes=None, database=None):
         if database is None:
             database = self.new_query_database()
-        for subnet, domain in lglass.dns.rdns_subnets(obj.ip_network):
+        classes = self.filter_classes(classes)
+        if self.domain_class not in classes:
+            return
+        try:
+            net = netaddr.IPNetwork(term)
+        except netaddr.core.AddrFormatError:
+            return
+        for subnet, domain in lglass.dns.rdns_subnets(net):
             try:
-                yield self.database.fetch("domain", domain)
+                yield self.database.fetch(self.domain_class, domain)
             except KeyError:
                 pass
 
