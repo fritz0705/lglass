@@ -21,6 +21,7 @@ if __name__ == "__main__":
 
     db = create_database(args.database)
     engine = lglass.whois.engine.WhoisEngine(db)
+    engine.type_hints[r"[0-9A-Za-z]+-DN42$"] = {"role", "person"}
     server = lglass.whois.server.SimpleWhoisServer(engine)
 
     loop = asyncio.get_event_loop()
