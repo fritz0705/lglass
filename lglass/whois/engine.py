@@ -6,7 +6,7 @@ import re
 import jinja2
 import netaddr
 
-import lglass.database
+import lglass.nic
 import lglass.dns
 import lglass.schema
 import lglass.proxy
@@ -129,7 +129,8 @@ class WhoisEngine(object):
                         yield as_block
             return
         elif parse_as_block(query) and "as-block" in classes:
-            yield from database.find(keys=query, types="as-block")
+            k = lglass.nic.ASBlockObject([("as-block", query)])
+            yield from database.find(keys=k.primary_key, types="as-block")
             return
         elif query.startswith("ORG-") and "organisation" in classes:
             yield from database.find(keys=query, types="organisation")
