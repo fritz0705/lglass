@@ -82,6 +82,7 @@ class SimpleWhoisServer(object):
                 default=False)
         argparser.add_argument("--persistent-connection", "-k",
                 action="store_true", default=False)
+        argparser.add_argument("--inverse", "-i")
         argparser.add_argument("-q")
         argparser.add_argument("terms", nargs="*")
         return argparser
@@ -115,13 +116,15 @@ class SimpleWhoisServer(object):
 
         if args.primary_keys: query_args["recursive"] = False
 
+        db = self.engine.new_query_database()
         for term in args.terms or []:
-            results = self.engine.query(term, **query_args)
+            results = self.engine.query(term, database=db, **query_args)
             writer.write(self.format_results(results,
                 primary_keys=args.primary_keys,
                 pretty_print_options={
                     "min_padding": 16,
-                    "add_padding": 0}).encode())
+                    "add_padding": 0},
+                database=db).encode())
 
         writer.write(b"\n")
         await writer.drain()
@@ -150,7 +153,8 @@ class SimpleWhoisServer(object):
         writer.close()
 
     def format_results(self, results, primary_keys=False,
-            include_abuse_contact=True, pretty_print_options={}):
+            include_abuse_contact=True, pretty_print_options={},
+            database=None):
         if not results and self.not_found_message is not None:
             return self.not_found_message
         response = ""
@@ -158,7 +162,8 @@ class SimpleWhoisServer(object):
             primary_key = self.database.primary_key(primary)
             related_objects = list(results[primary])[1:]
             if include_abuse_contact:
-                abuse_contact = self.engine.query_abuse(primary)
+                abuse_contact = self.engine.query_abuse(primary,
+                        database=database)
                 if abuse_contact:
                     response += "% Abuse contact for '{}' is '{}'\n\n".format(
                             primary_key, abuse_contact)
