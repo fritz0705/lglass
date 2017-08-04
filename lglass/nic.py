@@ -334,6 +334,8 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
 
     def _lookup_class(self, object_class, object_keys):
         if isinstance(object_keys, str):
+            if object_keys in {'.', '..'}:
+                return
             object_keys = object_keys.replace("_", "/")
             try:
                 os.stat(self._build_path(object_class, object_keys))
