@@ -166,6 +166,7 @@ if __name__ == "__main__":
     argparser.add_argument("--port", "-p", default=4343)
     argparser.add_argument("--address", "-a", default="::1,127.0.0.1")
     argparser.add_argument("--preamble", "-P")
+    argparser.add_argument("--handle-hint")
     argparser.add_argument("database")
 
     args = argparser.parse_args()
@@ -177,6 +178,9 @@ if __name__ == "__main__":
     if args.preamble is not None:
         with open(args.preamble) as fh:
             server.preamble = fh.read()
+    
+    if args.handle_hint is not None:
+        engine.type_hints[args.handle_hint] = engine.handle_classes
 
     loop = asyncio.get_event_loop()
     coro = asyncio.start_server(server.handle, args.address.split(","), args.port, loop=loop)
