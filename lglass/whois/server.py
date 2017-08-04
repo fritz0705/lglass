@@ -16,10 +16,35 @@ class SolidArgumentParser(argparse.ArgumentParser):
 
 class SimpleWhoisServer(object):
     version_string = "% lglass.whois.server {}\n".format(lglass.version).encode()
+    not_found_template = "%ERROR:101: no entries found\n" + \
+            "%\n" + "% No entries found in source {source}.\n\n"
+    preamble_template = "% This is the {source} Database query service.\n" + \
+            "% The objects are in RPSL format.\n\n"
 
-    def __init__(self, engine, primer=None):
+    def __init__(self, engine):
         self.engine = engine
-        self.primer = primer
+
+    @property
+    def preamble(self):
+        if self.preamble_template is not None:
+            return self.preamble_template.format(source=self.database_name)
+
+    @preamble.setter
+    def preamble(self, new_pre):
+        self.preamble_template = new_pre
+
+    @property
+    def not_found_message(self):
+        if self.not_found_template is not None:
+            return self.not_found_template.format(source=self.database_name)
+
+    @not_found_message.setter
+    def not_found_message(self, new_nfm):
+        self.not_found_template = new_nfm
+
+    @property
+    def database_name(self):
+        return self.database.database_name
 
     @property
     def database(self):
@@ -90,8 +115,8 @@ class SimpleWhoisServer(object):
 
     async def handle_persistent(self, reader, writer):
         while True:
-            if self.primer is not None:
-                writer.write(self.primer.encode())
+            if self.preamble is not None:
+                writer.write(self.preamble.encode())
             request = await reader.readline()
             request = request.decode()
             k = await self.query(request, writer)
@@ -99,8 +124,8 @@ class SimpleWhoisServer(object):
                 break
 
     async def handle(self, reader, writer):
-        if self.primer is not None:
-            writer.write(self.primer.encode())
+        if self.preamble is not None:
+            writer.write(self.preamble.encode())
         request = await reader.readline()
         request = request.decode()
         persistent_connection = await self.query(request, writer)
@@ -111,6 +136,8 @@ class SimpleWhoisServer(object):
 
     def format_results(self, results, primary_keys=False,
             include_abuse_contact=True, pretty_print_options={}):
+        if not results and self.not_found_message is not None:
+            return self.not_found_message
         response = ""
         for primary in sorted(results.keys(), key=lambda k: k.object_class):
             primary_key = self.database.primary_key(primary)
@@ -138,7 +165,7 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="Simple whois server")
     argparser.add_argument("--port", "-p", default=4343)
     argparser.add_argument("--address", "-a", default="::1,127.0.0.1")
-    argparser.add_argument("--primer", "-P")
+    argparser.add_argument("--preamble", "-P")
     argparser.add_argument("database")
 
     args = argparser.parse_args()
@@ -147,9 +174,9 @@ if __name__ == "__main__":
     engine = lglass.whois.engine.WhoisEngine(db)
     server = SimpleWhoisServer(engine)
 
-    if args.primer is not None:
-        with open(args.primer) as fh:
-            server.primer = fh.read()
+    if args.preamble is not None:
+        with open(args.preamble) as fh:
+            server.preamble = fh.read()
 
     loop = asyncio.get_event_loop()
     coro = asyncio.start_server(server.handle, args.address.split(","), args.port, loop=loop)
