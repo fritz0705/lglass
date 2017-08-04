@@ -88,6 +88,9 @@ class ProxyDatabase(Database):
     def fetch(self, *args, **kwargs):
         return self.backend.fetch(*args, **kwargs)
 
+    def search(self, *args, **kwargs):
+        return self.backend.search(*args, **kwargs)
+
     def primary_class(self, *args, **kwargs):
         return self.backend.primary_class(*args, **kwargs)
 
@@ -105,4 +108,12 @@ class ProxyDatabase(Database):
     @property
     def primary_key_rules(self):
         return self.backend.primary_key_rules
+
+    @property
+    def manifest(self):
+        return self.backend.manifest
+
+    @property
+    def database_name(self):
+        return self.backend.database_name
 

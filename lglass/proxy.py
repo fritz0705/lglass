@@ -72,14 +72,6 @@ class CacheProxyDatabase(lglass.database.ProxyDatabase):
         for key, (obj, expires_at) in other.cache_items():
             self._cache[key] = (obj, expires_at)
 
-    @property
-    def manifest(self):
-        return self.backend.manifest
-
-    @property
-    def database_name(self):
-        return self.backend.database_name
-
 class NotifyProxyDatabase(lglass.database.ProxyDatabase):
     def __init__(self, backend, on_update=None):
         super().__init__(backend)
