@@ -33,6 +33,8 @@ def fix_object(obj):
 
 class InetnumObject(lglass.nic.InetnumObject):
     def to_domain_objects(self):
+        if "nserver" not in self:
+            return
         for _, rdns_domain in self.rdns_domains():
             obj = DomainObject([("domain", rdns_domain)])
             for k, v in self.items():
@@ -137,7 +139,7 @@ class DN42Database(lglass.nic.FileDatabase):
                 if not key.endswith(("in-addr.arpa", "ip6.arpa")):
                     keys.remove(key)
                     yield from super()._lookup_class("dns", {key})
-        if not keys:
+        if keys is not None and not keys:
             return
         found = set()
         for dns in super()._lookup_class("dns", keys):
