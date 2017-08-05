@@ -115,10 +115,7 @@ class Object(object):
             self.remove(key)
     
     def __contains__(self, key):
-        for key1 in self.keys():
-            if key1 == key:
-                return True
-        return False
+        return key in set(self.keys())
 
     def __len__(self):
         return len(self.data)
