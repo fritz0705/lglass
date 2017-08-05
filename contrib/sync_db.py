@@ -11,8 +11,6 @@ def sync(src, dst, dn42=False, delete=True):
 
     for obj in src.find():
         if obj.last_modified_datetime > last_update:
-            if src.database_name not in obj:
-                obj.append("source", src.database_name)
             if dn42:
                 for fix in lglass.dn42.fix_object(obj):
                     yield ('ADD', fix.object_class, fix.primary_key)
