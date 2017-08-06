@@ -365,7 +365,6 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     db = lglass.nic.FileDatabase(args.database)
-    db = lglass.nic.RemoteWhoisDatabase("whois.flhb.de")
     eng = WhoisEngine(db)
 
     classes = args.classes.split(",") if args.classes else db.object_classes
