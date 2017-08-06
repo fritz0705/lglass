@@ -6,8 +6,9 @@ import re
 import jinja2
 import netaddr
 
-import lglass.nic
+import lglass.database
 import lglass.dns
+import lglass.nic
 import lglass.schema
 import lglass.proxy
 
@@ -83,14 +84,6 @@ class WhoisEngine(object):
             primary_results = list(self.query_primary(query,
                 classes=primary_classes,
                 database=database))
-
-        if reverse_domain:
-            for obj in list(primary_results):
-                if obj.object_class in self.cidr_classes:
-                    primary_results.extend(self.query_reverse_domains(
-                        obj.ip_network,
-                        database=database,
-                        classes=classes))
         
         if less_specific_levels != 0:
             for obj in list(primary_results):
@@ -104,6 +97,14 @@ class WhoisEngine(object):
                 if obj.object_class in self.cidr_classes:
                     primary_results.extend(self.query_more_specifics(obj,
                         levels=more_specific_levels, database=database))
+
+        if reverse_domain:
+            for obj in list(primary_results):
+                if obj.object_class in self.cidr_classes:
+                    primary_results.extend(self.query_reverse_domains(
+                        obj.ip_network,
+                        database=database,
+                        classes=classes))
 
         results = {obj: [obj]
                 for obj in primary_results
@@ -208,8 +209,9 @@ class WhoisEngine(object):
         supernets = {str(n) for n in net.supernet()} | {str(net)}
 
         inetnums = database.lookup(types=inetnum_classes, keys=supernets)
-        routes = database.lookup(types=route_classes,
-                keys=lambda k: k.startswith(tuple(supernets)))
+        routes = database.search(
+                query={rc: set(supernets) for rc in route_classes},
+                types=route_classes)
 
         # Sort inetnum objects by prefix length
         inetnums = sorted(list(inetnums),
@@ -219,8 +221,7 @@ class WhoisEngine(object):
             inetnum = database.fetch(*inetnums[0])
             if not exact_match or inetnum.ip_network == net:
                 yield inetnum
-        for route_spec in routes:
-            route = database.fetch(*route_spec)
+        for route in routes:
             if net in route.ip_network:
                 yield route
 
