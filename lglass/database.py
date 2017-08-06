@@ -56,6 +56,16 @@ class Database(object):
     def save(self, obj, **options):
         pass
 
+    def delete(self, obj):
+        pass
+
+    def search(self, query={}, types=None, keys=None):
+        for obj in self.find(types=types, keys=keys):
+            for k, v in query.items():
+                if v in obj.get(k):
+                    yield obj
+                    break
+
     def find(self, filter=None, types=None, keys=None):
         for object_class, object_key in self.lookup(types=types, keys=keys):
             obj = self.fetch(object_class, object_key)
@@ -67,7 +77,8 @@ class Database(object):
                 object_classes=self.object_classes)
 
     def primary_key(self, object_class):
-        return primary_key(object_class, primary_key_rules=self.primary_key_rules,
+        return primary_key(object_class,
+                primary_key_rules=self.primary_key_rules,
                 primary_class=self.primary_class)
 
 def perform_key_match(key_pat, key):
@@ -90,6 +101,9 @@ class ProxyDatabase(Database):
 
     def search(self, *args, **kwargs):
         return self.backend.search(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self.backend.delete(*args, **kwargs)
 
     def primary_class(self, *args, **kwargs):
         return self.backend.primary_class(*args, **kwargs)
