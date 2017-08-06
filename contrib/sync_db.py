@@ -18,6 +18,8 @@ def sync(src, dst, dn42=False, delete=True):
             else:
                 yield ('ADD', obj.object_class, obj.primary_key)
                 dst.save(obj)
+        else:
+            yield ('IGNORE', obj.object_class, obj.primary_key)
 
     if delete:
         for obj in dst.find():
