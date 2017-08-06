@@ -73,16 +73,20 @@ class CacheProxyDatabase(lglass.database.ProxyDatabase):
             self._cache[key] = (obj, expires_at)
 
 class NotifyProxyDatabase(lglass.database.ProxyDatabase):
-    def __init__(self, backend, on_update=None):
+    def __init__(self, backend, on_update=None, on_delete=None):
         super().__init__(backend)
         self._on_update = on_update
+        self._on_delete = on_delete
 
-    def on_update(self, object_class, object_key):
+    def on_update(self, obj):
         if self._on_update is not None:
-            self._on_update(object_class, object_key)
+            self._on_update(obj)
+
+    def on_delete(self, obj):
+        if self._on_delete is not None:
+            self._on_delete(obj)
 
     def save(self, obj, **options):
         super().save(obj, **options)
-        object_class, object_key = self.primary_class(obj), self.primary_key(obj)
-        self.on_update(object_class, object_key)
+        self.on_update(obj)
 
