@@ -172,6 +172,13 @@ class Object(object):
     def __str__(self):
         return "".join(self.pretty_print())
 
+    def __repr__(self):
+        return "<{module_name}.{class_name} {object_class}: {object_key}>".format(
+                module_name=type(self).__module__,
+                class_name=type(self).__name__,
+                object_class=self.object_class,
+                object_key=self.object_key)
+
     def __hash__(self):
         return hash((self.type, self.key))
 
@@ -191,6 +198,9 @@ class Object(object):
 
     def copy(self):
         return self.__class__(self.data)
+
+    def to_json(self):
+        return list(map(list, self.data))
 
     @classmethod
     def from_file(cls, fh):
