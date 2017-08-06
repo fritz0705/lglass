@@ -61,8 +61,12 @@ class Database(object):
 
     def search(self, query={}, types=None, keys=None):
         for obj in self.find(types=types, keys=keys):
-            for k, v in query.items():
-                if v in obj.get(k):
+            for key, query_value in query.items():
+                values = obj.get(key)
+                if isinstance(query_value, set) and query_value.intersection(values):
+                    yield obj
+                    break
+                elif isinstance(query_value, str) and query_value in values:
                     yield obj
                     break
 
@@ -80,6 +84,12 @@ class Database(object):
         return primary_key(object_class,
                 primary_key_rules=self.primary_key_rules,
                 primary_class=self.primary_class)
+
+    def primary_spec(self, obj):
+        return self.primary_class(obj), self.primary_key(obj)
+
+    def __contains__(self, obj):
+        pass
 
 def perform_key_match(key_pat, key):
     return (key_pat is None) or (isinstance(key_pat, str) and key == key_pat) \
