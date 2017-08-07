@@ -2,6 +2,7 @@
 
 import argparse
 import re
+import sys
 
 import jinja2
 import netaddr
@@ -209,9 +210,11 @@ class WhoisEngine(object):
         supernets = {str(n) for n in net.supernet()} | {str(net)}
 
         inetnums = database.lookup(types=inetnum_classes, keys=supernets)
-        routes = database.search(
-                query={rc: set(supernets) for rc in route_classes},
-                types=route_classes)
+        routes = database.lookup(types=route_classes,
+                keys=lambda s: s.startswith(tuple(supernets)))
+        #routes = database.search(
+        #        query={rc: set(supernets) for rc in route_classes},
+        #        types=route_classes)
 
         # Sort inetnum objects by prefix length
         inetnums = sorted(list(inetnums),
@@ -221,7 +224,8 @@ class WhoisEngine(object):
             inetnum = database.fetch(*inetnums[0])
             if not exact_match or inetnum.ip_network == net:
                 yield inetnum
-        for route in routes:
+        for route_spec in routes:
+            route = database.fetch(*route_spec)
             if net in route.ip_network:
                 yield route
 
@@ -346,11 +350,12 @@ class WhoisEngine(object):
             self._schema_cache[typ] = schema
             return schema
 
-if __name__ == "__main__":
+def main(args=None, stdout=sys.stdout):
     import argparse
     import time
 
-    import lglass.dn42
+    if args is None:
+        args = sys.argv[1:]
 
     argparser = argparse.ArgumentParser(description="Perform whois lookups directly")
     argparser.add_argument("--database", "-D", help="Path to database", default=".")
@@ -385,30 +390,36 @@ if __name__ == "__main__":
 
     start_time = time.time()
     for term in args.terms:
-        print("% Results for query '{query}'".format(query=term))
-        print()
+        print("% Results for query '{query}'".format(query=term), file=stdout)
+        print(file=stdout)
         results = eng.query(term, **query_args)
         for primary in sorted(results.keys(), key=lambda k: k.type):
             related = list(results[primary])[1:]
             if args.primary_keys:
                 if isinstance(db.primary_key_rules.get(primary.type), list):
                     for key in db.primary_key_rules[primary.type]:
-                        print("{}: {}".format(key, primary[key]))
+                        print("{}: {}".format(key, primary[key]), file=stdout)
                 else:
-                    print("{}: {}".format(primary.type, primary.key))
-                print()
+                    print("{}: {}".format(primary.type, primary.key), file=stdout)
+                print(file=stdout)
                 continue
             print("% Information related to '{obj}'".format(
-                obj=db.primary_key(primary)))
-            print()
+                obj=db.primary_key(primary)), file=stdout)
+            print(file=stdout)
             abuse_contact = eng.query_abuse(primary)
             if abuse_contact:
                 print("% Abuse contact for '{obj}' is '{abuse}'".format(
                     obj=db.primary_key(primary),
-                    abuse=abuse_contact))
-                print()
-            print("".join(primary.pretty_print(**pretty_print_options)))
+                    abuse=abuse_contact), file=stdout)
+                print(file=stdout)
+            print("".join(primary.pretty_print(**pretty_print_options)),
+                    file=stdout)
             for obj in sorted(related, key=lambda k: k.type):
-                print("".join(obj.pretty_print(**pretty_print_options)))
-    print("% Query took {} seconds".format(time.time() - start_time))
+                print("".join(obj.pretty_print(**pretty_print_options)),
+                        file=stdout)
+    print("% Query took {} seconds".format(time.time() - start_time),
+            file=stdout)
+
+if __name__ == "__main__":
+    main()
 
