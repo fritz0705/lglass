@@ -73,29 +73,12 @@ class SimpleWhoisServer(object):
         return self.abuse_template.format(object_key=object_key, contact=contact)
 
     def _build_argparser(self):
-        argparser = SolidArgumentParser(add_help=False)
-        argparser.add_argument("--domains", "-d", action="store_true",
-                default=False)
-        argparser.add_argument("--types", "-T")
-        argparser.add_argument("--one-more", "-m", action="store_const",
-                const=1, dest="more_specific_levels", default=0)
-        argparser.add_argument("--all-more", "-M", action="store_const",
-                const=-1, dest="more_specific_levels")
-        argparser.add_argument("--one-less", "-l", action="store_const",
-                const=1, dest="less_specific_levels", default=0)
-        argparser.add_argument("--all-less", "-L", action="store_const",
-                const=-1, dest="less_specific_levels")
-        argparser.add_argument("--exact", "-x", action="store_true",
-                default=False)
-        argparser.add_argument("--no-recurse", "-r", action="store_true",
-                default=False)
-        argparser.add_argument("--primary-keys", "-K", action="store_true",
-                default=False)
+        argparser = lglass.whois.engine.new_argparser(cls=SolidArgumentParser,
+                add_help=False)
         argparser.add_argument("--persistent-connection", "-k",
                 action="store_true", default=False)
         argparser.add_argument("--inverse", "-i")
         argparser.add_argument("-q")
-        argparser.add_argument("terms", nargs="*")
         return argparser
 
     async def query(self, request, writer):
@@ -115,17 +98,7 @@ class SimpleWhoisServer(object):
             await writer.drain()
             return args.persistent_connection
 
-        classes = args.types.split(",") if args.types \
-                else self.database.object_classes
-        query_args = dict(
-                reverse_domain=args.domains,
-                classes=classes,
-                less_specific_levels=args.less_specific_levels,
-                more_specific_levels=args.more_specific_levels,
-                exact_match=args.exact,
-                recursive=not args.no_recurse)
-
-        if args.primary_keys: query_args["recursive"] = False
+        query_kwargs = lglass.whois.engine.args_to_query_kwargs(args)
 
         inverse_fields = None
         if args.inverse is not None:
@@ -140,7 +113,7 @@ class SimpleWhoisServer(object):
         for term in args.terms or []:
             if inverse_fields is not None:
                 term = {f: term for f in inverse_fields}
-            results = self.engine.query(term, database=db, **query_args)
+            results = self.engine.query(term, database=db, **query_kwargs)
             writer.write(self.format_results(results,
                 primary_keys=args.primary_keys,
                 pretty_print_options={

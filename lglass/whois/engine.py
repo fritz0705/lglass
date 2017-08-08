@@ -13,13 +13,6 @@ import lglass.nic
 import lglass.schema
 import lglass.proxy
 
-def _uniq(it):
-    s = set()
-    for v in it:
-        if v in s: continue
-        s.add(v)
-        yield v
-
 def _hint_match(hint, query):
     return re.match(hint, query)
 
@@ -64,6 +57,14 @@ class WhoisEngine(object):
             classes = self.database.object_classes
         elif isinstance(classes, str):
             classes = {classes}
+        else:
+            classes = set(classes)
+        if "nic-hdl" in classes:
+            classes.update(self.handle_classes)
+        if "cidr" in classes:
+            classes.update(self.cidr_classes)
+        if "address" in classes:
+            classes.update(self.address_classes)
         classes = set(self.database.primary_class(c)
                 for c in classes).intersection(self.database.object_classes)
         return classes
@@ -228,6 +229,8 @@ class WhoisEngine(object):
         if inetnums:
             inetnum = database.fetch(*inetnums[0])
             yield inetnum
+        elif exact_match:
+            return
         for route_spec in routes:
             route = database.fetch(*route_spec)
             if net in route.ip_network:
@@ -354,6 +357,41 @@ class WhoisEngine(object):
             self._schema_cache[typ] = schema
             return schema
 
+def new_argparser(cls=argparse.ArgumentParser, *args, **kwargs):
+    argparser = cls(*args, **kwargs)
+    argparser.add_argument("--domains", "-d", action="store_true",
+            default=False)
+    argparser.add_argument("--types", "-T")
+    argparser.add_argument("--one-more", "-m", action="store_const",
+            const=1, dest="more_specific_levels", default=0)
+    argparser.add_argument("--all-more", "-M", action="store_const",
+            const=-1, dest="more_specific_levels")
+    argparser.add_argument("--one-less", "-l", action="store_const",
+            const=1, dest="less_specific_levels", default=0)
+    argparser.add_argument("--all-less", "-L", action="store_const",
+            const=-1, dest="less_specific_levels")
+    argparser.add_argument("--exact", "-x", action="store_true",
+            default=False)
+    argparser.add_argument("--no-recurse", "-r", action="store_true",
+            default=False)
+    argparser.add_argument("--primary-keys", "-K", action="store_true",
+            default=False)
+    argparser.add_argument("terms", nargs="*")
+    return argparser
+
+def args_to_query_kwargs(args):
+    kwargs = dict(
+            reverse_domain=args.domains,
+            less_specific_levels=args.less_specific_levels,
+            more_specific_levels=args.more_specific_levels,
+            exact_match=args.exact,
+            recursive=not args.no_recurse)
+    if args.types is not None:
+        kwargs["classes"] = args.types.split(",")
+    if args.primary_keys:
+        kwargs["recursive"] = False
+    return kwargs
+
 def main(args=None, stdout=sys.stdout):
     import argparse
     import time
@@ -361,66 +399,50 @@ def main(args=None, stdout=sys.stdout):
     if args is None:
         args = sys.argv[1:]
 
-    argparser = argparse.ArgumentParser(description="Perform whois lookups directly")
-    argparser.add_argument("--database", "-D", help="Path to database", default=".")
-    argparser.add_argument("--domains", "-d", help="Include reverse domains", action="store_true", default=False)
-    argparser.add_argument("--classes", "-T", help="Comma-separated list of classes", default="")
-    argparser.add_argument("--levels", "-l", help="Maximum number of less specific matches", dest="levels", type=int, default=0)
-    argparser.add_argument("--exact", "-x", help="Only exact number matches", action="store_true", default=False)
-    argparser.add_argument("--no-recurse", "-r", help="Disable recursive lookups for contacts", dest="recursive", action="store_false", default=True)
-    argparser.add_argument("--primary-keys", "-K", help="Only return primary keys", action="store_true", default=False)
-    argparser.add_argument("terms", nargs="+")
+    argparser = new_argparser(description="Perform whois lookups directly")
+    argparser.add_argument("--database", "-D", help="Path to database",
+            default=".")
+    argparser.add_argument("--inverse", "-i")
 
     args = argparser.parse_args()
 
     db = lglass.nic.FileDatabase(args.database)
     eng = WhoisEngine(db)
 
-    classes = args.classes.split(",") if args.classes else db.object_classes
-
-    query_args = dict(
-            reverse_domain=args.domains,
-            classes=classes,
-            less_specific_levels=args.levels,
-            exact_match=args.exact,
-            recursive=args.recursive)
-
-    if args.primary_keys:
-        query_args["recursive"] = False
+    query_kwargs = args_to_query_kwargs(args)
 
     pretty_print_options = dict(
             min_padding=16,
             add_padding=0)
 
+    inverse_fields = None
+    if args.inverse is not None:
+        inverse_fields = args.inverse.split(",")
+
     start_time = time.time()
     for term in args.terms:
-        print("% Results for query '{query}'".format(query=term), file=stdout)
-        print(file=stdout)
-        results = eng.query(term, **query_args)
+        print("% Results for query '{query}'".format(query=term))
+        print()
+        if inverse_fields is not None:
+            term = {f: term for f in inverse_fields}
+        results = eng.query(term, **query_kwargs)
         for primary in sorted(results.keys(), key=lambda k: k.type):
-            related = list(results[primary])[1:]
-            if args.primary_keys:
-                if isinstance(db.primary_key_rules.get(primary.type), list):
-                    for key in db.primary_key_rules[primary.type]:
-                        print("{}: {}".format(key, primary[key]), file=stdout)
-                else:
-                    print("{}: {}".format(primary.type, primary.key), file=stdout)
-                print(file=stdout)
-                continue
-            print("% Information related to '{obj}'".format(
-                obj=db.primary_key(primary)), file=stdout)
-            print(file=stdout)
+            primary_key = db.primary_key(primary)
+            related_objects = list(results[primary])[1:]
             abuse_contact = eng.query_abuse(primary)
             if abuse_contact:
-                print("% Abuse contact for '{obj}' is '{abuse}'".format(
-                    obj=db.primary_key(primary),
-                    abuse=abuse_contact), file=stdout)
-                print(file=stdout)
-            print("".join(primary.pretty_print(**pretty_print_options)),
-                    file=stdout)
-            for obj in sorted(related, key=lambda k: k.type):
-                print("".join(obj.pretty_print(**pretty_print_options)),
-                        file=stdout)
+                print("% Abuse contact for '{}' is '{}'".format(primary_key,
+                    abuse_contact))
+                print()
+            if args.primary_keys:
+                primary = primary.primary_key_object()
+                print("".join(primary.pretty_print(**pretty_print_options)))
+                continue
+            print("% Information related to '{}'".format(primary_key))
+            print()
+            print("".join(primary.pretty_print(**pretty_print_options)))
+            for obj in related_objects:
+                print("".join(obj.pretty_print(**pretty_print_options)))
     print("% Query took {} seconds".format(time.time() - start_time),
             file=stdout)
 
