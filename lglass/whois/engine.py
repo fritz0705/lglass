@@ -26,6 +26,7 @@ def _hint_match(hint, query):
 class WhoisEngine(object):
     _schema_cache = None
     cidr_classes = {"inetnum", "inet6num"}
+    address_classes = {"address", "address6"}
     route_classes = {"route", "route6"}
     handle_classes = {"person", "role", "organisation"}
     network_classes = cidr_classes | route_classes
@@ -84,7 +85,8 @@ class WhoisEngine(object):
         else:
             primary_results = list(self.query_primary(query,
                 classes=primary_classes,
-                database=database))
+                database=database,
+                exact_match=exact_match))
         
         if less_specific_levels != 0:
             for obj in list(primary_results):
@@ -121,7 +123,7 @@ class WhoisEngine(object):
         if database is None:
             database = self.new_query_database()
         classes = self.filter_classes(classes)
-        yield from database.search(query, classes=classes)
+        yield from database.search(query, types=classes)
 
     def query_primary(self, query, classes=None, exact_match=False,
             database=None):
@@ -172,7 +174,7 @@ class WhoisEngine(object):
         try:
             net = netaddr.IPNetwork(query)
             yield from self.query_network(net, classes=classes,
-                    exact_match=False, database=database)
+                    exact_match=exact_match, database=database)
             return
         except netaddr.core.AddrFormatError:
             pass
@@ -180,7 +182,7 @@ class WhoisEngine(object):
             netrange = lglass.nic.parse_ip_range(query)
             for net in netrange.cidrs():
                 yield from self.query_network(net, classes=classes,
-                        exact_match=False, database=database)
+                        exact_match=exact_match, database=database)
                 pass
         except (netaddr.core.AddrFormatError, IndexError, ValueError):
             pass
@@ -209,7 +211,10 @@ class WhoisEngine(object):
             net = netaddr.IPNetwork(net)
         supernets = {str(n) for n in net.supernet()} | {str(net)}
 
-        inetnums = database.lookup(types=inetnum_classes, keys=supernets)
+        if exact_match:
+            inetnums = database.lookup(types=inetnum_classes, keys=str(net))
+        else:
+            inetnums = database.lookup(types=inetnum_classes, keys=supernets)
         routes = database.lookup(types=route_classes,
                 keys=lambda s: s.startswith(tuple(supernets)))
         #routes = database.search(
@@ -222,8 +227,7 @@ class WhoisEngine(object):
                 reverse=True)
         if inetnums:
             inetnum = database.fetch(*inetnums[0])
-            if not exact_match or inetnum.ip_network == net:
-                yield inetnum
+            yield inetnum
         for route_spec in routes:
             route = database.fetch(*route_spec)
             if net in route.ip_network:
@@ -421,5 +425,6 @@ def main(args=None, stdout=sys.stdout):
             file=stdout)
 
 if __name__ == "__main__":
+    import cProfile
     main()
 
