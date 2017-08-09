@@ -19,11 +19,11 @@ def _hint_match(hint, query):
 class WhoisEngine(object):
     _schema_cache = None
     cidr_classes = {"inetnum", "inet6num"}
-    address_classes = {"address", "address6"}
+    address_classes = {"address"}
     route_classes = {"route", "route6"}
     handle_classes = {"person", "role", "organisation"}
-    network_classes = cidr_classes | route_classes
-    abuse_classes = {"inetnum", "inet6num", "aut-num"}
+    network_classes = cidr_classes | route_classes | address_classes
+    abuse_classes = {"inetnum", "inet6num", "aut-num"} | address_classes
 
     def __init__(self, database=None, use_schemas=False, type_hints=None,
             global_cache=None, query_cache=True,
@@ -52,13 +52,15 @@ class WhoisEngine(object):
             return lglass.proxy.CacheProxyDatabase(self.database)
         return self.database
 
-    def filter_classes(self, classes):
+    def filter_classes(self, classes, *other_class_sets):
         if classes is None:
             classes = self.database.object_classes
         elif isinstance(classes, str):
             classes = {classes}
         else:
             classes = set(classes)
+        for class_set in other_class_sets:
+            classes &= class_set
         if "nic-hdl" in classes:
             classes.update(self.handle_classes)
         if "cidr" in classes:
@@ -71,7 +73,7 @@ class WhoisEngine(object):
 
     def query(self, query, classes=None, reverse_domain=False, recursive=True,
             less_specific_levels=0, exact_match=False, database=None,
-            more_specific_levels=0):
+            more_specific_levels=0, sources=None):
         if database is None:
             database = self.new_query_database()
         classes = self.filter_classes(classes)
@@ -205,13 +207,15 @@ class WhoisEngine(object):
         else:
             classes = set(classes).intersection(self.network_classes)
 
-        inetnum_classes = self.cidr_classes.intersection(classes)
-        route_classes = self.route_classes.intersection(classes)
+        inetnum_classes = self.filter_classes(classes, self.cidr_classes)
+        route_classes = self.filter_classes(classes, self.route_classes)
+        address_classes = self.filter_classes(classes, self.address_classes)
 
         if not isinstance(net, netaddr.IPNetwork):
             net = netaddr.IPNetwork(net)
         supernets = {str(n) for n in net.supernet()} | {str(net)}
 
+        addresses = database.find(types=address_classes, keys=str(net.ip))
         if exact_match:
             inetnums = database.lookup(types=inetnum_classes, keys=str(net))
         else:
@@ -222,6 +226,8 @@ class WhoisEngine(object):
         #        query={rc: set(supernets) for rc in route_classes},
         #        types=route_classes)
 
+        for address in addresses:
+            yield address
         # Sort inetnum objects by prefix length
         inetnums = sorted(list(inetnums),
                 key=lambda s: netaddr.IPNetwork(s[1]).prefixlen,
@@ -239,25 +245,30 @@ class WhoisEngine(object):
     def query_inverse(self, obj, database=None):
         if database is None:
             database = self.new_query_database()
+        schema = None
         if self.use_schemas:
             try:
                 schema = self._load_schema(obj.type)
             except KeyError:
-                return
+                pass
+        if schema is not None:
             inverse_objects = []
             for key, _, _, inverse in schema.schema_keys():
+                if "nic-hdl" in inverse:
+                    inverse.extend(self.handle_classes)
                 for value in obj.get(key):
                     yield from database.find(types=inverse, keys=value)
-        else:
-            # Use default rules
-            inverse_objects = set()
-            inverse_objects.update(obj.get("admin-c"))
-            inverse_objects.update(obj.get("tech-c"))
-            inverse_objects.update(obj.get("zone-c"))
-            inverse_objects.update(obj.get("org"))
-            for inverse in inverse_objects:
-                yield from database.find(types=self.handle_classes,
-                        keys=inverse)
+            return
+
+        # Use default rules
+        inverse_objects = set()
+        inverse_objects.update(obj.get("admin-c"))
+        inverse_objects.update(obj.get("tech-c"))
+        inverse_objects.update(obj.get("zone-c"))
+        inverse_objects.update(obj.get("org"))
+        for inverse in inverse_objects:
+            yield from database.find(types=self.handle_classes,
+                    keys=inverse)
 
     def query_abuse(self, obj, database=None):
         if database is None:
@@ -280,7 +291,7 @@ class WhoisEngine(object):
         try:
             abuse_contact = next(database.find(types=self.handle_classes,
                     keys=abuse_contact_key))
-        except IndexError:
+        except StopIteration:
             return
         if not abuse_contact:
             return
