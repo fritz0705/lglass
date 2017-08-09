@@ -98,6 +98,10 @@ class Object(object):
         raise TypeError("Expected key to be str or int, got {}".format(type(key)))
     
     def __setitem__(self, key, value):
+        if isinstance(value, (list, slice, set)):
+            for val in value:
+                self.append(key, val)
+            return
         if isinstance(key, (int, slice)):
             self.data[key] = value
         elif isinstance(key, str):
