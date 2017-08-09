@@ -80,6 +80,8 @@ class WhoisEngine(object):
         primary_classes = set(classes)
         if self.domain_class in primary_classes:
             primary_classes.update(self.cidr_classes)
+        if self.address_classes & primary_classes and more_specific_levels:
+            primary_classes.update(self.cidr_classes)
 
         if isinstance(query, dict):
             primary_results = list(self.query_search_inverse(query,
@@ -252,12 +254,17 @@ class WhoisEngine(object):
             except KeyError:
                 pass
         if schema is not None:
-            inverse_objects = []
+            inverse_objects = set()
             for key, _, _, inverse in schema.schema_keys():
                 if "nic-hdl" in inverse:
                     inverse.extend(self.handle_classes)
                 for value in obj.get(key):
-                    yield from database.find(types=inverse, keys=value)
+                    for inv in inverse:
+                        inverse_objects.add((inv, value))
+            for object_class, object_type in inverse_objects:
+                obj = database.try_fetch(object_class, object_type)
+                if obj:
+                    yield obj
             return
 
         # Use default rules
