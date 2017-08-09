@@ -118,6 +118,18 @@ class NicObject(lglass.object.Object):
         else:
             return datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
 
+    @property
+    def description(self):
+        return self["descr"]
+
+    @description.setter
+    def description(self, new_descr):
+        self["descr"] = new_descr
+
+    @description.deleter
+    def description(self):
+        del self["descr"]
+
 class HandleObject(NicObject):
     @property
     def primary_key_fields(self):
@@ -306,6 +318,22 @@ class NicDatabaseMixin(object):
             object_class = data[0][0]
         return self.object_class_type(object_class)(data)
 
+    @property
+    def database_name(self):
+        return self.manifest.object_key
+
+    @database_name.setter
+    def database_name(self, new_name):
+        self.manifest.object_key = new_name
+
+    @property
+    def serial(self):
+        return self.manifest.getfirst("serial", default=0)
+
+    @serial.setter
+    def serial(self, new_serial):
+        self.manifest["serial"] = new_serial
+
 class FileDatabase(lglass.database.Database, NicDatabaseMixin):
     _manifest = None
 
@@ -429,20 +457,4 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             obj = NicObject([("database", os.path.basename(self._path))])
         self._manifest = obj
         return obj
-
-    @property
-    def database_name(self):
-        return self.manifest.object_key
-
-    @database_name.setter
-    def database_name(self, new_name):
-        self.manifest.object_key = new_name
-
-    @property
-    def serial(self):
-        return self.manifest.getfirst("serial", default=0)
-
-    @serial.setter
-    def serial(self, new_serial):
-        self.manifest["serial"] = new_serial
 
