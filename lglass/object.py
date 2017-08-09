@@ -132,14 +132,15 @@ class Object(object):
 
     def add(self, key, value, index=None):
         if index is not None:
-            return self.insert(index, key, value)
-        return self.append(key, value)
+            self._data.insert(index, (key, value))
+        else:
+            self._data.append((key, value))
 
     def append(self, key, value):
-        return self._data.append((key, value))
+        return self.add(key, value)
 
     def insert(self, index, key, value):
-        return self._data.insert(index, (key, value))
+        return self.add(key, value, index)
 
     def indices(self, key):
         return [i for i, (k, v) in enumerate(self.data) if k == key]
