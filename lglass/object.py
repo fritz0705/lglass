@@ -363,13 +363,16 @@ def parse_object(lines, pragmas={}):
 
     return result
 
-if __name__ == "__main__":
+def main():
     import argparse
     import sys
 
     argparser = argparse.ArgumentParser(description="Pretty-print objects")
     argparser.add_argument("--min-padding", help="Minimal padding between key and value", type=int, default=0)
     argparser.add_argument("--add-padding", help="Additional padding between key and value", type=int, default=8)
+    argparser.add_argument("--whois-format", action="store_true")
+    argparser.add_argument("--tee", "-T", action="store_true")
+    argparser.add_argument("--inplace", "-i", action="store_true")
     argparser.add_argument("files", nargs='*', help="Input files")
 
     args = argparser.parse_args()
@@ -377,13 +380,24 @@ if __name__ == "__main__":
     options = dict(
             min_padding=args.min_padding,
             add_padding=args.add_padding)
+    if args.whois_format:
+        options["min_padding"] = 16
+        options["add_padding"] = 0
 
     if not args.files:
         obj = Object.from_file(sys.stdin)
         print("".join(obj.pretty_print(**options)))
-    else:
-        for f in args.files:
-            with open(f) as fh:
-                obj = Object.from_file(fh)
-                print("".join(obj.pretty_print(**options)))
+        return
+
+    for f in args.files:
+        with open(f, "r") as fh:
+            obj = Object.from_file(fh)
+        if args.inplace:
+            with open(f, "w") as fh:
+                fh.write("".join(obj.pretty_print(**options)))
+        if args.tee or not args.inplace:
+            print("".join(obj.pretty_print(**options)))
+
+if __name__ == "__main__":
+    main()
 
