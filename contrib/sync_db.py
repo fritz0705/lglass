@@ -10,6 +10,12 @@ def sync(src, dst, dn42=False, delete=True):
     last_update = dst.manifest.last_modified_datetime
 
     for obj in src.find():
+        if obj.source != src.database_name:
+            yield ('FOREIGN', obj.object_class, obj.primary_key)
+            continue
+        elif dst.primary_class(obj.object_class) not in dst.object_classes:
+            yield ('OTHERTYPE', obj.object_class, obj.primary_key)
+            continue
         if obj.last_modified_datetime > last_update:
             if dn42:
                 for fix in lglass.dn42.fix_object(obj):
@@ -24,6 +30,7 @@ def sync(src, dst, dn42=False, delete=True):
     if delete:
         for obj in dst.find():
             if src.database_name not in obj.get("source"):
+                yield ('FOREIGN', obj.object_class, obj.primary_key)
                 continue
             original_primary_key = src.primary_key(obj)
             original_object = src.try_fetch(obj.object_class, original_primary_key)
