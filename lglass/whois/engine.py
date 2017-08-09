@@ -319,29 +319,12 @@ class WhoisEngine(object):
             database = self.new_query_database()
         if obj.type not in self.cidr_classes:
             return
-        max_prefixlen = 128 if obj.ip_network.version == 6 else 32
-        prefixlen = obj.ip_network.prefixlen
-        more_specific_prefixlens = self.ipv4_more_specific_prefixlens \
-                if obj.ip_network.version == 4 \
-                else self.ipv6_more_specific_prefixlens
-        if prefixlen not in more_specific_prefixlens:
-            return
-        prefixlens = set(range(prefixlen + 1, max_prefixlen + 1)) & more_specific_prefixlens
-        found_levels = 0
-        for prefixlen in prefixlens:
-            found = 0
-            for subnet in obj.ip_network.subnet(prefixlen):
-                try:
-                    res = database.fetch(obj.type, str(subnet))
-                except KeyError:
-                    continue
-                if res:
-                    yield res
-                    found += 1
-            if found:
-                found_levels += 1
-            if found_levels == levels:
-                break
+        classes = {obj.type} | self.address_classes
+        res = set()
+        for rel in database.find(types=classes):
+            if rel.ip_network in obj.ip_network:
+                res.add(rel)
+        yield from sorted(res, key=lambda o: o.ip_network)
 
     def query_less_specifics(self, obj, levels=1, database=None):
         if database is None:
