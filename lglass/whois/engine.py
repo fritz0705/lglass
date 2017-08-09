@@ -413,18 +413,26 @@ def main(args=None, stdout=sys.stdout):
     argparser = new_argparser(description="Perform whois lookups directly")
     argparser.add_argument("--database", "-D", help="Path to database",
             default=".")
+    argparser.add_argument("-q")
     argparser.add_argument("--inverse", "-i")
 
     args = argparser.parse_args()
 
     db = lglass.nic.FileDatabase(args.database)
     eng = WhoisEngine(db)
+    eng.ipv4_more_specific_prefixlens = set(range(0, 33))
+    eng.ipv6_more_specific_prefixlens = set(range(0, 129))
+    eng.use_schemas = True
 
     query_kwargs = args_to_query_kwargs(args)
 
     pretty_print_options = dict(
             min_padding=16,
             add_padding=0)
+
+    if args.q == "types":
+        print("\n".join(db.object_classes))
+        return
 
     inverse_fields = None
     if args.inverse is not None:
