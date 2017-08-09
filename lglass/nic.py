@@ -136,25 +136,27 @@ class HandleObject(NicObject):
         return ["nic-hdl"]
 
 class InetnumObject(NicObject):
+    def add(self, key, value, index=None):
+        try:
+            return super().add(key, value, index)
+        finally:
+            if key == self.object_class:
+                self.ip_network = self.ip_network
+
     @property
     def ip_range(self):
-        if self.ip_version == 4:
+        if "-" in self.object_key:
             return parse_ip_range(self["inetnum"])
-        elif self.ip_version == 6:
-            if "-" in self["inet6num"]:
-                return parse_ip_range(self["inet6num"])
-            net = self.ip_network
-            return netaddr.IPRange(net[0], net[-1])
+        net = self.ip_network
+        return netaddr.IPRange(net[0], net[-1])
 
     @property
     def ip_network(self):
         try:
-            if self.ip_version == 6:
-                return netaddr.IPNetwork(self["inet6num"])
+            return netaddr.IPNetwork(self.object_key)
         except netaddr.core.AddrFormatError:
-            return self.ip_range.cidrs()[0]
-        if self.ip_version == 4:
-            return self.ip_range.cidrs()[0]
+            pass
+        return self.ip_range.cidrs()[0]
 
     @ip_network.setter
     def ip_network(self, new_ip_network):
@@ -163,12 +165,13 @@ class InetnumObject(NicObject):
                 new_ip_network = parse_ip_range(new_ip_network)
             else:
                 new_ip_network = netaddr.IPNetwork(new_ip_network)
-        if self.ip_version == 4 and isinstance(new_ip_network, netaddr.IPNetwork):
+        if "-" in self.object_key and isinstance(new_ip_network, netaddr.IPNetwork):
             new_ip_network = netaddr.IPRange(new_ip_network[0], new_ip_network[-1])
-        if isinstance(new_ip_network, netaddr.IPRange):
-            self.object_key = "{} - {}".format(new_ip_network[0], new_ip_network[-1])
-        elif isinstance(new_ip_network, netaddr.IPNetwork):
+        if isinstance(new_ip_network, netaddr.IPNetwork):
             self.object_key = str(new_ip_network)
+        elif isinstance(new_ip_network, netaddr.IPRange):
+            self.object_key = "{} - {}".format(new_ip_network[0],
+                new_ip_network[-1])
         if new_ip_network.version == 4:
             self.object_class = "inetnum"
         elif new_ip_network.version == 6:
