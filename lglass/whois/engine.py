@@ -261,7 +261,7 @@ class WhoisEngine(object):
                 for value in obj.get(key):
                     for inv in inverse:
                         inverse_objects.add((inv, value))
-            for object_class, object_type in inverse_objects:
+            for object_class, object_type in sorted(inverse_objects):
                 obj = database.try_fetch(object_class, object_type)
                 if obj:
                     yield obj
