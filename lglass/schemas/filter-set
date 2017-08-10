@@ -6,10 +6,10 @@ key:             filter optional single
 key:             mp-filter optional single
 key:             remarks optional multiple
 key:             org optional multiple inverse organisation
-key:             tech-c mandatory multiple inverse person
-key:             admin-c mandatory multiple inverse person
-key:             notify optional multiple inverse person
-key:             mnt-by mandatory multiple inverse mntner
-key:             mnt-lower optional multiple inverse mntner
+key:             tech-c mandatory multiple inverse nic-hdl
+key:             admin-c mandatory multiple inverse nic-hdl
+key:             notify optional multiple
+key:             mnt-by mandatory multiple
+key:             mnt-lower optional multiple
 key:             changed mandatory multiple
 key:             source mandatory single

@@ -5,11 +5,11 @@ key:             address mandatory multiple
 key:             phone mandatory multiple
 key:             fax-no optional multiple
 key:             e-mail optional multiple lookup
-key:             org optional multiple inverse organisation
+key:             org optional multiple
 key:             nic-hdl mandatory single primary lookup key
 key:             remarks optional multiple
-key:             notify optional multiple inverse person
-key:             abuse-mailbox optional multiple inverse person
-key:             mnt-by mandatory multiple inverse mntner
+key:             notify optional multiple
+key:             abuse-mailbox optional multiple
+key:             mnt-by mandatory multiple
 key:             changed mandatory multiple
 key:             source mandatory single

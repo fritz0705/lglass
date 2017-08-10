@@ -6,12 +6,12 @@ key:             phone optional multiple
 key:             fax-no optional multiple
 key:             e-mail mandatory multiple lookup
 key:             org optional multiple inverse organisation
-key:             admin-c optional multiple inverse person
-key:             tech-c optional multiple inverse person
+key:             admin-c optional multiple inverse nic-hdl
+key:             tech-c optional multiple inverse nic-hdl
 key:             nic-hdl mandatory single primary lookup
 key:             remarks optional multiple
-key:             notify optional multiple inverse person
-key:             abuse-mailbox optional single inverse person
-key:             mnt-by mandatory multiple inverse mntner
+key:             notify optional multiple
+key:             abuse-mailbox optional single
+key:             mnt-by mandatory multiple
 key:             changed mandatory multiple
 key:             source mandatory single

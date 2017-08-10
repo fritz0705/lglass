@@ -7,9 +7,9 @@ key:             fingerpr generated single
 key:             certif mandatory multiple
 key:             org optional multiple inverse organisation
 key:             remarks optional multiple
-key:             notify optional multiple inverse person
-key:             admin-c optional multiple inverse person
-key:             tech-c optional multiple inverse person
-key:             mnt-by mandatory multiple inverse mntner
+key:             notify optional multiple
+key:             admin-c optional multiple inverse nic-hdl
+key:             tech-c optional multiple inverse nic-hdl
+key:             mnt-by mandatory multiple
 key:             changed mandatory multiple
 key:             source mandatory single

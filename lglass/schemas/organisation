@@ -12,13 +12,13 @@ key:             e-mail mandatory multiple lookup
 key:             geoloc optional single
 key:             language optional multiple
 key:             org optional multiple inverse organisation
-key:             admin-c optional multiple inverse person
-key:             tech-c optional multiple inverse person
-key:             abuse-c optional single inverse person
-key:             ref-nfy optional multiple inverse person
-key:             mnt-ref mandatory multiple inverse person
-key:             notify optional multiple inverse person
-key:             abuse-mailbox optional multiple inverse person
-key:             mnt-by mandatory multiple inverse mntner
+key:             admin-c optional multiple inverse nic-hdl
+key:             tech-c optional multiple inverse nic-hdl
+key:             abuse-c optional single
+key:             ref-nfy optional multiple
+key:             mnt-ref mandatory multiple
+key:             notify optional multiple
+key:             abuse-mailbox optional multiple
+key:             mnt-by mandatory multiple
 key:             changed mandatory multiple
 key:             source mandatory single
