@@ -74,7 +74,7 @@ class SimpleWhoisServer(object):
 
     def _build_argparser(self):
         argparser = lglass.whois.engine.new_argparser(cls=SolidArgumentParser,
-                add_help=False)
+                add_help=False, prog="whois")
         argparser.add_argument("--persistent-connection", "-k",
                 action="store_true", default=False)
         argparser.add_argument("--inverse", "-i",
@@ -106,7 +106,8 @@ class SimpleWhoisServer(object):
         elif args.template is not None:
             return args.persistent_connection
         elif args.help:
-            await writer.write(argparser.format_help())
+            writer.write(self.format_comment(argparser.format_help()).encode() +
+                    b"\n")
             await writer.drain()
             return args.persistent_connection
 
@@ -158,6 +159,13 @@ class SimpleWhoisServer(object):
             await self.handle_persistent(reader, writer)
         await writer.drain()
         writer.close()
+
+
+    def format_comment(self, comment):
+        res = ""
+        for line in comment.splitlines():
+            res += "% " + line + "\n"
+        return res
 
     def format_results(self, results, primary_keys=False,
             include_abuse_contact=True, pretty_print_options={},
