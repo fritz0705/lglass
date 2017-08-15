@@ -146,7 +146,7 @@ class InetnumObject(NicObject):
     @property
     def ip_range(self):
         if "-" in self.object_key:
-            return parse_ip_range(self["inetnum"])
+            return parse_ip_range(self.object_key)
         net = self.ip_network
         return netaddr.IPRange(net[0], net[-1])
 
