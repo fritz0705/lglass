@@ -18,7 +18,7 @@ class SimpleWhoisServer(object):
     version_string = "% lglass.whois.server {}\n".format(lglass.version).encode()
     not_found_template = "%ERROR:101: no entries found\n" + \
             "%\n" + "% No entries found in source {source}.\n\n"
-    not_allowed_template = "%ERROR:102: not allowed\n\n"
+    not_allowed_template = "%ERROR:201: access denied\n\n"
     preamble_template = "% This is the {source} Database query service.\n" + \
             "% The objects are in RPSL format.\n\n"
     abuse_template = "% Abuse contact for '{object_key}' is '{contact}'\n"
@@ -77,8 +77,14 @@ class SimpleWhoisServer(object):
                 add_help=False)
         argparser.add_argument("--persistent-connection", "-k",
                 action="store_true", default=False)
-        argparser.add_argument("--inverse", "-i")
-        argparser.add_argument("-q")
+        argparser.add_argument("--inverse", "-i",
+                help="do an inverse look-up for specified ATTRibutes")
+        argparser.add_argument("-q", help="query specified server info",
+                choices=["version", "types", "sources"])
+        argparser.add_argument("--template", "-t",
+                help="request template for object of TYPE")
+        argparser.add_argument("--help", "-h", action="store_true",
+                help="display this help")
         return argparser
 
     async def query(self, request, writer):
@@ -95,6 +101,12 @@ class SimpleWhoisServer(object):
                 for source in self.sources:
                     writer.write(source.encode() + b":3:N:0-0\n")
                 writer.write(b"\n")
+            await writer.drain()
+            return args.persistent_connection
+        elif args.template is not None:
+            return args.persistent_connection
+        elif args.help:
+            await writer.write(argparser.format_help())
             await writer.drain()
             return args.persistent_connection
 

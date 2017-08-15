@@ -359,24 +359,33 @@ class WhoisEngine(object):
             return schema
 
 def new_argparser(cls=argparse.ArgumentParser, *args, **kwargs):
-    argparser = cls(*args, **kwargs)
+    if not isinstance(cls, type):
+        argparser = cls
+    else:
+        argparser = cls(*args, **kwargs)
     argparser.add_argument("--domains", "-d", action="store_true",
-            default=False)
-    argparser.add_argument("--types", "-T")
+            default=False, help="return DNS reverse delegation objects too")
+    argparser.add_argument("--types", "-T",
+            help="only look for objects of TYPE")
     argparser.add_argument("--one-more", "-m", action="store_const",
-            const=1, dest="more_specific_levels", default=0)
+            const=1, dest="more_specific_levels", default=0,
+            help="find all one level more specific matches")
     argparser.add_argument("--all-more", "-M", action="store_const",
-            const=-1, dest="more_specific_levels")
+            const=-1, dest="more_specific_levels",
+            help="find all levels of more specific matches")
     argparser.add_argument("--one-less", "-l", action="store_const",
-            const=1, dest="less_specific_levels", default=0)
+            const=1, dest="less_specific_levels", default=0,
+            help="find the one level less specific match")
     argparser.add_argument("--all-less", "-L", action="store_const",
-            const=-1, dest="less_specific_levels")
+            const=-1, dest="less_specific_levels",
+            help="find all levels less specific matches")
     argparser.add_argument("--exact", "-x", action="store_true",
-            default=False)
+            default=False, help="exact match")
     argparser.add_argument("--no-recurse", "-r", action="store_true",
-            default=False)
+            default=False,
+            help="turn off recursive look-ups for contact information")
     argparser.add_argument("--primary-keys", "-K", action="store_true",
-            default=False)
+            default=False, help="only primary keys are returned")
     argparser.add_argument("terms", nargs="*")
     return argparser
 
