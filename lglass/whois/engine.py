@@ -4,7 +4,6 @@ import argparse
 import re
 import sys
 
-import jinja2
 import netaddr
 
 import lglass.database
