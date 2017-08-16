@@ -14,12 +14,23 @@ class HostObject(lglass.nic.NicObject):
         return netaddr.IPAddress(self["address"])
 
     @property
+    def ipv6_prefixes(self):
+        return list(map(netaddr.IPNetwork, self.get("ipv6-prefix")))
+
+    def ipv6_slaacs(self):
+        slaacs = []
+        for l2_address in self.l2_addresses:
+            for prefix in self.ipv6_prefixes:
+                slaacs.append(l2_address.ipv6(prefix.value))
+        return slaacs
+
+    @property
     def l2_addresses(self):
-        return list(self.get("l2-address"))
+        return list(map(netaddr.EUI, self.get("l2-address")))
 
     @property
     def primary_l2_address(self):
-        return self["l2-address"]
+        return netaddr.EUI(self["l2-address"])
 
     @property
     def status(self):
@@ -75,13 +86,8 @@ class AddressObject(lglass.nic.NicObject):
         return self["l2-address"]
 
     @property
-    def hosts(self):
-        return list(self.get("host"))
-
-    @hosts.setter
-    def hosts(self, new_hosts):
-        del self["host"]
-        self["host"] = new_hosts
+    def hostnames(self):
+        return list(self.get("hostname"))
 
     @property
     def primary_host(self):
@@ -90,6 +96,13 @@ class AddressObject(lglass.nic.NicObject):
     @primary_host.setter
     def primary_host(self, new_host):
         self["host"] = new_host
+
+    @property
+    def status(self):
+        try:
+            return self["status"]
+        except:
+            pass
 
 class IPAMDatabaseMixin(lglass.nic.NicDatabaseMixin):
     def __init__(self):
@@ -105,4 +118,8 @@ class FileDatabase(lglass.nic.FileDatabase, IPAMDatabaseMixin):
     def __init__(self, *args, **kwargs):
         lglass.nic.FileDatabase.__init__(self, *args, **kwargs)
         IPAMDatabaseMixin.__init__(self)
+
+if __name__ == "__main__":
+    import lglass.lipam
+    lglass.lipam.main()
 
