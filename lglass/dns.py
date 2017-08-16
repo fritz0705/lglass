@@ -17,9 +17,7 @@ def rdns_subnets(network):
         yield (subnet, rdns_domain(subnet))
 
 def rdns_network(domain):
-    if domain[-1] == '.':
-        domain = domain[:-1]
-    components = domain.split(".")
+    components = domain_split(domain)
     if len(components) < 2 or components[-1] != "arpa":
         return None
     if components[-2] == "ip6":
@@ -88,6 +86,36 @@ def generate_delegation(domain, comments=False, include_glue=True, include_ds=Tr
 def generate_delegations(domains, **kwargs):
     for domain in domains:
         yield from generate_delegation(domain, **kwargs)
+
+def domain_split(dom):
+    if isinstance(dom, list):
+        return dom
+    if dom[-1] == '.':
+        dom = dom[:-1]
+    if not dom:
+        return []
+    return dom.split('.')
+
+def domain_join(dom):
+    if not dom[-1]:
+        dom = dom[:-1]
+    return '.'.join(dom)
+
+def is_subdomain(sub, dom):
+    if isinstance(dom, str):
+        dom = domain_split(dom)
+    if isinstance(sub, str):
+        sub = domain_split(sub)
+    if not dom:
+        return True
+    n = len(dom)
+    return sub[-n:] == dom
+
+def domain_equal(dom, dom1):
+    return domain_split(dom) == domain_split(dom1)
+
+def is_reverse_domain(dom):
+    return is_subdomain(dom, ["in-addr", "arpa"]) or is_subdomain(dom, ["ip6", "arpa"])
 
 if __name__ == "__main__":
     import argparse
