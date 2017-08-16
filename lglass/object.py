@@ -233,10 +233,16 @@ def parse_objects(lines, pragmas=None):
     obj = []
     for line in lines_iter:
         if not line.strip() and obj:
-            yield parse_object(obj)
+            obj = parse_object(obj)
+            if obj:
+                yield obj
             obj = []
         else:
             obj.append(line)
+    if obj:
+        obj = parse_object(obj)
+        if obj:
+            yield obj
 
 # TODO rewrite object parser
 def parse_object(lines, pragmas={}):
