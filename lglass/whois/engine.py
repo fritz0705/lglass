@@ -321,15 +321,20 @@ class WhoisEngine(object):
             except KeyError:
                 pass
 
-    def query_more_specifics(self, obj, levels=1, database=None):
+    def query_more_specifics(self, obj_or_net, levels=1, database=None):
         if database is None:
             database = self.new_query_database()
-        if obj.type not in self.cidr_classes:
-            return
-        classes = {obj.type} | self.address_classes
+        if isinstance(obj_or_net, lglass.object.Object):
+            if obj_or_net.type not in self.cidr_classes:
+                return
+            classes = {obj_or_net.type} | self.address_classes
+            net = obj_or_net.ip_network
+        else:
+            classes = self.address_classes | self.cidr_classes
+            net = obj_or_net
         res = set()
         for rel in database.find(types=classes):
-            if rel.ip_network in obj.ip_network:
+            if rel.ip_network in net:
                 res.add(rel)
         yield from sorted(res, key=lambda o: o.ip_network)
 
