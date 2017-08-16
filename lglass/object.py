@@ -47,7 +47,10 @@ class Object(object):
     def primary_key_object(self):
         return self.__class__([(k, v) for k, v in self.data if k in self.primary_key_fields])
 
-    def extend(self, ex):
+    def extend(self, ex, append_group=False):
+        append = self.append
+        if append_group:
+            append = self.append_group
         if isinstance(ex, list):
             for offset, item in enumerate(ex):
                 if isinstance(item, (tuple, list)):
@@ -60,7 +63,7 @@ class Object(object):
                 else:
                     raise TypeError("offset {}: expected entry to be of type tuple, got {}".format(offset, item))
             for key, value in ex:
-                self.add(key, value)
+                append(key, value)
         elif isinstance(ex, dict):
             for key, value in ex:
                 if not isinstance(key, str):
@@ -74,16 +77,16 @@ class Object(object):
             for key, value in ex:
                 if isinstance(value, list):
                     for val in value:
-                        self.add(key, val)
+                        append(key, val)
                 else:
-                    self.add(key, value)
+                    append(key, value)
             pass
         elif isinstance(ex, str):
-            self.extend(parse_object(ex.splitlines()))
+            self.extend(parse_object(ex.splitlines()), append_group=append_group)
         elif isinstance(ex, Object):
-            self.extend(ex.data)
+            self.extend(ex.data, append_group=append_group)
         elif hasattr(ex, "__iter__"):
-            self.extend(list(ex))
+            self.extend(list(ex), append_group=append_group)
         else:
             raise TypeError("Expected ex to be dict, list, str, or lglass.object.Object, got {}".format(type(ex)))
 
@@ -127,6 +130,9 @@ class Object(object):
     def get(self, key):
         return [v for k, v in self._data if k == key]
 
+    def getitems(self, key):
+        return [kv for kv in self._data if kv[0] == key]
+
     def getfirst(self, key, default=None):
         return next(self.get(key), default)
 
@@ -138,6 +144,13 @@ class Object(object):
 
     def append(self, key, value):
         return self.add(key, value)
+
+    def append_group(self, key, value):
+        try:
+            idx = self.indices(key)[-1] + 1
+            return self.insert(idx, key, value)
+        except IndexError:
+            return self.append(key, value)
 
     def insert(self, index, key, value):
         return self.add(key, value, index)
