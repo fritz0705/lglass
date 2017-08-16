@@ -7,6 +7,16 @@ class SchemaObject(lglass.object.Object):
         for constraint in self.get("key"):
             yield parse_constraint(constraint)
 
+    def template(self):
+        tpl = []
+        for key_name, multiple, mandatory, inverse in self.schema_keys():
+            t = ""
+            t += "[mandatory] " if mandatory else "[optional]   "
+            t += "[multiple] " if multiple  else "[single]    "
+            t += "[inverse key]" if inverse else "[ ]"
+            tpl.append((key_name, t))
+        return tpl
+
 def parse_constraint(constraint):
     key_name, *tokens = constraint.split()
     tokens_iter = iter(tokens)
