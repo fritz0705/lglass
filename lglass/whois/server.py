@@ -7,6 +7,7 @@ import lglass
 import lglass.whois.engine
 import lglass.nic
 
+
 class SolidArgumentParser(argparse.ArgumentParser):
     def exit(self, *args, **kwargs):
         pass
@@ -14,13 +15,15 @@ class SolidArgumentParser(argparse.ArgumentParser):
     def error(self, *args, **kwargs):
         pass
 
+
 class SimpleWhoisServer(object):
-    version_string = "% lglass.whois.server {}\n".format(lglass.version).encode()
+    version_string = "% lglass.whois.server {}\n".format(
+        lglass.version).encode()
     not_found_template = "%ERROR:101: no entries found\n" + \
-            "%\n" + "% No entries found in source {source}.\n\n"
+        "%\n" + "% No entries found in source {source}.\n\n"
     not_allowed_template = "%ERROR:201: access denied\n\n"
     preamble_template = "% This is the {source} Database query service.\n" + \
-            "% The objects are in RPSL format.\n\n"
+        "% The objects are in RPSL format.\n\n"
     abuse_template = "% Abuse contact for '{object_key}' is '{contact}'\n"
     allow_inverse_search = False
 
@@ -70,21 +73,24 @@ class SimpleWhoisServer(object):
         return self.engine.database
 
     def abuse_message(self, object_key, contact):
-        return self.abuse_template.format(object_key=object_key, contact=contact)
+        return self.abuse_template.format(
+            object_key=object_key, contact=contact)
 
     def _build_argparser(self):
-        argparser = lglass.whois.engine.new_argparser(cls=SolidArgumentParser,
-                add_help=False, prog="whois")
+        argparser = lglass.whois.engine.new_argparser(
+            cls=SolidArgumentParser, add_help=False, prog="whois")
         argparser.add_argument("--persistent-connection", "-k",
-                action="store_true", default=False)
-        argparser.add_argument("--inverse", "-i",
-                help="do an inverse look-up for specified ATTRibutes")
+                               action="store_true", default=False)
+        argparser.add_argument(
+            "--inverse",
+            "-i",
+            help="do an inverse look-up for specified ATTRibutes")
         argparser.add_argument("-q", help="query specified server info",
-                choices=["version", "types", "sources"])
+                               choices=["version", "types", "sources"])
         argparser.add_argument("--template", "-t",
-                help="request template for object of TYPE")
+                               help="request template for object of TYPE")
         argparser.add_argument("--help", "-h", action="store_true",
-                help="display this help")
+                               help="display this help")
         return argparser
 
     async def query(self, request, writer):
@@ -95,7 +101,10 @@ class SimpleWhoisServer(object):
             if args.q == "version":
                 writer.write(self.version_string)
             elif args.q == "types":
-                writer.write("\n".join(sorted(self.database.object_classes)).encode())
+                writer.write(
+                    "\n".join(
+                        sorted(
+                            self.database.object_classes)).encode())
                 writer.write(b"\n\n")
             elif args.q == "sources":
                 for source in self.sources:
@@ -106,8 +115,10 @@ class SimpleWhoisServer(object):
         elif args.template is not None:
             return args.persistent_connection
         elif args.help:
-            writer.write(self.format_comment(argparser.format_help()).encode() +
-                    b"\n")
+            writer.write(
+                self.format_comment(
+                    argparser.format_help()).encode() +
+                b"\n")
             await writer.drain()
             return args.persistent_connection
 
@@ -128,11 +139,11 @@ class SimpleWhoisServer(object):
                 term = {f: term for f in inverse_fields}
             results = self.engine.query(term, database=db, **query_kwargs)
             writer.write(self.format_results(results,
-                primary_keys=args.primary_keys,
-                pretty_print_options={
-                    "min_padding": 16,
-                    "add_padding": 0},
-                database=db).encode())
+                                             primary_keys=args.primary_keys,
+                                             pretty_print_options={
+                                                 "min_padding": 16,
+                                                 "add_padding": 0},
+                                             database=db).encode())
 
         writer.write(b"\n")
         await writer.drain()
@@ -160,7 +171,6 @@ class SimpleWhoisServer(object):
         await writer.drain()
         writer.close()
 
-
     def format_comment(self, comment):
         res = ""
         for line in comment.splitlines():
@@ -168,8 +178,8 @@ class SimpleWhoisServer(object):
         return res
 
     def format_results(self, results, primary_keys=False,
-            include_abuse_contact=True, pretty_print_options={},
-            database=None):
+                       include_abuse_contact=True, pretty_print_options={},
+                       database=None):
         if not results and self.not_found_message is not None:
             return self.not_found_message
         response = ""
@@ -178,23 +188,25 @@ class SimpleWhoisServer(object):
             related_objects = list(results[primary])[1:]
             if include_abuse_contact:
                 abuse_contact = self.engine.query_abuse(primary,
-                        database=database)
+                                                        database=database)
                 if abuse_contact:
                     response += self.abuse_message(primary_key, abuse_contact)
                     response += "\n"
             if primary_keys:
                 primary = primary.primary_key_object()
-                response += "".join(primary.pretty_print(**pretty_print_options))
+                response += "".join(primary.pretty_print(**
+                                                         pretty_print_options))
                 response += "\n"
                 continue
             response += "% Information related to '{}'\n\n".format(
-                    self.database.primary_key(primary))
+                self.database.primary_key(primary))
             response += "".join(primary.pretty_print(**pretty_print_options))
             response += "\n"
             for obj in related_objects:
                 response += "".join(obj.pretty_print(**pretty_print_options))
                 response += "\n"
         return response
+
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="Simple whois server")
@@ -214,7 +226,7 @@ if __name__ == "__main__":
     if args.preamble is not None:
         with open(args.preamble) as fh:
             server.preamble = fh.read()
-    
+
     if args.handle_hint is not None:
         engine.type_hints[args.handle_hint] = engine.handle_classes
 
@@ -222,7 +234,11 @@ if __name__ == "__main__":
         server.sources = args.sources.split(",")
 
     loop = asyncio.get_event_loop()
-    coro = asyncio.start_server(server.handle, args.address.split(","), args.port, loop=loop)
+    coro = asyncio.start_server(
+        server.handle,
+        args.address.split(","),
+        args.port,
+        loop=loop)
     s = loop.run_until_complete(coro)
 
     try:
@@ -233,4 +249,3 @@ if __name__ == "__main__":
     s.close()
     loop.run_until_complete(s.wait_closed())
     loop.close()
-

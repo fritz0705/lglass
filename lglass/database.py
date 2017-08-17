@@ -6,8 +6,9 @@ object_classes = {}
 class_synonyms = []
 primary_key_rules = {}
 
+
 def primary_class(object_class, class_synonyms=class_synonyms,
-        object_classes=object_classes):
+                  object_classes=object_classes):
     if isinstance(object_class, lglass.object.Object):
         object_class = object_class.object_class
     for synonym_group in class_synonyms:
@@ -17,8 +18,9 @@ def primary_class(object_class, class_synonyms=class_synonyms,
                     return synonyme
     return object_class
 
+
 def primary_key(obj, primary_key_rules=primary_key_rules,
-        primary_class=primary_class):
+                primary_class=primary_class):
     object_class = primary_class(obj.object_class)
     try:
         rule = primary_key_rules[object_class]
@@ -28,6 +30,7 @@ def primary_key(obj, primary_key_rules=primary_key_rules,
         return object_class.object_key
     if callable(rule):
         return rule(obj)
+
     def _components():
         for component in rule:
             if primary_class(component) == object_class:
@@ -35,6 +38,7 @@ def primary_key(obj, primary_key_rules=primary_key_rules,
             else:
                 yield obj.getfirst(component, default="")
     return "".join(_components())
+
 
 class Database(object):
     object_classes = {}
@@ -63,7 +67,8 @@ class Database(object):
         for obj in self.find(types=types, keys=keys):
             for key, query_value in query.items():
                 values = obj.get(key)
-                if isinstance(query_value, set) and query_value.intersection(values):
+                if isinstance(query_value,
+                              set) and query_value.intersection(values):
                     yield obj
                     break
                 elif isinstance(query_value, str) and query_value in values:
@@ -78,12 +83,12 @@ class Database(object):
 
     def primary_class(self, object_class):
         return primary_class(object_class, class_synonyms=self.class_synonyms,
-                object_classes=self.object_classes)
+                             object_classes=self.object_classes)
 
     def primary_key(self, object_class):
         return primary_key(object_class,
-                primary_key_rules=self.primary_key_rules,
-                primary_class=self.primary_class)
+                           primary_key_rules=self.primary_key_rules,
+                           primary_class=self.primary_class)
 
     def primary_spec(self, obj):
         return self.primary_class(obj), self.primary_key(obj)
@@ -91,10 +96,21 @@ class Database(object):
     def __contains__(self, obj):
         pass
 
+
 def perform_key_match(key_pat, key):
-    return (key_pat is None) or (isinstance(key_pat, str) and key == key_pat) \
-            or (isinstance(key_pat, (list, set, tuple, frozenset)) and key in key_pat) \
-            or (callable(key_pat) and key_pat(key))
+    return (
+        key_pat is None) or (
+        isinstance(
+            key_pat,
+            str) and key == key_pat) or (
+                isinstance(
+                    key_pat,
+                    (list,
+                     set,
+                     tuple,
+                     frozenset)) and key in key_pat) or (
+        callable(key_pat) and key_pat(key))
+
 
 class ProxyDatabase(Database):
     def __init__(self, backend):
@@ -140,4 +156,3 @@ class ProxyDatabase(Database):
     @property
     def database_name(self):
         return self.backend.database_name
-

@@ -1,5 +1,6 @@
 # coding: utf-8
 
+
 class Object(object):
     def __init__(self, data=None, **kwargs):
         self._data = []
@@ -45,7 +46,8 @@ class Object(object):
         return [self.object_class]
 
     def primary_key_object(self):
-        return self.__class__([(k, v) for k, v in self.data if k in self.primary_key_fields])
+        return self.__class__(
+            [(k, v) for k, v in self.data if k in self.primary_key_fields])
 
     def extend(self, ex, append_group=False):
         append = self.append
@@ -55,25 +57,40 @@ class Object(object):
             for offset, item in enumerate(ex):
                 if isinstance(item, (tuple, list)):
                     if len(item) != 2:
-                        raise ValueError("offset {}: expected tuple of length 2, got {}".format(offset))
+                        raise ValueError(
+                            "offset {}: expected tuple of length 2, got {}".format(offset))
                     elif not isinstance(item[0], str):
-                        raise ValueError("offset {}: expected key to be of type str, got {}".format(offset, type(item[0])))
+                        raise ValueError(
+                            "offset {}: expected key to be of type str, got {}".format(
+                                offset, type(
+                                    item[0])))
                     elif not isinstance(item[1], str):
-                        raise ValueError("offset {}: expected value to be of type str, got {}".format(offset, type(item[1])))
+                        raise ValueError(
+                            "offset {}: expected value to be of type str, got {}".format(
+                                offset, type(
+                                    item[1])))
                 else:
-                    raise TypeError("offset {}: expected entry to be of type tuple, got {}".format(offset, item))
+                    raise TypeError(
+                        "offset {}: expected entry to be of type tuple, got {}".format(
+                            offset, item))
             for key, value in ex:
                 append(key, value)
         elif isinstance(ex, dict):
             for key, value in ex:
                 if not isinstance(key, str):
-                    raise ValueError("expected key to be of type str, got {}".format(type(key)))
+                    raise ValueError(
+                        "expected key to be of type str, got {}".format(
+                            type(key)))
                 elif not isinstance(value, (str, list)):
-                    raise ValueError("expected value to be of type str or list, got {}".format(type(value)))
+                    raise ValueError(
+                        "expected value to be of type str or list, got {}".format(
+                            type(value)))
                 if isinstance(value, list):
                     for off, val in enumerate(value):
                         if not isinstance(val, str):
-                            raise ValueError("key {} offset {}: expected value to be of type str, got {}".format(key, off, type(val)))
+                            raise ValueError(
+                                "key {} offset {}: expected value to be of type str, got {}".format(
+                                    key, off, type(val)))
             for key, value in ex:
                 if isinstance(value, list):
                     for val in value:
@@ -82,13 +99,18 @@ class Object(object):
                     append(key, value)
             pass
         elif isinstance(ex, str):
-            self.extend(parse_object(ex.splitlines()), append_group=append_group)
+            self.extend(
+                parse_object(
+                    ex.splitlines()),
+                append_group=append_group)
         elif isinstance(ex, Object):
             self.extend(ex.data, append_group=append_group)
         elif hasattr(ex, "__iter__"):
             self.extend(list(ex), append_group=append_group)
         else:
-            raise TypeError("Expected ex to be dict, list, str, or lglass.object.Object, got {}".format(type(ex)))
+            raise TypeError(
+                "Expected ex to be dict, list, str, or lglass.object.Object, got {}".format(
+                    type(ex)))
 
     def __getitem__(self, key):
         if isinstance(key, str):
@@ -98,8 +120,10 @@ class Object(object):
                 raise KeyError(repr(key))
         elif isinstance(key, (int, slice)):
             return self.data[key]
-        raise TypeError("Expected key to be str or int, got {}".format(type(key)))
-    
+        raise TypeError(
+            "Expected key to be str or int, got {}".format(
+                type(key)))
+
     def __setitem__(self, key, value):
         if isinstance(value, (list, slice, set)):
             for val in value:
@@ -120,7 +144,7 @@ class Object(object):
             del self.data[key]
         else:
             self.remove(key)
-    
+
     def __contains__(self, key):
         return key in set(self.keys())
 
@@ -174,17 +198,18 @@ class Object(object):
         return (value for _, value in self.items())
 
     def pretty_print(self, min_padding=0, add_padding=8):
-        padding = max(max((len(k) for k in self.keys()), default=0), min_padding) + add_padding
+        padding = max(max((len(k) for k in self.keys()),
+                          default=0), min_padding) + add_padding
         for key, value in self:
             value_lines = value.splitlines() or [""]
             record = "{key}:{pad}{value}\n".format(
-                    key=key,
-                    pad=" " * (padding - len(key)),
-                    value=value_lines[0])
+                key=key,
+                pad=" " * (padding - len(key)),
+                value=value_lines[0])
             for line in value_lines[1:]:
                 record += "{pad}{value}\n".format(
-                        pad=" " * (padding + 1),
-                        value=line)
+                    pad=" " * (padding + 1),
+                    value=line)
             yield record
 
     def __str__(self):
@@ -192,10 +217,10 @@ class Object(object):
 
     def __repr__(self):
         return "<{module_name}.{class_name} {object_class}: {object_key}>".format(
-                module_name=type(self).__module__,
-                class_name=type(self).__name__,
-                object_class=self.object_class,
-                object_key=self.object_key)
+            module_name=type(self).__module__,
+            class_name=type(self).__name__,
+            object_class=self.object_class,
+            object_key=self.object_key)
 
     def __hash__(self):
         return hash((self.type, self.key))
@@ -228,6 +253,7 @@ class Object(object):
     def from_str(cls, string):
         return cls(string)
 
+
 def parse_objects(lines, pragmas=None):
     lines_iter = iter(lines)
     obj = []
@@ -245,6 +271,8 @@ def parse_objects(lines, pragmas=None):
             yield obj
 
 # TODO rewrite object parser
+
+
 def parse_object(lines, pragmas={}):
     r'''This is a simple RPSL parser which expects an iterable which yields lines.
     This parser processes the object format, not the policy format. The object
@@ -263,7 +291,7 @@ def parse_object(lines, pragmas={}):
     are on their own line, which must begin with "%!", followed by any
     amount of whitespace, "pragma", at least one whitespace, followed by the
     pragma-specific part.
-    
+
     The following pragmas are supported:
 
         ``%! pragma whitespace-preserve [on|off]``
@@ -308,28 +336,37 @@ def parse_object(lines, pragmas={}):
             # this line defines a parser instruction, which should be a pragma
             values = line[2:].strip().split()
             if len(values) <= 1:
-                raise ValueError("Syntax error: Expected pragma type after 'pragma'")
+                raise ValueError(
+                    "Syntax error: Expected pragma type after 'pragma'")
             if values[0] != "pragma":
-                raise ValueError("Syntax error: Only pragmas are allowed as parser instructions")
+                raise ValueError(
+                    "Syntax error: Only pragmas are allowed as parser instructions")
             if values[1] == "rfc":
                 pragmas.update(default_pragmas)
             elif values[1] in {"whitespace-preserve", "stop-at-empty-line",
-                "condense-whitespace", "strict-ripe", "hash-comment"}:
+                               "condense-whitespace", "strict-ripe", "hash-comment"}:
                 try:
                     if values[2] not in {"on", "off"}:
-                        raise ValueError("Syntax error: Expected 'on' or 'off' as value for '{}' pragma".format(values[1]))
+                        raise ValueError(
+                            "Syntax error: Expected 'on' or 'off' as value for '{}' pragma".format(
+                                values[1]))
                     pragmas[values[1]] = True if values[2] == "on" else False
                 except IndexError:
-                    raise ValueError("Syntax error: Expected value after '{}'".format(values[1]))
+                    raise ValueError(
+                        "Syntax error: Expected value after '{}'".format(
+                            values[1]))
             elif values[1] == "newline-type":
                 try:
                     if values[2] not in ["cr", "lf", "crlf", "none"]:
-                        raise ValueError("Syntax error: Expected 'cr', 'lf', 'crlf' or 'none' as value for 'newline-type' pragma")
+                        raise ValueError(
+                            "Syntax error: Expected 'cr', 'lf', 'crlf' or 'none' as value for 'newline-type' pragma")
                     pragmas["newline-type"] = values[2]
                 except IndexError:
-                    raise ValueError("Syntax error: Expected value after 'newline-type'")
+                    raise ValueError(
+                        "Syntax error: Expected value after 'newline-type'")
             else:
-                raise ValueError("Syntax error: Unknown pragma: {}".format(values))
+                raise ValueError(
+                    "Syntax error: Unknown pragma: {}".format(values))
             continue
 
         # continue if line is empty
@@ -342,7 +379,7 @@ def parse_object(lines, pragmas={}):
         line = line.split("%")[0]
         if pragmas["hash-comment"]:
             line = line.split("#")[0]
-        
+
         if not line.strip():
             continue
 
@@ -368,7 +405,8 @@ def parse_object(lines, pragmas={}):
 
         if pragmas["strict-ripe"]:
             if not re.match("^[a-zA-Z0-9-]+$", key):
-                raise ValueError("Syntax error: Key doesn't match RIPE database requirements")
+                raise ValueError(
+                    "Syntax error: Key doesn't match RIPE database requirements")
 
         if not pragmas["whitespace-preserve"]:
             key = key.strip()
@@ -376,19 +414,28 @@ def parse_object(lines, pragmas={}):
 
         if pragmas["condense-whitespace"]:
             import re
-            value = re.sub(r"[\s]+", " ", value, flags=re.M|re.S)
+            value = re.sub(r"[\s]+", " ", value, flags=re.M | re.S)
 
         result.append((key, value))
 
     return result
+
 
 def main():
     import argparse
     import sys
 
     argparser = argparse.ArgumentParser(description="Pretty-print objects")
-    argparser.add_argument("--min-padding", help="Minimal padding between key and value", type=int, default=0)
-    argparser.add_argument("--add-padding", help="Additional padding between key and value", type=int, default=8)
+    argparser.add_argument(
+        "--min-padding",
+        help="Minimal padding between key and value",
+        type=int,
+        default=0)
+    argparser.add_argument(
+        "--add-padding",
+        help="Additional padding between key and value",
+        type=int,
+        default=8)
     argparser.add_argument("--whois-format", action="store_true")
     argparser.add_argument("--tee", "-T", action="store_true")
     argparser.add_argument("--inplace", "-i", action="store_true")
@@ -397,8 +444,8 @@ def main():
     args = argparser.parse_args()
 
     options = dict(
-            min_padding=args.min_padding,
-            add_padding=args.add_padding)
+        min_padding=args.min_padding,
+        add_padding=args.add_padding)
     if args.whois_format:
         options["min_padding"] = 16
         options["add_padding"] = 0
@@ -417,6 +464,6 @@ def main():
         if args.tee or not args.inplace:
             print("".join(obj.pretty_print(**options)))
 
+
 if __name__ == "__main__":
     main()
-

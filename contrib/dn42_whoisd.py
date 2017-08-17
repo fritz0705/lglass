@@ -9,10 +9,12 @@ import lglass.proxy
 import lglass.whois.engine
 import lglass.whois.server
 
+
 def create_database(db_path):
     db = lglass.dn42.DN42Database(db_path)
     return lglass.proxy.CacheProxyDatabase(db,
-            lifetime=600)
+                                           lifetime=600)
+
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="DN42 Whois server")
@@ -32,7 +34,7 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     coro = asyncio.start_server(server.handle, args.address.split(","),
-            args.port, loop=loop)
+                                args.port, loop=loop)
     s = loop.run_until_complete(coro)
 
     try:
@@ -43,4 +45,3 @@ if __name__ == "__main__":
         s.close()
     loop.run_until_complete(s.wait_closed())
     loop.close()
-

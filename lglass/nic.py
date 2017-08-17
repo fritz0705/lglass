@@ -11,6 +11,7 @@ import lglass.database
 import lglass.dns
 import lglass.object
 
+
 def parse_asn(asn):
     try:
         return int(asn)
@@ -20,15 +21,18 @@ def parse_asn(asn):
     if m:
         return int(m[1])
 
+
 def parse_as_block(as_block):
     m = re.match(r"(AS)?([0-9]+)\s*[-_/]?\s*(AS)?([0-9]+)$", as_block)
     if not m:
         return False
     return int(m[2]), int(m[4])
 
+
 def parse_ip_range(string):
     start, end = map(lambda s: s.strip(), string.split("-", 1))
     return netaddr.IPRange(start, end)
+
 
 class NicObject(lglass.object.Object):
     @property
@@ -74,7 +78,7 @@ class NicObject(lglass.object.Object):
     def maintainers(self, new_maintainers):
         try:
             mnt_index = self.indices("mnt-by")[0]
-        except:
+        except BaseException:
             pass
 
     @maintainers.deleter
@@ -91,10 +95,12 @@ class NicObject(lglass.object.Object):
     @created.setter
     def created(self, new_date):
         if isinstance(new_date, (int, float)):
-            new_date = datetime.datetime.fromtimestamp(new_date, tz=datetime.timezone.utc)
+            new_date = datetime.datetime.fromtimestamp(
+                new_date, tz=datetime.timezone.utc)
         elif isinstance(new_date, str):
             new_date = dateutil.parser.parse(new_date)
-        self["created"] = new_date.astimezone(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self["created"] = new_date.astimezone(
+            tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @property
     def last_modified(self):
@@ -106,10 +112,12 @@ class NicObject(lglass.object.Object):
     @last_modified.setter
     def last_modified(self, new_date):
         if isinstance(new_date, (int, float)):
-            new_date = datetime.datetime.fromtimestamp(new_date, tz=datetime.timezone.utc)
+            new_date = datetime.datetime.fromtimestamp(
+                new_date, tz=datetime.timezone.utc)
         elif isinstance(new_date, str):
             new_date = dateutil.parser.parse(new_date)
-        self["last-modified"] = new_date.astimezone(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self["last-modified"] = new_date.astimezone(
+            tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @property
     def last_modified_datetime(self):
@@ -130,10 +138,12 @@ class NicObject(lglass.object.Object):
     def description(self):
         del self["descr"]
 
+
 class HandleObject(NicObject):
     @property
     def primary_key_fields(self):
         return ["nic-hdl"]
+
 
 class InetnumObject(NicObject):
     def add(self, key, value, index=None):
@@ -165,13 +175,15 @@ class InetnumObject(NicObject):
                 new_ip_network = parse_ip_range(new_ip_network)
             else:
                 new_ip_network = netaddr.IPNetwork(new_ip_network)
-        if "-" in self.object_key and isinstance(new_ip_network, netaddr.IPNetwork):
-            new_ip_network = netaddr.IPRange(new_ip_network[0], new_ip_network[-1])
+        if "-" in self.object_key and isinstance(
+                new_ip_network, netaddr.IPNetwork):
+            new_ip_network = netaddr.IPRange(
+                new_ip_network[0], new_ip_network[-1])
         if isinstance(new_ip_network, netaddr.IPNetwork):
             self.object_key = str(new_ip_network)
         elif isinstance(new_ip_network, netaddr.IPRange):
             self.object_key = "{} - {}".format(new_ip_network[0],
-                new_ip_network[-1])
+                                               new_ip_network[-1])
         if new_ip_network.version == 4:
             self.object_class = "inetnum"
         elif new_ip_network.version == 6:
@@ -208,10 +220,11 @@ class InetnumObject(NicObject):
     @property
     def domain_maintainers(self):
         return list(self.get("mnt-domains"))
-    
+
     @property
     def lower_maintainers(self):
         return list(self.get("mnt-lower"))
+
 
 class ASBlockObject(NicObject):
     def __contains__(self, number_or_key):
@@ -236,6 +249,7 @@ class ASBlockObject(NicObject):
     def primary_key(self):
         return "AS{} - AS{}".format(self.start, self.end)
 
+
 class RouteObject(NicObject):
     @property
     def ip_network(self):
@@ -250,18 +264,18 @@ class RouteObject(NicObject):
             return 6
         elif self.object_class == "route":
             return 4
-    
+
     @property
     def origin(self):
         try:
             return self["origin"]
-        except:
+        except BaseException:
             pass
 
     @property
     def primary_key(self):
         return "{}{}".format(self.ip_network, self.origin)
-    
+
     @property
     def lower_maintainers(self):
         return list(self.get("mnt-lower"))
@@ -269,10 +283,11 @@ class RouteObject(NicObject):
     @property
     def route_maintainers(self):
         return list(self.get("mnt-routes"))
-    
+
     @property
     def primary_key_fields(self):
         return [self.object_class, "origin"]
+
 
 class AutNumObject(NicObject):
     @property
@@ -286,22 +301,42 @@ class AutNumObject(NicObject):
     def __int__(self):
         return parse_asn(self.object_key)
 
-object_classes = {"as-block", "as-set", "aut-num", "domain", "filter-set",
-        "inet-rtr", "inet6num", "inetnum", "irt", "key-cert", "mntner",
-        "organisation", "peering-set", "person", "poem", "poetic-form", "role",
-        "route-set", "route", "route6", "rtr-set"}
+
+object_classes = {
+    "as-block",
+    "as-set",
+    "aut-num",
+    "domain",
+    "filter-set",
+    "inet-rtr",
+    "inet6num",
+    "inetnum",
+    "irt",
+    "key-cert",
+    "mntner",
+    "organisation",
+    "peering-set",
+    "person",
+    "poem",
+    "poetic-form",
+    "role",
+    "route-set",
+    "route",
+    "route6",
+    "rtr-set"}
 class_synonyms = [{"dns", "domain"}]
 primary_key_rules = {}
 object_class_types = {
-        "route": RouteObject,
-        "route6": RouteObject,
-        "inetnum": InetnumObject,
-        "inet6num": InetnumObject,
-        "person": HandleObject,
-        "role": HandleObject,
-        "as-block": ASBlockObject,
-        "aut-num": AutNumObject,
+    "route": RouteObject,
+    "route6": RouteObject,
+    "inetnum": InetnumObject,
+    "inet6num": InetnumObject,
+    "person": HandleObject,
+    "role": HandleObject,
+    "as-block": ASBlockObject,
+    "aut-num": AutNumObject,
 }
+
 
 class NicDatabaseMixin(object):
     def __init__(self):
@@ -337,6 +372,7 @@ class NicDatabaseMixin(object):
     def serial(self, new_serial):
         self.manifest["serial"] = new_serial
 
+
 class FileDatabase(lglass.database.Database, NicDatabaseMixin):
     _manifest = None
 
@@ -348,7 +384,12 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
     def _build_path(self, object_class, object_key=None):
         if object_key is None:
             return os.path.join(self._path, object_class)
-        return os.path.join(self._path, object_class, object_key.replace("/", "_"))
+        return os.path.join(
+            self._path,
+            object_class,
+            object_key.replace(
+                "/",
+                "_"))
 
     def lookup(self, types=None, keys=None):
         if types is None:
@@ -387,7 +428,8 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
         except TypeError:
             pass
         for key in os.listdir(self._build_path(object_class)):
-            if key[0] == '.': continue
+            if key[0] == '.':
+                continue
             key = key.replace("_", "/")
             if lglass.database.perform_key_match(object_keys, key):
                 yield (object_class, key)
@@ -421,8 +463,8 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
         except FileExistsError:
             pass
         save_obj = NicObject(obj.data)
-        remove_last_modified = self.database_name in save_obj.get("source") or \
-                not save_obj.get("source")
+        remove_last_modified = self.database_name in save_obj.get(
+            "source") or not save_obj.get("source")
         if remove_last_modified:
             save_obj.remove("last-modified")
         if save_obj.source is not None and save_obj.source == self.database_name:
@@ -460,4 +502,3 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             obj = NicObject([("database", os.path.basename(self._path))])
         self._manifest = obj
         return obj
-

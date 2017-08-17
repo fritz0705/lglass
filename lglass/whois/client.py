@@ -4,6 +4,7 @@ import socket
 
 import lglass.object
 
+
 class WhoisClient(object):
     def __init__(self, address, port=43, flavour='RIPE', database=None):
         self.address = address
@@ -17,7 +18,7 @@ class WhoisClient(object):
         return lglass.object.Object(data)
 
     def build_query(self, term, classes=None, reverse_domain=False,
-            recursive=True, exact=False, inverse_attributes=None):
+                    recursive=True, exact=False, inverse_attributes=None):
         query = []
         if classes is not None:
             query.append("-T")
@@ -57,4 +58,3 @@ class WhoisClient(object):
         response = response.decode().splitlines()
         for obj in lglass.object.parse_objects(response):
             yield self.create_object(obj)
-

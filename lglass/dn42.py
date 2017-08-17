@@ -7,8 +7,10 @@ import netaddr
 import lglass.dns
 import lglass.nic
 
+
 def _format_as_block_key(obj):
     return "{}_{}".format(obj.start, obj.end)
+
 
 def fix_object(obj):
     if obj.object_class in {"route", "route6"}:
@@ -31,6 +33,7 @@ def fix_object(obj):
     else:
         yield obj
 
+
 class InetnumObject(lglass.nic.InetnumObject):
     def to_domain_objects(self):
         if "nserver" not in self:
@@ -39,12 +42,14 @@ class InetnumObject(lglass.nic.InetnumObject):
             obj = DomainObject([("domain", rdns_domain)])
             for k, v in self.items():
                 if k in {"zone-c", "admin-c", "tech-c", "mnt-by", "nserver",
-                        "ds-rrdata", "created", "last-modified", "source"}:
+                         "ds-rrdata", "created", "last-modified", "source"}:
                     obj.add(k, v)
             yield obj
 
+
 class DomainObject(lglass.nic.NicObject):
     pass
+
 
 class DN42Database(lglass.nic.FileDatabase):
     version = 0
@@ -83,17 +88,22 @@ class DN42Database(lglass.nic.FileDatabase):
         self._domain_cache = {}
 
     def preload_domains(self):
-        existing_domains = {domain for _, domain in super().lookup(types="dns")}
+        existing_domains = {
+            domain for _,
+            domain in super().lookup(
+                types="dns")}
         inetnums = list(self.find(types={"inetnum", "inet6num"}))
         inetnums = sorted(inetnums,
-                key=lambda d: d.ip_network.prefixlen,
-                reverse=True)
+                          key=lambda d: d.ip_network.prefixlen,
+                          reverse=True)
         for inetnum in inetnums:
             for domain in inetnum.to_domain_objects():
-                if domain in existing_domains: continue
-                if domain.object_key in self._domain_cache: continue
+                if domain in existing_domains:
+                    continue
+                if domain.object_key in self._domain_cache:
+                    continue
                 self._domain_cache[domain.object_key] = domain
-    
+
     def fetch(self, object_class, object_key):
         object_class = self.primary_class(object_class)
         if self.version == 0 and object_class == "dns":
@@ -130,7 +140,9 @@ class DN42Database(lglass.nic.FileDatabase):
         yield from super()._lookup_class(object_class, keys)
 
     def _lookup_dns(self, keys):
-        if isinstance(keys, str) and not keys.endswith(("in-addr.arpa", "ip6.arpa")):
+        if isinstance(
+                keys, str) and not keys.endswith(
+                ("in-addr.arpa", "ip6.arpa")):
             yield from super()._lookup_class("dns", keys)
             return
         if isinstance(keys, set):
@@ -152,9 +164,11 @@ class DN42Database(lglass.nic.FileDatabase):
                         inetnum.ip_network.version == 4:
                     continue
                 for domain in inetnum.to_domain_objects():
-                    if domain in found: continue
+                    if domain in found:
+                        continue
                     self._domain_cache[domain.object_key] = domain
-                    if lglass.database.perform_key_match(keys, domain.object_key):
+                    if lglass.database.perform_key_match(
+                            keys, domain.object_key):
                         yield ("dns", domain.object_key)
             except netaddr.core.AddrFormatError:
                 pass
@@ -165,4 +179,3 @@ class DN42Database(lglass.nic.FileDatabase):
                 super().save(nobj, **options)
             return
         super().save(nobj, **options)
-

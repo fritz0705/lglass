@@ -16,6 +16,7 @@ import lglass.whois.server
 
 from lglass.ipam import *
 
+
 class IPAMTool(object):
     def __init__(self, stdin=None, stdout=None, stderr=None, editor=None):
         if stdin is None:
@@ -31,12 +32,12 @@ class IPAMTool(object):
             editor = os.getenv("EDITOR")
         self.editor = editor
         self.pretty_print_options = dict(
-                min_padding=16,
-                add_padding=0)
+            min_padding=16,
+            add_padding=0)
         self.argparser = argparse.ArgumentParser()
         self.argparser.add_argument("--database", "-D", default=".")
         self.argparser.add_argument("--verbose", "-v", action="store_true",
-                default=False)
+                                    default=False)
         self.argparser.add_argument('--editor')
         self.command_parsers = self.argparser.add_subparsers(dest="subcommand")
         # lipam add-inverse OBJECT...
@@ -44,27 +45,30 @@ class IPAMTool(object):
         add_inverse_parser.add_argument("object", nargs="*")
         # lipam add-object OBJECT_CLASS OBJECT_KEY
         add_object_parser = self.command_parsers.add_parser('add-object',
-                aliases=["add"])
+                                                            aliases=["add"])
         add_object_parser.add_argument("file", nargs="*")
         # lipam create-address [--admin-c NIC-HDL] [--tech-c NIC-HDL]
         #                      [--add-host|--no-add-host] [--status STATUS]
         #                      [-h|--hostname HOSTNAME] ADDRESS
-        create_address_parser = self.command_parsers.add_parser("create-address")
+        create_address_parser = self.command_parsers.add_parser(
+            "create-address")
         create_address_parser.add_argument("--admin-c", action="append",
-                default=[])
+                                           default=[])
         create_address_parser.add_argument("--tech-c", action="append",
-                default=[])
+                                           default=[])
         create_address_parser.add_argument("--hostname", "-H", action="append",
-                default=[])
+                                           default=[])
         create_address_parser.add_argument("--descr", "-D")
         create_address_parser.add_argument("--add-inverse", "-i",
-                action="store_true", default=False)
-        create_address_parser.add_argument("--no-add-inverse", action="store_false",
-                dest="add_inverse")
+                                           action="store_true", default=False)
+        create_address_parser.add_argument(
+            "--no-add-inverse",
+            action="store_false",
+            dest="add_inverse")
         create_address_parser.add_argument("--edit", action="store_true",
-                default=True)
+                                           default=True)
         create_address_parser.add_argument("--no-edit", action="store_false",
-                dest="edit")
+                                           dest="edit")
         create_address_parser.add_argument("--status", "-S")
         create_address_parser.add_argument("address")
         # lipam create-host [--admin-c NIC-HDL] [--tech-c NIC-HDL]
@@ -73,164 +77,186 @@ class IPAMTool(object):
         #                   [--status STATUS] HOSTNAME
         create_host_parser = self.command_parsers.add_parser("create-host")
         create_host_parser.add_argument("--admin-c", action="append",
-                default=[])
+                                        default=[])
         create_host_parser.add_argument("--tech-c", action="append",
-                default=[])
+                                        default=[])
         create_host_parser.add_argument("--descr", "-D")
         create_host_parser.add_argument("--address", "-A", action="append",
-                default=[])
+                                        default=[])
         create_host_parser.add_argument("--l2-address", "-2", action="append",
-                default=[])
+                                        default=[])
         create_host_parser.add_argument("--add-inverse", "-i",
-                action="store_true", default=False)
-        create_host_parser.add_argument("--no-add-inverse", action="store_false",
-                dest="add_inverse")
+                                        action="store_true", default=False)
+        create_host_parser.add_argument(
+            "--no-add-inverse",
+            action="store_false",
+            dest="add_inverse")
         create_host_parser.add_argument("--edit", action="store_true",
-                default=True)
+                                        default=True)
         create_host_parser.add_argument("--no-edit", action="store_false",
-                dest="edit")
+                                        dest="edit")
         create_host_parser.add_argument("--status", "-S")
         create_host_parser.add_argument("hostname")
         # lipam create-inetnum [--admin-c NIC-HDL] [--tech-c NIC-HDL]
         #                      [--descr DESCR] [--netname NAME] [--org ORG]
         #                      [--status STATUS] NETWORK
-        create_inetnum_parser = self.command_parsers.add_parser("create-inetnum")
+        create_inetnum_parser = self.command_parsers.add_parser(
+            "create-inetnum")
         create_inetnum_parser.add_argument("--admin-c", action="append",
-                default=[])
+                                           default=[])
         create_inetnum_parser.add_argument("--tech-c", action="append",
-                default=[])
+                                           default=[])
         create_inetnum_parser.add_argument("--descr", "-D")
         create_inetnum_parser.add_argument("--status", "-S")
         create_inetnum_parser.add_argument("--netname", "-N")
         create_inetnum_parser.add_argument("--org", "-O")
         create_inetnum_parser.add_argument("--edit", action="store_true",
-                default=True)
+                                           default=True)
         create_inetnum_parser.add_argument("--no-edit", action="store_false",
-                dest="edit")
+                                           dest="edit")
         create_inetnum_parser.add_argument("network")
         # lipam create-object OBJECT_CLASS OBJECT_KEY
-        create_object_parser = self.command_parsers.add_parser("create-object",
-                aliases=["create"])
-        create_object_parser.add_argument("--add", "-a", nargs=2, action="append",
-                default=[])
+        create_object_parser = self.command_parsers.add_parser(
+            "create-object", aliases=["create"])
+        create_object_parser.add_argument(
+            "--add", "-a", nargs=2, action="append", default=[])
         create_object_parser.add_argument("--admin-c", action="append",
-                default=[])
+                                          default=[])
         create_object_parser.add_argument("--tech-c", action="append",
-                default=[])
+                                          default=[])
         create_object_parser.add_argument("--edit", action="store_true",
-                default=True)
+                                          default=True)
         create_object_parser.add_argument("--no-edit", action="store_false",
-                dest="edit")
+                                          dest="edit")
         create_object_parser.add_argument("--template", action="store_true",
-                default=False)
-        create_object_parser.add_argument("--no-template", action="store_false",
-                dest="template")
+                                          default=False)
+        create_object_parser.add_argument(
+            "--no-template", action="store_false", dest="template")
         create_object_parser.add_argument("object_class")
         create_object_parser.add_argument("object_key", nargs="?")
         # lipam delete-object OBJECT_CLASS OBJECT_KEY
-        delete_object_parser = self.command_parsers.add_parser('delete-object',
-                aliases=['delete', 'rm'])
+        delete_object_parser = self.command_parsers.add_parser(
+            'delete-object', aliases=['delete', 'rm'])
         delete_object_parser.add_argument('object_class')
         delete_object_parser.add_argument('object_key')
         # lipam edit-object OBJECT_CLASS OBJECT_KEY
         edit_object_parser = self.command_parsers.add_parser('edit-object',
-                aliases=["edit"])
+                                                             aliases=["edit"])
         edit_object_parser.add_argument('object_class')
         edit_object_parser.add_argument('object_key')
         # lipam format-object OBJECT
-        format_object_parser = self.command_parsers.add_parser("format-object",
-                aliases=["format"])
+        format_object_parser = self.command_parsers.add_parser(
+            "format-object", aliases=["format"])
         format_object_parser.add_argument("--object", "-o", nargs=2)
         format_object_parser.add_argument("object_class", nargs='?')
         format_object_parser.add_argument("object_key", nargs='?')
         # lipam generate-dns DOMAIN
         generate_dns_parser = self.command_parsers.add_parser('generate-dns')
         generate_dns_parser.add_argument('--delegate', action='store_true',
-                default=True)
+                                         default=True)
         generate_dns_parser.add_argument('--no-delegate', action='store_false',
-                dest='delegate')
+                                         dest='delegate')
         generate_dns_parser.add_argument('--fqdn', action='store_true',
-                default=True)
+                                         default=True)
         generate_dns_parser.add_argument('--no-fqdn', action='store_false',
-                dest='fqdn')
+                                         dest='fqdn')
         generate_dns_parser.add_argument('--l2-address-rrtype', default='TXT')
         generate_dns_parser.add_argument('--ipv4', action='store_true',
-                default=True)
+                                         default=True)
         generate_dns_parser.add_argument('--no-ipv4', action='store_false',
-                dest='ipv4')
+                                         dest='ipv4')
         generate_dns_parser.add_argument('--ipv6', action='store_true',
-                default=True)
+                                         default=True)
         generate_dns_parser.add_argument('--no-ipv6', action='store_false',
-                dest='ipv6')
+                                         dest='ipv6')
         generate_dns_parser.add_argument('--ds', action='store_true',
-                default=True)
+                                         default=True)
         generate_dns_parser.add_argument('--no-ds', action='store_false',
-                dest='ds')
+                                         dest='ds')
         generate_dns_parser.add_argument('--glue', action='store_true',
-                default=True)
+                                         default=True)
         generate_dns_parser.add_argument('--no-glue', action='store_false',
-                dest='glue')
-        generate_dns_parser.add_argument('--comments', "-C", action='store_true',
-                default=False)
+                                         dest='glue')
+        generate_dns_parser.add_argument(
+            '--comments', "-C", action='store_true', default=False)
         generate_dns_parser.add_argument('--no-comments', action='store_false',
-                dest='comments')
+                                         dest='comments')
         generate_dns_parser.add_argument('--netname-rrtype', default='TXT')
         generate_dns_parser.add_argument('--netname', action='store_true',
-                default=False)
+                                         default=False)
         generate_dns_parser.add_argument('--no-netname', action='store_false',
-                dest='netname')
-        generate_dns_parser.add_argument("--custom-records", action="store_true",
-                default=True)
-        generate_dns_parser.add_argument("--no-custom-records",
-                action="store_false", dest="custom_records")
+                                         dest='netname')
+        generate_dns_parser.add_argument(
+            "--custom-records", action="store_true", default=True)
+        generate_dns_parser.add_argument(
+            "--no-custom-records",
+            action="store_false",
+            dest="custom_records")
         generate_dns_parser.add_argument("--exact", action="store_true",
-                default=True)
-        generate_dns_parser.add_argument("--no-exact", "-X", action="store_false",
-                dest="exact")
+                                         default=True)
+        generate_dns_parser.add_argument(
+            "--no-exact", "-X", action="store_false", dest="exact")
         generate_dns_parser.add_argument('domain')
         # lipam get-object OBJECT_CLASS OBJECT_KEY
         get_object_parser = self.command_parsers.add_parser('get-object',
-                aliases=['get'])
+                                                            aliases=['get'])
         get_object_parser.add_argument('object_class')
         get_object_parser.add_argument('object_key')
         # lipam lint
         lint_parser = self.command_parsers.add_parser('lint')
         lint_parser.add_argument('--object', '-o', action='append',
-                default=[], nargs=2)
+                                 default=[], nargs=2)
         lint_parser.add_argument('--warn-missing-inverse', action='store_true',
-                default=True)
-        lint_parser.add_argument('--no-warn-missing-inverse',
-                action='store_false', dest='warn_missing_inverse')
+                                 default=True)
+        lint_parser.add_argument(
+            '--no-warn-missing-inverse',
+            action='store_false',
+            dest='warn_missing_inverse')
         lint_parser.add_argument('--warn-foreign-reference',
-                action='store_true', default=True)
-        lint_parser.add_argument('--no-warn-foreign-reference',
-                action='store_false', dest='warn_foreign_reference')
+                                 action='store_true', default=True)
+        lint_parser.add_argument(
+            '--no-warn-foreign-reference',
+            action='store_false',
+            dest='warn_foreign_reference')
         lint_parser.add_argument('--warn-missing-object',
-                action='store_true', default=True)
-        lint_parser.add_argument('--no-warn-missing-object',
-                action='store_false', dest='warn_missing_object')
+                                 action='store_true', default=True)
+        lint_parser.add_argument(
+            '--no-warn-missing-object',
+            action='store_false',
+            dest='warn_missing_object')
         lint_parser.add_argument('--warn-address-format',
-                action='store_true', default=True)
-        lint_parser.add_argument('--no-warn-address-format',
-                action='store_false', dest='warn_address_format')
+                                 action='store_true', default=True)
+        lint_parser.add_argument(
+            '--no-warn-address-format',
+            action='store_false',
+            dest='warn_address_format')
         lint_parser.add_argument('--warn-wrong-mntner', action='store_true',
-                default=True)
-        lint_parser.add_argument('--no-warn-wrong-mntner',
-                action='store_false', dest='warn_wrong_mntner')
+                                 default=True)
+        lint_parser.add_argument(
+            '--no-warn-wrong-mntner',
+            action='store_false',
+            dest='warn_wrong_mntner')
         lint_parser.add_argument('object_class', nargs='?')
         lint_parser.add_argument('object_key', nargs='?')
         # lipam list-network [--format|-F (table|objects)] [--types TYPES]
         #                    NETWORK
         list_network_parser = self.command_parsers.add_parser('list-network')
         list_network_parser.add_argument('--types', '-T',
-                default='address,network')
-        list_network_parser.add_argument('--format', '-F',
-                choices=['table', 'objects', 'primary-keys', 'primary', 'keys'],
-                default='keys')
+                                         default='address,network')
+        list_network_parser.add_argument(
+            '--format',
+            '-F',
+            choices=[
+                'table',
+                'objects',
+                'primary-keys',
+                'primary',
+                'keys'],
+            default='keys')
         list_network_parser.add_argument("--hosts", "-H", action="store_true",
-                default=False)
+                                         default=False)
         list_network_parser.add_argument("--no-hosts", action="store_false",
-                dest="hosts")
+                                         dest="hosts")
         list_network_parser.add_argument('network')
         # lipam whois ...
         whois_parser = self.command_parsers.add_parser('whois')
@@ -238,7 +264,8 @@ class IPAMTool(object):
         # lipam whois-server
         whois_server_parser = self.command_parsers.add_parser('whois-server')
         whois_server_parser.add_argument("--port", "-p", default=4343)
-        whois_server_parser.add_argument("--address", "-a", default="::1,127.0.0.1")
+        whois_server_parser.add_argument(
+            "--address", "-a", default="::1,127.0.0.1")
 
     def main(self, argv=None):
         # parse cli arguments
@@ -293,14 +320,19 @@ class IPAMTool(object):
             self._save_object(obj)
 
     def add_inverse(self):
-        objects = list(self.database.lookup(types={"host", "address"}, keys=self.args.object))
+        objects = list(
+            self.database.lookup(
+                types={
+                    "host",
+                    "address"},
+                keys=self.args.object))
         for object_class, object_key in objects:
             obj = self.database.fetch(object_class, object_key)
             if obj.object_class == "host":
                 self._add_inverse_addresses(obj)
             elif obj.object_class == "address":
                 self._add_inverse_hosts(obj)
-    
+
     def _add_inverse_addresses(self, host):
         for address in host.get("address"):
             created = False
@@ -315,7 +347,7 @@ class IPAMTool(object):
                     address.extend(host.getitems("admin-c"))
                     address.extend(host.getitems("tech-c"))
                 self._save_object(address)
-    
+
     def _add_inverse_hosts(self, address):
         for hostname in address.get("hostname"):
             created = False
@@ -334,11 +366,13 @@ class IPAMTool(object):
     def create_address(self):
         addr = netaddr.IPAddress(self.args.address)
         obj = self._new_object("address", addr)
-        if self.args.descr: obj.append("descr", self.args.descr)
+        if self.args.descr:
+            obj.append("descr", self.args.descr)
         obj.extend(("hostname", hostname) for hostname in self.args.hostname)
         obj.extend(("admin-c", admin_c) for admin_c in self.args.admin_c)
         obj.extend(("tech-c", tech_c) for tech_c in self.args.tech_c)
-        if self.args.status: obj.append("status", self.args.status)
+        if self.args.status:
+            obj.append("status", self.args.status)
         if self.args.edit:
             obj = self._edit_object(obj)
         netaddr.IPAddress(obj.object_key)
@@ -349,16 +383,18 @@ class IPAMTool(object):
     def create_host(self):
         hostname = self.args.hostname
         obj = self._new_object("host", hostname)
-        if self.args.descr: obj.append("descr", self.args.descr)
-        obj.extend((("l2-address", address) for address in self.args.l2_address),
-                append_group=True)
+        if self.args.descr:
+            obj.append("descr", self.args.descr)
+        obj.extend((("l2-address", address)
+                    for address in self.args.l2_address), append_group=True)
         obj.extend((("address", address) for address in self.args.address),
-                append_group=True)
+                   append_group=True)
         obj.extend((("admin-c", admin_c) for admin_c in self.args.admin_c),
-                append_group=True)
+                   append_group=True)
         obj.extend((("tech-c", tech_c) for tech_c in self.args.tech_c),
-                append_group=True)
-        if self.args.status: obj.append("status", self.args.status)
+                   append_group=True)
+        if self.args.status:
+            obj.append("status", self.args.status)
         if self.args.edit:
             obj = self._edit_object(obj)
         self._save_object(obj)
@@ -368,28 +404,32 @@ class IPAMTool(object):
     def create_inetnum(self):
         net = netaddr.IPNetwork(self.args.network)
         obj = self._new_object("inetnum" if net.version == 4 else "inet6num",
-                net)
-        if self.args.netname: obj.append("netname", self.args.netname)
-        if self.args.descr: obj.append("descr", self.args.descr)
-        if self.args.org: obj.append("org", self.args.obj)
+                               net)
+        if self.args.netname:
+            obj.append("netname", self.args.netname)
+        if self.args.descr:
+            obj.append("descr", self.args.descr)
+        if self.args.org:
+            obj.append("org", self.args.obj)
         obj.extend((("admin-c", admin_c) for admin_c in self.args.admin_c),
-                append_group=True)
+                   append_group=True)
         obj.extend((("tech-c", tech_c) for tech_c in self.args.tech_c),
-                append_group=True)
-        if self.args.status: obj.append("status", self.args.status)
+                   append_group=True)
+        if self.args.status:
+            obj.append("status", self.args.status)
         if self.args.edit:
             obj = self._edit_object(obj)
         self._save_object(obj)
 
     def create_object(self):
         obj = self._new_object(self.args.object_class, self.args.object_key,
-                template=self.args.template)
+                               template=self.args.template)
         obj.extend((("admin-c", admin_c) for admin_c in self.args.admin_c),
-                append_group=True)
+                   append_group=True)
         obj.extend((("tech-c", tech_c) for tech_c in self.args.tech_c),
-                append_group=True)
+                   append_group=True)
         obj.extend(((key, value) for key, value in self.args.add),
-                append_group=True)
+                   append_group=True)
         if self.args.edit:
             obj = self._edit_object(obj)
         self._save_object(obj)
@@ -411,7 +451,10 @@ class IPAMTool(object):
             if self.args.object_key:
                 objs.append((self.args.object_class, self.args.object_key))
             else:
-                objs.extend(self.database.lookup(types={self.args.object_class}))
+                objs.extend(
+                    self.database.lookup(
+                        types={
+                            self.args.object_class}))
         if self.args.object:
             for obj in self.args.object:
                 objs.append((obj[0], obj[1]))
@@ -430,18 +473,18 @@ class IPAMTool(object):
         inetnums = set()
         if self.args.delegate:
             domains = set(domain_name for _, domain_name
-                    in db.lookup(types="domain")
-                    if lglass.dns.is_subdomain(domain_name, dom) and
-                    (self.args.exact or 
-                        not lglass.dns.domain_equal(domain_name, dom)))
+                          in db.lookup(types="domain")
+                          if lglass.dns.is_subdomain(domain_name, dom) and
+                          (self.args.exact or
+                           not lglass.dns.domain_equal(domain_name, dom)))
         if self.args.fqdn:
             hosts = set(hostname for _, hostname in db.lookup(types="host")
-                    if lglass.dns.is_subdomain(hostname, dom))
+                        if lglass.dns.is_subdomain(hostname, dom))
         if lglass.dns.is_reverse_domain(dom) or not dom:
             addresses = set(address for _, address
-                    in db.lookup(types="address")
-                    if lglass.dns.is_subdomain(
-                        netaddr.IPAddress(address).reverse_dns, dom))
+                            in db.lookup(types="address")
+                            if lglass.dns.is_subdomain(
+                                netaddr.IPAddress(address).reverse_dns, dom))
         for address in sorted(addresses):
             address = db.fetch("address", address)
             rdns_domain = address.ip_address.reverse_dns
@@ -455,9 +498,12 @@ class IPAMTool(object):
             domain = db.fetch("domain", domain)
             if self.args.comments:
                 self.print("; domain: {}".format(domain.object_key))
-            self.print("\n".join(lglass.dns.generate_delegation(domain,
-                include_glue=self.args.glue,
-                include_ds=self.args.ds)))
+            self.print(
+                "\n".join(
+                    lglass.dns.generate_delegation(
+                        domain,
+                        include_glue=self.args.glue,
+                        include_ds=self.args.ds)))
             if self.args.custom_records:
                 for rr in domain.get("rr"):
                     self.print("{hostname}. {rr}".format(
@@ -498,7 +544,10 @@ class IPAMTool(object):
             if self.args.object_key:
                 objs.append((self.args.object_class, self.args.object_key))
             else:
-                objs.extend(self.database.lookup(types={self.args.object_class}))
+                objs.extend(
+                    self.database.lookup(
+                        types={
+                            self.args.object_class}))
         if self.args.object:
             for obj in self.args.object:
                 objs.append((obj[0], obj[1]))
@@ -516,14 +565,14 @@ class IPAMTool(object):
                 self.print_object(res)
                 if res.object_class == "address" and self.args.hosts:
                     for host in self.database.find(types="host",
-                            keys=res.get("hostname")):
+                                                   keys=res.get("hostname")):
                         self.print_object(host)
         elif self.args.format in {'primary', 'primary-keys', 'keys'}:
             for res in ms:
                 self.print_object(res.primary_key_object())
                 if res.object_class == "address" and self.args.hosts:
                     for host in self.database.find(types="host",
-                            keys=res.get("hostname")):
+                                                   keys=res.get("hostname")):
                         self.print_object(host.primary_key_object())
         elif self.args.format == 'table':
             self.print_network_table(net, ms)
@@ -555,9 +604,9 @@ class IPAMTool(object):
         server = lglass.whois.server.SimpleWhoisServer(self.whois_engine())
         loop = asyncio.get_event_loop()
         coro = asyncio.start_server(server.handle,
-                self.args.address.split(","),
-                self.args.port,
-                loop=loop)
+                                    self.args.address.split(","),
+                                    self.args.port,
+                                    loop=loop)
         s = loop.run_until_complete(coro)
         try:
             loop.run_forever()
@@ -582,7 +631,10 @@ class IPAMTool(object):
         if self.args.editor is not None:
             editor = self.args.editor
         with tempfile.NamedTemporaryFile("w+b", buffering=0) as fh:
-            fh.write("".join(obj.pretty_print(**self.pretty_print_options)).encode())
+            fh.write(
+                "".join(
+                    obj.pretty_print(
+                        **self.pretty_print_options)).encode())
             fh.write("% Uncomment the next line to abort process\n".encode())
             fh.write("% abort:   abort\n".encode())
             fh.flush()
@@ -619,16 +671,21 @@ class IPAMTool(object):
         return self.database.save(obj, *args, **kwargs)
 
     def print_object(self, obj, *args, **kwargs):
-        return self.print("".join(obj.pretty_print(**self.pretty_print_options)),
-                *args, **kwargs)
-    
+        return self.print(
+            "".join(
+                obj.pretty_print(
+                    **self.pretty_print_options)),
+            *args,
+            **kwargs)
+
     def print(self, *args, **kwargs):
         return print(*args, **kwargs, file=self.stdout)
+
 
 def main():
     t = IPAMTool()
     t.main()
 
+
 if __name__ == "__main__":
     main()
-

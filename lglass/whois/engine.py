@@ -12,8 +12,10 @@ import lglass.nic
 import lglass.schema
 import lglass.proxy
 
+
 def _hint_match(hint, query):
     return re.match(hint, query)
+
 
 class WhoisEngine(object):
     _schema_cache = None
@@ -25,9 +27,9 @@ class WhoisEngine(object):
     abuse_classes = {"inetnum", "inet6num", "aut-num"} | address_classes
 
     def __init__(self, database=None, use_schemas=False, type_hints=None,
-            global_cache=None, query_cache=True,
-            ipv4_more_specific_prefixlens=None,
-            ipv6_more_specific_prefixlens=None):
+                 global_cache=None, query_cache=True,
+                 ipv4_more_specific_prefixlens=None,
+                 ipv6_more_specific_prefixlens=None):
         self.database = database
         self.use_schemas = use_schemas
         self._schema_cache = {}
@@ -67,12 +69,12 @@ class WhoisEngine(object):
         if "address" in classes:
             classes.update(self.address_classes)
         classes = set(self.database.primary_class(c)
-                for c in classes).intersection(self.database.object_classes)
+                      for c in classes).intersection(self.database.object_classes)
         return classes
 
     def query(self, query, classes=None, reverse_domain=False, recursive=True,
-            less_specific_levels=0, exact_match=False, database=None,
-            more_specific_levels=0, sources=None):
+              less_specific_levels=0, exact_match=False, database=None,
+              more_specific_levels=0, sources=None):
         if database is None:
             database = self.new_query_database()
         classes = self.filter_classes(classes)
@@ -83,27 +85,35 @@ class WhoisEngine(object):
             primary_classes.update(self.cidr_classes)
 
         if isinstance(query, dict):
-            primary_results = list(self.query_search_inverse(query,
+            primary_results = list(
+                self.query_search_inverse(
+                    query,
                     classes=primary_classes,
                     database=database))
         else:
             primary_results = list(self.query_primary(query,
-                classes=primary_classes,
-                database=database,
-                exact_match=exact_match))
-        
+                                                      classes=primary_classes,
+                                                      database=database,
+                                                      exact_match=exact_match))
+
         if less_specific_levels != 0:
             for obj in list(primary_results):
                 if obj.object_class in self.cidr_classes:
-                    primary_results = list(self.query_less_specifics(obj,
-                        levels=less_specific_levels,
-                        database=database))[::-1] + primary_results
+                    primary_results = list(
+                        self.query_less_specifics(
+                            obj,
+                            levels=less_specific_levels,
+                            database=database))[
+                        ::-1] + primary_results
 
         if more_specific_levels != 0:
             for obj in frozenset(primary_results):
                 if obj.object_class in self.cidr_classes:
-                    primary_results.extend(self.query_more_specifics(obj,
-                        levels=more_specific_levels, database=database))
+                    primary_results.extend(
+                        self.query_more_specifics(
+                            obj,
+                            levels=more_specific_levels,
+                            database=database))
 
         if reverse_domain:
             for obj in list(primary_results):
@@ -114,15 +124,15 @@ class WhoisEngine(object):
                         classes=classes))
 
         results = {obj: [obj]
-                for obj in primary_results
-                if database.primary_class(obj.object_class) in classes}
+                   for obj in primary_results
+                   if database.primary_class(obj.object_class) in classes}
 
         for obj in results.keys():
             if recursive:
                 results[obj].extend(self.query_inverse(obj, database=database))
-        
+
         return results
-    
+
     def query_search_inverse(self, query, classes=None, database=None):
         if database is None:
             database = self.new_query_database()
@@ -130,7 +140,7 @@ class WhoisEngine(object):
         yield from database.search(query, types=classes)
 
     def query_primary(self, query, classes=None, exact_match=False,
-            database=None):
+                      database=None):
         if database is None:
             database = self.new_query_database()
 
@@ -178,7 +188,7 @@ class WhoisEngine(object):
         try:
             net = netaddr.IPNetwork(query)
             yield from self.query_network(net, classes=classes,
-                    exact_match=exact_match, database=database)
+                                          exact_match=exact_match, database=database)
             return
         except netaddr.core.AddrFormatError:
             pass
@@ -186,20 +196,20 @@ class WhoisEngine(object):
             netrange = lglass.nic.parse_ip_range(query)
             for net in netrange.cidrs():
                 yield from self.query_network(net, classes=classes,
-                        exact_match=exact_match, database=database)
+                                              exact_match=exact_match, database=database)
                 pass
         except (netaddr.core.AddrFormatError, IndexError, ValueError):
             pass
-        
+
         for hint, typ in self.type_hints.items():
             if _hint_match(hint, query):
                 yield from database.find(keys=query, types=typ)
                 return
-        
+
         yield from database.find(keys=query, types=classes)
 
     def query_network(self, net, classes=None, exact_match=False,
-            database=None):
+                      database=None):
         if database is None:
             database = self.new_query_database()
 
@@ -222,8 +232,8 @@ class WhoisEngine(object):
         else:
             inetnums = database.lookup(types=inetnum_classes, keys=supernets)
         routes = database.lookup(types=route_classes,
-                keys=lambda s: s.startswith(tuple(supernets)))
-        #routes = database.search(
+                                 keys=lambda s: s.startswith(tuple(supernets)))
+        # routes = database.search(
         #        query={rc: set(supernets) for rc in route_classes},
         #        types=route_classes)
 
@@ -231,8 +241,8 @@ class WhoisEngine(object):
             yield address
         # Sort inetnum objects by prefix length
         inetnums = sorted(list(inetnums),
-                key=lambda s: netaddr.IPNetwork(s[1]).prefixlen,
-                reverse=True)
+                          key=lambda s: netaddr.IPNetwork(s[1]).prefixlen,
+                          reverse=True)
         if inetnums:
             inetnum = database.fetch(*inetnums[0])
             yield inetnum
@@ -274,7 +284,7 @@ class WhoisEngine(object):
         inverse_objects.update(obj.get("org"))
         for inverse in inverse_objects:
             yield from database.find(types=self.handle_classes,
-                    keys=inverse)
+                                     keys=inverse)
 
     def query_abuse(self, obj, database=None):
         if database is None:
@@ -296,7 +306,7 @@ class WhoisEngine(object):
             return
         try:
             abuse_contact = next(database.find(types=self.handle_classes,
-                    keys=abuse_contact_key))
+                                               keys=abuse_contact_key))
         except StopIteration:
             return
         if not abuse_contact:
@@ -362,49 +372,63 @@ class WhoisEngine(object):
             self._schema_cache[typ] = schema
             return schema
 
+
 def new_argparser(cls=argparse.ArgumentParser, *args, **kwargs):
     if not isinstance(cls, type):
         argparser = cls
     else:
         argparser = cls(*args, **kwargs)
-    argparser.add_argument("--domains", "-d", action="store_true",
-            default=False, help="return DNS reverse delegation objects too")
+    argparser.add_argument(
+        "--domains",
+        "-d",
+        action="store_true",
+        default=False,
+        help="return DNS reverse delegation objects too")
     argparser.add_argument("--types", "-T",
-            help="only look for objects of TYPE")
+                           help="only look for objects of TYPE")
     argparser.add_argument("--one-more", "-m", action="store_const",
-            const=1, dest="more_specific_levels", default=0,
-            help="find all one level more specific matches")
+                           const=1, dest="more_specific_levels", default=0,
+                           help="find all one level more specific matches")
     argparser.add_argument("--all-more", "-M", action="store_const",
-            const=-1, dest="more_specific_levels",
-            help="find all levels of more specific matches")
+                           const=-1, dest="more_specific_levels",
+                           help="find all levels of more specific matches")
     argparser.add_argument("--one-less", "-l", action="store_const",
-            const=1, dest="less_specific_levels", default=0,
-            help="find the one level less specific match")
+                           const=1, dest="less_specific_levels", default=0,
+                           help="find the one level less specific match")
     argparser.add_argument("--all-less", "-L", action="store_const",
-            const=-1, dest="less_specific_levels",
-            help="find all levels less specific matches")
+                           const=-1, dest="less_specific_levels",
+                           help="find all levels less specific matches")
     argparser.add_argument("--exact", "-x", action="store_true",
-            default=False, help="exact match")
-    argparser.add_argument("--no-recurse", "-r", action="store_true",
-            default=False,
-            help="turn off recursive look-ups for contact information")
-    argparser.add_argument("--primary-keys", "-K", action="store_true",
-            default=False, help="only primary keys are returned")
+                           default=False, help="exact match")
+    argparser.add_argument(
+        "--no-recurse",
+        "-r",
+        action="store_true",
+        default=False,
+        help="turn off recursive look-ups for contact information")
+    argparser.add_argument(
+        "--primary-keys",
+        "-K",
+        action="store_true",
+        default=False,
+        help="only primary keys are returned")
     argparser.add_argument("terms", nargs="*")
     return argparser
 
+
 def args_to_query_kwargs(args):
     kwargs = dict(
-            reverse_domain=args.domains,
-            less_specific_levels=args.less_specific_levels,
-            more_specific_levels=args.more_specific_levels,
-            exact_match=args.exact,
-            recursive=not args.no_recurse)
+        reverse_domain=args.domains,
+        less_specific_levels=args.less_specific_levels,
+        more_specific_levels=args.more_specific_levels,
+        exact_match=args.exact,
+        recursive=not args.no_recurse)
     if args.types is not None:
         kwargs["classes"] = args.types.split(",")
     if args.primary_keys:
         kwargs["recursive"] = False
     return kwargs
+
 
 def main(args=None, stdout=sys.stdout):
     import argparse
@@ -415,7 +439,7 @@ def main(args=None, stdout=sys.stdout):
 
     argparser = new_argparser(description="Perform whois lookups directly")
     argparser.add_argument("--database", "-D", help="Path to database",
-            default=".")
+                           default=".")
     argparser.add_argument("-q")
     argparser.add_argument("--inverse", "-i")
 
@@ -430,8 +454,8 @@ def main(args=None, stdout=sys.stdout):
     query_kwargs = args_to_query_kwargs(args)
 
     pretty_print_options = dict(
-            min_padding=16,
-            add_padding=0)
+        min_padding=16,
+        add_padding=0)
 
     if args.q == "types":
         print("\n".join(db.object_classes))
@@ -454,7 +478,7 @@ def main(args=None, stdout=sys.stdout):
             abuse_contact = eng.query_abuse(primary)
             if abuse_contact:
                 print("% Abuse contact for '{}' is '{}'".format(primary_key,
-                    abuse_contact))
+                                                                abuse_contact))
                 print()
             if args.primary_keys:
                 primary = primary.primary_key_object()
@@ -466,9 +490,9 @@ def main(args=None, stdout=sys.stdout):
             for obj in related_objects:
                 print("".join(obj.pretty_print(**pretty_print_options)))
     print("% Query took {} seconds".format(time.time() - start_time),
-            file=stdout)
+          file=stdout)
+
 
 if __name__ == "__main__":
     import cProfile
     main()
-

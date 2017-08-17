@@ -40,4 +40,3 @@ setuptools.setup(
     package_data={
     }
 )
-

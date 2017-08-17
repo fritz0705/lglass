@@ -4,6 +4,7 @@ import netaddr
 
 import lglass.nic
 
+
 class HostObject(lglass.nic.NicObject):
     @property
     def addresses(self):
@@ -43,6 +44,7 @@ class HostObject(lglass.nic.NicObject):
     @status.deleter
     def status(self):
         del self["status"]
+
 
 class AddressObject(lglass.nic.NicObject):
     @property
@@ -101,8 +103,9 @@ class AddressObject(lglass.nic.NicObject):
     def status(self):
         try:
             return self["status"]
-        except:
+        except BaseException:
             pass
+
 
 class IPAMDatabaseMixin(lglass.nic.NicDatabaseMixin):
     def __init__(self):
@@ -114,12 +117,13 @@ class IPAMDatabaseMixin(lglass.nic.NicDatabaseMixin):
         self.object_classes = set(self.object_classes)
         self.object_classes.update({"address", "host"})
 
+
 class FileDatabase(lglass.nic.FileDatabase, IPAMDatabaseMixin):
     def __init__(self, *args, **kwargs):
         lglass.nic.FileDatabase.__init__(self, *args, **kwargs)
         IPAMDatabaseMixin.__init__(self)
 
+
 if __name__ == "__main__":
     import lglass.lipam
     lglass.lipam.main()
-

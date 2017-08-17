@@ -4,9 +4,10 @@ import datetime
 
 import lglass.database
 
+
 class CacheProxyDatabase(lglass.database.ProxyDatabase):
     def __init__(self, backend, cache_presence=True, cache_objects=True,
-            lifetime=None, cache_backend=dict):
+                 lifetime=None, cache_backend=dict):
         super().__init__(backend)
         self.cache_presence = cache_presence
         self.cache_objects = cache_objects
@@ -43,7 +44,7 @@ class CacheProxyDatabase(lglass.database.ProxyDatabase):
         elif self.cache_presence:
             self._cache[(object_class, object_key)] = (True, expires_at)
         return obj
-    
+
     def lookup(self, types=None, keys=None):
         if isinstance(types, str):
             types = {types}
@@ -72,6 +73,7 @@ class CacheProxyDatabase(lglass.database.ProxyDatabase):
         for key, (obj, expires_at) in other.cache_items():
             self._cache[key] = (obj, expires_at)
 
+
 class NotifyProxyDatabase(lglass.database.ProxyDatabase):
     def __init__(self, backend, on_update=None, on_delete=None):
         super().__init__(backend)
@@ -89,4 +91,3 @@ class NotifyProxyDatabase(lglass.database.ProxyDatabase):
     def save(self, obj, **options):
         super().save(obj, **options)
         self.on_update(obj)
-

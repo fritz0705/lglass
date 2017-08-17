@@ -7,6 +7,7 @@ import lglass.object
 
 db = lglass.nic.FileDatabase(sys.argv[1])
 
+
 def objects(lines):
     obj = []
     for line in lines:
@@ -20,6 +21,7 @@ def objects(lines):
     if obj:
         yield obj
 
+
 for obj in objects(sys.stdin.readlines()):
     obj = lglass.object.parse_object(obj)
     obj = db.object_class_type(obj[0][0])(obj)
@@ -31,4 +33,3 @@ for obj in objects(sys.stdin.readlines()):
 
     db.save(obj)
     print("Save {} {}".format(obj.object_class, db.primary_key(obj)))
-

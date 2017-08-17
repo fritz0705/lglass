@@ -6,6 +6,7 @@ import datetime
 import lglass.nic
 import lglass.dn42
 
+
 def sync(src, dst, dn42=False, delete=True):
     last_update = dst.manifest.last_modified_datetime
 
@@ -33,9 +34,12 @@ def sync(src, dst, dn42=False, delete=True):
                 yield ('FOREIGN', obj.object_class, obj.primary_key)
                 continue
             original_primary_key = src.primary_key(obj)
-            original_object = src.try_fetch(obj.object_class, original_primary_key)
-            d = original_object is None or (obj.object_class in {"route", "route6"} and
-                    obj["origin"] not in original_object.get("origin") and dn42)
+            original_object = src.try_fetch(
+                obj.object_class, original_primary_key)
+            d = original_object is None or (
+                obj.object_class in {
+                    "route",
+                    "route6"} and obj["origin"] not in original_object.get("origin") and dn42)
             if d:
                 yield ('DEL', obj.object_class, obj.primary_key)
                 dst.delete(obj)
@@ -44,9 +48,10 @@ def sync(src, dst, dn42=False, delete=True):
     dst.manifest.last_modified = datetime.datetime.now()
     dst.save_manifest()
 
+
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
-            description="Sync local database with DN42 database")
+        description="Sync local database with DN42 database")
     argparser.add_argument("--from-dn42", action="store_true")
     argparser.add_argument("--no-delete", action="store_true")
     argparser.add_argument("--mqtt-broker")
@@ -65,7 +70,7 @@ if __name__ == "__main__":
 
     actions = []
     for action, object_class, object_key in sync(src, dst, dn42=args.from_dn42,
-            delete=not args.no_delete):
+                                                 delete=not args.no_delete):
         if not args.quiet:
             print("{} {}:   {}".format(action, object_class, object_key))
         actions.append((action, object_class, object_key))
@@ -78,4 +83,3 @@ if __name__ == "__main__":
         for a in actions:
             mqttc.publish(args.mqtt_topic, "{} {}: {}".format(*a))
         mqttc.loop_stop(force=False)
-
