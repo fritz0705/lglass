@@ -80,7 +80,8 @@ class SimpleWhoisServer(object):
         argparser = lglass.whois.engine.new_argparser(
             cls=SolidArgumentParser, add_help=False, prog="whois")
         argparser.add_argument("--persistent-connection", "-k",
-                               action="store_true", default=False)
+                               action="store_true", default=False,
+                               help=argparse.SUPPRESS)
         argparser.add_argument(
             "--inverse",
             "-i",
