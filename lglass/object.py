@@ -114,6 +114,7 @@ class Object(object):
 
     def __getitem__(self, key):
         if isinstance(key, str):
+            key = key.replace("_", "-")
             try:
                 return list(self.get(key))[0]
             except IndexError:
@@ -132,6 +133,7 @@ class Object(object):
         if isinstance(key, (int, slice)):
             self.data[key] = value
         elif isinstance(key, str):
+            key = key.replace("_", "-")
             if key not in self:
                 self.append(key, value)
             else:
@@ -141,6 +143,7 @@ class Object(object):
 
     def __delitem__(self, key):
         if isinstance(key, (int, slice)):
+            key = key.replace("_", "-")
             del self.data[key]
         else:
             self.remove(key)
@@ -161,6 +164,7 @@ class Object(object):
         return next(self.get(key), default)
 
     def add(self, key, value, index=None):
+        value = str(value)
         if index is not None:
             self._data.insert(index, (key, value))
         else:
