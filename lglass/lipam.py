@@ -85,6 +85,8 @@ class IPAMTool(object):
                                         default=[])
         create_host_parser.add_argument("--l2-address", "-2", action="append",
                                         default=[])
+        create_host_parser.add_argument("--eui64", "-64", action="append",
+                default=[])
         create_host_parser.add_argument("--add-inverse", "-i",
                                         action="store_true", default=False)
         create_host_parser.add_argument(
@@ -401,6 +403,10 @@ class IPAMTool(object):
                     for address in self.args.l2_address), append_group=True)
         obj.extend((("address", address) for address in self.args.address),
                    append_group=True)
+        for prefix in self.args.eui64:
+            for l2_address in self.args.l2_address:
+                obj.append("address", str(netaddr.EUI(l2_address).ipv6(
+                    netaddr.IPNetwork(prefix)[0])))
         obj.extend((("admin-c", admin_c) for admin_c in self.args.admin_c),
                    append_group=True)
         obj.extend((("tech-c", tech_c) for tech_c in self.args.tech_c),
