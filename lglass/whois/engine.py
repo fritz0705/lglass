@@ -143,6 +143,7 @@ class WhoisEngine(object):
                       database=None):
         if database is None:
             database = self.new_query_database()
+        query = query.upper()
 
         classes = self.filter_classes(classes)
 
