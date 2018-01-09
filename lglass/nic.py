@@ -376,20 +376,23 @@ class NicDatabaseMixin(object):
 class FileDatabase(lglass.database.Database, NicDatabaseMixin):
     _manifest = None
 
-    def __init__(self, path, read_only=False):
+    def __init__(self, path, read_only=False, case_insensitive=True):
         NicDatabaseMixin.__init__(self)
         self._path = path
         self.read_only = read_only
+        self.case_insensitive = case_insensitive
 
     def _build_path(self, object_class, object_key=None):
         if object_key is None:
             return os.path.join(self._path, object_class)
+        if self.case_insensitive is True:
+            object_key = object_key.lower()
         return os.path.join(
             self._path,
             object_class,
             object_key.replace(
                 "/",
-                "_").lower())
+                "_"))
 
     def lookup(self, types=None, keys=None):
         if types is None:
