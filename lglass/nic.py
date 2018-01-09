@@ -389,7 +389,7 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             object_class,
             object_key.replace(
                 "/",
-                "_"))
+                "_").lower())
 
     def lookup(self, types=None, keys=None):
         if types is None:
