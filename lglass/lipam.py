@@ -258,6 +258,16 @@ class IPAMTool(object):
         list_network_parser.add_argument("--no-hosts", action="store_false",
                                          dest="hosts")
         list_network_parser.add_argument('network')
+        # lipam rename-object object_class old_object_key new_object_key
+        rename_object_parser = self.command_parsers.add_parser("rename-object",
+                aliases=["rename", "move", "move-object"])
+        rename_object_parser.add_argument("object_class")
+        rename_object_parser.add_argument("old_object_key")
+        rename_object_parser.add_argument("new_object_key")
+        # lipam renumber old_ip_address new_ip_address
+        renumber_parser = self.command_parsers.add_parser("renumber")
+        renumber_parser.add_argument("old_ip_address")
+        renumber_parser.add_argument("new_ip_address")
         # lipam whois ...
         whois_parser = self.command_parsers.add_parser('whois')
         lglass.whois.engine.new_argparser(whois_parser)
@@ -301,6 +311,8 @@ class IPAMTool(object):
             return self.lint()
         elif sc == "list-network":
             return self.list_network()
+        elif sc in {"move", "move-object", "rename", "rename-object"}:
+            return self.rename_object()
         elif sc == "whois":
             return self.whois()
         elif sc == "whois-server":
@@ -576,6 +588,23 @@ class IPAMTool(object):
                         self.print_object(host.primary_key_object())
         elif self.args.format == 'table':
             self.print_network_table(net, ms)
+
+    def rename_object(self):
+        obj = self.database.fetch(self.args.object_class,
+                self.args.old_object_key)
+        nobj = obj.copy()
+        nobj.object_key = self.args.new_object_key
+        try:
+            self._save_object(nobj)
+            self.database.delete(obj)
+        except:
+            try:
+                self.database.delete(nobj)
+            except:
+                pass
+            finally:
+                self._save_object(obj)
+            raise
 
     def whois(self):
         eng = self.whois_engine()
