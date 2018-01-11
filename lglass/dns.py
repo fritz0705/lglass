@@ -95,7 +95,7 @@ def generate_delegation(
             for glue in glues:
                 yield glue_record(server, glue)
     if include_ds:
-        for ds_rrdata in domain.get("ds-rrdata"):
+        for ds_rrdata in domain.get("ds-rdata"):
             yield ds_delegation(domain["domain"], ds_rrdata)
 
 

@@ -28,7 +28,7 @@ def fix_object(obj):
         if obj.object_class == "inet6num":
             nobj.object_key = nobj.primary_key
         nobj.remove("nserver")
-        nobj.remove("ds-rrdata")
+        nobj.remove("ds-rdata")
         yield nobj
     else:
         yield obj
@@ -42,7 +42,7 @@ class InetnumObject(lglass.nic.InetnumObject):
             obj = DomainObject([("domain", rdns_domain)])
             for k, v in self.items():
                 if k in {"zone-c", "admin-c", "tech-c", "mnt-by", "nserver",
-                         "ds-rrdata", "created", "last-modified", "source"}:
+                         "ds-rdata", "created", "last-modified", "source"}:
                     obj.add(k, v)
             yield obj
 
