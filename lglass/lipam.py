@@ -86,7 +86,7 @@ class IPAMTool(object):
         create_host_parser.add_argument("--l2-address", "-2", action="append",
                                         default=[])
         create_host_parser.add_argument("--eui64", "-64", action="append",
-                default=[])
+                                        default=[])
         create_host_parser.add_argument("--add-inverse", "-i",
                                         action="store_true", default=False)
         create_host_parser.add_argument(
@@ -262,7 +262,7 @@ class IPAMTool(object):
         list_network_parser.add_argument('network')
         # lipam rename-object object_class old_object_key new_object_key
         rename_object_parser = self.command_parsers.add_parser("rename-object",
-                aliases=["rename", "move", "move-object"])
+                                                               aliases=["rename", "move", "move-object"])
         rename_object_parser.add_argument("object_class")
         rename_object_parser.add_argument("old_object_key")
         rename_object_parser.add_argument("new_object_key")
@@ -597,7 +597,7 @@ class IPAMTool(object):
 
     def rename_object(self):
         obj = self.database.fetch(self.args.object_class,
-                self.args.old_object_key)
+                                  self.args.old_object_key)
         nobj = obj.copy()
         nobj.object_key = self.args.new_object_key
         try:
