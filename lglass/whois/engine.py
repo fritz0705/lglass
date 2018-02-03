@@ -270,6 +270,14 @@ class WhoisEngine(object):
             for key, _, _, inverse in schema.schema_keys():
                 if "nic-hdl" in inverse:
                     inverse.extend(self.handle_classes)
+                if "nic-cidr" in inverse:
+                    inverse.extend(self.cidr_classes)
+                if "nic-addr" in inverse:
+                    inverse.extend(self.address_classes)
+                if "nic-route" in inverse:
+                    inverse.extend(self.route_classes)
+                if "nic-net" in inverse:
+                    inverse.extend(self.network_classes)
                 for value in obj.get(key):
                     for inv in inverse:
                         inverse_objects.add((inv, value))
