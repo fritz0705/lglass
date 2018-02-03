@@ -77,7 +77,10 @@ class Database(object):
 
     def find(self, filter=None, types=None, keys=None):
         for object_class, object_key in self.lookup(types=types, keys=keys):
-            obj = self.fetch(object_class, object_key)
+            try:
+                obj = self.fetch(object_class, object_key)
+            except:
+                continue
             if not filter or filter(obj):
                 yield obj
 
