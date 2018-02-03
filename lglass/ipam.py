@@ -107,15 +107,30 @@ class AddressObject(lglass.nic.NicObject):
             pass
 
 
+class SegmentObject(lglass.nic.NicObject):
+    @property
+    def networks(self):
+        return list(self.get("net"))
+
+    @property
+    def vlan_id(self):
+        return int(self["vlan-id"])
+
+    @property
+    def members(self):
+        pass
+
+
 class IPAMDatabaseMixin(lglass.nic.NicDatabaseMixin):
     def __init__(self):
         lglass.nic.NicDatabaseMixin.__init__(self)
         self.object_class_types = dict(self.object_class_types)
         self.object_class_types.update({
             "address": AddressObject,
-            "host": HostObject})
+            "host": HostObject,
+            "segment": SegmentObject})
         self.object_classes = set(self.object_classes)
-        self.object_classes.update({"address", "host"})
+        self.object_classes.update({"address", "host", "segment"})
 
 
 class FileDatabase(lglass.nic.FileDatabase, IPAMDatabaseMixin):

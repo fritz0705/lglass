@@ -184,6 +184,9 @@ class WhoisEngine(object):
         elif query.startswith("IRT-") and "irt" in classes:
             yield from database.find(keys=query, types="irt")
             return
+        elif query.startswith("SEG-") and "segment" in classes:
+            yield from database.find(keys=query, types="segment")
+            return
 
         try:
             net = netaddr.IPNetwork(query)
