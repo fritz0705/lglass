@@ -1,6 +1,5 @@
 # coding: utf-8
 
-
 class Object(object):
     def __init__(self, data=None, **kwargs):
         self._data = []
@@ -408,6 +407,7 @@ def parse_object(lines, pragmas={}):
             raise ValueError("Syntax error: Missing value")
 
         if pragmas["strict-ripe"]:
+            import re
             if not re.match("^[a-zA-Z0-9-]+$", key):
                 raise ValueError(
                     "Syntax error: Key doesn't match RIPE database requirements")
