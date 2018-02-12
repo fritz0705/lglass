@@ -21,9 +21,8 @@ setuptools.setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Operating System :: POSIX",
-        "Programming Language :: Python :: 3.6",
-        "Topic :: Internet :: Log Analysis",
-        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.7",
         "Topic :: System :: Networking",
         "Topic :: System :: Systems Administration"
     ],
