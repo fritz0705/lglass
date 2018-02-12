@@ -55,7 +55,8 @@ class DN42Database(lglass.nic.FileDatabase):
     version = 0
 
     def __init__(self, path, force_version=None, case_insensitive=False):
-        lglass.nic.FileDatabase.__init__(self, path, case_insensitive=case_insensitive)
+        lglass.nic.FileDatabase.__init__(
+            self, path, case_insensitive=case_insensitive)
         self.object_class_types = dict(self.object_class_types)
         self.object_class_types.update({
             "domain": DomainObject,

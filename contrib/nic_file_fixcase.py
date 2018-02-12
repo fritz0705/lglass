@@ -12,4 +12,3 @@ new_db = lglass.nic.FileDatabase(sys.argv[1], case_insensitive=True)
 for obj in old_db.find():
     old_db.delete(obj)
     new_db.save(obj)
-
