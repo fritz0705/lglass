@@ -1,5 +1,6 @@
 # coding: utf-8
 
+
 class Object(object):
     def __init__(self, data=None, **kwargs):
         self._data = []
@@ -257,19 +258,19 @@ class Object(object):
         return cls(string)
 
 
-def parse_objects(lines, pragmas=None):
+def parse_objects(lines, pragmas={}):
     lines_iter = iter(lines)
     obj = []
     for line in lines_iter:
         if not line.strip() and obj:
-            obj = parse_object(obj)
+            obj = parse_object(obj, pragmas=pragmas)
             if obj:
                 yield obj
             obj = []
         else:
             obj.append(line)
     if obj:
-        obj = parse_object(obj)
+        obj = parse_object(obj, pragmas=pragmas)
         if obj:
             yield obj
 
