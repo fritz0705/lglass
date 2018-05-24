@@ -117,6 +117,10 @@ class SegmentObject(lglass.nic.NicObject):
         return int(self["vlan-id"])
 
     @property
+    def vxlan_vni(self):
+        return int(self["vxlan-vni"])
+
+    @property
     def members(self):
         pass
 
