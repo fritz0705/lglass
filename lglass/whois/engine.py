@@ -55,7 +55,7 @@ class WhoisEngine(object):
         if self.database is not None:
             return self.new_query_database()
         raise TypeError("positional argument 'database' required for unbound"
-                " whois engine")
+                        " whois engine")
 
     def filter_classes(self, classes, *other_class_sets, database=None):
         database = self._get_database(database)
@@ -223,11 +223,11 @@ class WhoisEngine(object):
             classes = set(classes).intersection(self.network_classes)
 
         inetnum_classes = self.filter_classes(classes, self.cidr_classes,
-                database=database)
+                                              database=database)
         route_classes = self.filter_classes(classes, self.route_classes,
-                database=database)
+                                            database=database)
         address_classes = self.filter_classes(classes, self.address_classes,
-                database=database)
+                                              database=database)
 
         if not isinstance(net, netaddr.IPNetwork):
             net = netaddr.IPNetwork(net)
