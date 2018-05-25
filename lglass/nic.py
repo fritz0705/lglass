@@ -17,7 +17,7 @@ def parse_asn(asn):
         return int(asn)
     except ValueError:
         pass
-    m = re.match("AS([0-9]+)$", asn)
+    m = re.match("[aA][sS]([0-9]+)$", asn)
     if m:
         return int(m[1])
 

@@ -148,7 +148,7 @@ class WhoisEngine(object):
 
         classes = self.filter_classes(classes, database=database)
 
-        if re.match(r"AS[0-9]+$", query):
+        if re.match(r"as[0-9]+$", query):
             # aut-num lookup
             if "aut-num" in classes:
                 yield from database.find(keys=query, types="aut-num")
