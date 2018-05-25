@@ -44,18 +44,23 @@ class WhoisEngine(object):
         self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
         self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
 
-    @property
-    def domain_class(self):
-        return self.database.primary_class("domain")
-
     def new_query_database(self):
         if self.query_cache:
             return lglass.proxy.CacheProxyDatabase(self.database)
         return self.database
 
-    def filter_classes(self, classes, *other_class_sets):
+    def _get_database(self, prototype):
+        if prototype is not None:
+            return prototype
+        if self.database is not None:
+            return self.new_query_database()
+        raise TypeError("positional argument 'database' required for unbound"
+                " whois engine")
+
+    def filter_classes(self, classes, *other_class_sets, database=None):
+        database = self._get_database(database)
         if classes is None:
-            classes = self.database.object_classes
+            classes = database.object_classes
         elif isinstance(classes, str):
             classes = {classes}
         else:
@@ -68,18 +73,17 @@ class WhoisEngine(object):
             classes.update(self.cidr_classes)
         if "address" in classes:
             classes.update(self.address_classes)
-        classes = set(self.database.primary_class(c)
-                      for c in classes).intersection(self.database.object_classes)
+        classes = set(database.primary_class(c)
+                      for c in classes).intersection(database.object_classes)
         return classes
 
     def query(self, query, classes=None, reverse_domain=False, recursive=True,
               less_specific_levels=0, exact_match=False, database=None,
               more_specific_levels=0, sources=None):
-        if database is None:
-            database = self.new_query_database()
-        classes = self.filter_classes(classes)
+        database = self._get_database(database)
+        classes = self.filter_classes(classes, database=database)
         primary_classes = set(classes)
-        if self.domain_class in primary_classes:
+        if database.primary_class("domain") in primary_classes:
             primary_classes.update(self.cidr_classes)
         if self.address_classes & primary_classes and more_specific_levels:
             primary_classes.update(self.cidr_classes)
@@ -134,17 +138,15 @@ class WhoisEngine(object):
         return results
 
     def query_search_inverse(self, query, classes=None, database=None):
-        if database is None:
-            database = self.new_query_database()
+        database = self._get_database(database)
         classes = self.filter_classes(classes)
         yield from database.search(query, types=classes)
 
     def query_primary(self, query, classes=None, exact_match=False,
                       database=None):
-        if database is None:
-            database = self.new_query_database()
+        database = self._get_database(database)
 
-        classes = self.filter_classes(classes)
+        classes = self.filter_classes(classes, database=database)
 
         if re.match(r"AS[0-9]+$", query):
             # aut-num lookup
@@ -213,17 +215,19 @@ class WhoisEngine(object):
 
     def query_network(self, net, classes=None, exact_match=False,
                       database=None):
-        if database is None:
-            database = self.new_query_database()
+        database = self._get_database(database)
 
         if classes is None:
             classes = self.network_classes
         else:
             classes = set(classes).intersection(self.network_classes)
 
-        inetnum_classes = self.filter_classes(classes, self.cidr_classes)
-        route_classes = self.filter_classes(classes, self.route_classes)
-        address_classes = self.filter_classes(classes, self.address_classes)
+        inetnum_classes = self.filter_classes(classes, self.cidr_classes,
+                database=database)
+        route_classes = self.filter_classes(classes, self.route_classes,
+                database=database)
+        address_classes = self.filter_classes(classes, self.address_classes,
+                database=database)
 
         if not isinstance(net, netaddr.IPNetwork):
             net = netaddr.IPNetwork(net)
@@ -257,8 +261,7 @@ class WhoisEngine(object):
                 yield route
 
     def query_inverse(self, obj, database=None):
-        if database is None:
-            database = self.new_query_database()
+        database = self._get_database(database)
         schema = None
         if self.use_schemas:
             try:
@@ -298,8 +301,7 @@ class WhoisEngine(object):
                                      keys=inverse)
 
     def query_abuse(self, obj, database=None):
-        if database is None:
-            database = self.new_query_database()
+        database = self._get_database(database)
         if obj.object_class not in self.abuse_classes:
             return
         abuse_contact_key = None
@@ -382,6 +384,19 @@ class WhoisEngine(object):
             schema = lglass.schema.load_schema(self.database, typ)
             self._schema_cache[typ] = schema
             return schema
+
+
+default_engine = WhoisEngine()
+
+query = default_engine.query
+query_search_inverse = default_engine.query_search_inverse
+query_primary = default_engine.query_primary
+query_network = default_engine.query_network
+query_inverse = default_engine.query_inverse
+query_abuse = default_engine.query_abuse
+query_reverse_domain = default_engine.query_reverse_domains
+query_more_specifics = default_engine.query_more_specifics
+query_less_specifics = default_engine.query_less_specifics
 
 
 def new_argparser(cls=argparse.ArgumentParser, *args, **kwargs):
