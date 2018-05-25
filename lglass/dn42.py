@@ -9,7 +9,7 @@ import lglass.nic
 
 
 def _format_as_block_key(obj):
-    return "{}_{}".format(obj.start, obj.end)
+    return "AS{}-AS{}".format(obj.start, obj.end)
 
 
 def fix_object(obj):
