@@ -331,7 +331,8 @@ class WhoisEngine(object):
         if database is None:
             database = self.new_query_database()
         classes = self.filter_classes(classes)
-        if self.domain_class not in classes:
+        domain_class = database.primary_class("domain")
+        if domain_class not in classes:
             return
         try:
             net = netaddr.IPNetwork(term)
@@ -339,7 +340,7 @@ class WhoisEngine(object):
             return
         for subnet, domain in lglass.dns.rdns_subnets(net):
             try:
-                yield database.fetch(self.domain_class, domain)
+                yield database.fetch(domain_class, domain)
             except KeyError:
                 pass
 
