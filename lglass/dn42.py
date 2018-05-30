@@ -92,8 +92,8 @@ class DN42Database(lglass.nic.FileDatabase):
         existing_domains = {
             domain for _,
             domain in super().lookup(
-                types="dns")}
-        inetnums = list(self.find(types={"inetnum", "inet6num"}))
+                classes="dns")}
+        inetnums = list(self.find(classes={"inetnum", "inet6num"}))
         inetnums = sorted(inetnums,
                           key=lambda d: d.ip_network.prefixlen,
                           reverse=True)
@@ -158,7 +158,7 @@ class DN42Database(lglass.nic.FileDatabase):
         for dns in super()._lookup_class("dns", keys):
             found.add(dns)
             yield dns
-        for inetnum in self.lookup(types={"inetnum", "inet6num"}):
+        for inetnum in self.lookup(classes={"inetnum", "inet6num"}):
             try:
                 inetnum = self.fetch(*inetnum)
                 if inetnum.ip_network.prefixlen > 24 and \

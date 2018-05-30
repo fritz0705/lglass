@@ -66,9 +66,9 @@ if __name__ == "__main__":
     db = lglass.dn42.DN42Database(args.database)
 
     if args.version == 4:
-        types = {"route"}
+        classes = {"route"}
     elif args.version == 6:
-        types = {"route6"}
+        classes = {"route6"}
     else:
         pass
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         else:
             print("flush roa")
 
-    for route in db.find(types=types):
+    for route in db.find(classes=classes):
         for entry in roa_entries(route):
             if args.weak_maxlen:
                 entry = list(entry)

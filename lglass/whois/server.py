@@ -209,7 +209,7 @@ class SimpleWhoisServer(object):
         return response
 
 
-if __name__ == "__main__":
+def main(args=None, database_cls=lglass.nic.FileDatabase):
     argparser = argparse.ArgumentParser(description="Simple whois server")
     argparser.add_argument("--port", "-p", default=4343)
     argparser.add_argument("--address", "-a", default="::1,127.0.0.1")
@@ -220,7 +220,7 @@ if __name__ == "__main__":
 
     args = argparser.parse_args()
 
-    db = lglass.nic.FileDatabase(args.database)
+    db = database_cls(args.database)
     engine = lglass.whois.engine.WhoisEngine(db)
     server = SimpleWhoisServer(engine)
 
@@ -250,3 +250,7 @@ if __name__ == "__main__":
     s.close()
     loop.run_until_complete(s.wait_closed())
     loop.close()
+
+if __name__ == "__main__":
+    main()
+

@@ -140,7 +140,7 @@ class WhoisEngine(object):
     def query_search_inverse(self, query, classes=None, database=None):
         database = self._get_database(database)
         classes = self.filter_classes(classes)
-        yield from database.search(query, types=classes)
+        yield from database.search(query, classes=classes)
 
     def query_primary(self, query, classes=None, exact_match=False,
                       database=None):
@@ -148,46 +148,46 @@ class WhoisEngine(object):
 
         classes = self.filter_classes(classes, database=database)
 
-        if re.match(r"as[0-9]+$", query):
+        if re.match(r"[aA][sS][0-9]+$", query):
             # aut-num lookup
             if "aut-num" in classes:
-                yield from database.find(keys=query, types="aut-num")
+                yield from database.find(keys=query, classes=("aut-num",))
             asn = lglass.nic.parse_asn(query)
             if "as-block" in classes:
-                for as_block in database.find(types="as-block"):
+                for as_block in database.find(classes=("as-block",)):
                     if asn in as_block:
                         yield as_block
             return
         elif lglass.nic.parse_as_block(query) and "as-block" in classes:
             k = lglass.nic.ASBlockObject([("as-block", query)])
-            yield from database.find(keys=k.primary_key, types="as-block")
+            yield from database.find(keys=k.primary_key, classes=("as-block",))
             return
         elif query.startswith("ORG-") and "organisation" in classes:
-            yield from database.find(keys=query, types="organisation")
+            yield from database.find(keys=query, classes=("organisation",))
             return
         elif query.endswith("-MNT") and "mntner" in classes:
-            yield from database.find(keys=query, types="mntner")
+            yield from database.find(keys=query, classes=("mntner",))
             return
         elif query.startswith("AS-") and "as-set" in classes:
-            yield from database.find(keys=query, types="as-set")
+            yield from database.find(keys=query, classes=("as-set",))
             return
         elif query.startswith("RS-") and "route-set" in classes:
-            yield from database.find(keys=query, types="route-set")
+            yield from database.find(keys=query, classes=("route-set",))
             return
         elif query.startswith("RTRS-") and "rtr-set" in classes:
-            yield from database.find(keys=query, types="rtr-set")
+            yield from database.find(keys=query, classes=("rtr-set",))
             return
         elif query.startswith("FLTR-") and "filter-set" in classes:
-            yield from database.find(keys=query, types="filter-set")
+            yield from database.find(keys=query, classes=("filter-set",))
             return
         elif query.startswith("PRNG-") and "peering-set" in classes:
-            yield from database.find(keys=query, types="peering-set")
+            yield from database.find(keys=query, classes=("peering-set",))
             return
         elif query.startswith("IRT-") and "irt" in classes:
-            yield from database.find(keys=query, types="irt")
+            yield from database.find(keys=query, classes=("irt",))
             return
         elif query.startswith("SEG-") and "segment" in classes:
-            yield from database.find(keys=query, types="segment")
+            yield from database.find(keys=query, classes=("segment",))
             return
 
         try:
@@ -206,12 +206,12 @@ class WhoisEngine(object):
         except (netaddr.core.AddrFormatError, IndexError, ValueError):
             pass
 
-        for hint, typ in self.type_hints.items():
+        for hint, cls in self.type_hints.items():
             if _hint_match(hint, query):
-                yield from database.find(keys=query, types=typ)
+                yield from database.find(keys=query, classes=(cls,))
                 return
 
-        yield from database.find(keys=query, types=classes)
+        yield from database.find(keys=query, classes=classes)
 
     def query_network(self, net, classes=None, exact_match=False,
                       database=None):
@@ -233,12 +233,12 @@ class WhoisEngine(object):
             net = netaddr.IPNetwork(net)
         supernets = {str(n) for n in net.supernet()} | {str(net)}
 
-        addresses = database.find(types=address_classes, keys=str(net.ip))
+        addresses = database.find(classes=address_classes, keys=(str(net.ip),))
         if exact_match:
-            inetnums = database.lookup(types=inetnum_classes, keys=str(net))
+            inetnums = database.lookup(classes=inetnum_classes, keys=(str(net),))
         else:
-            inetnums = database.lookup(types=inetnum_classes, keys=supernets)
-        routes = database.lookup(types=route_classes,
+            inetnums = database.lookup(classes=inetnum_classes, keys=supernets)
+        routes = database.lookup(classes=route_classes,
                                  keys=lambda s: s.startswith(tuple(supernets)))
         # routes = database.search(
         #        query={rc: set(supernets) for rc in route_classes},
@@ -297,8 +297,8 @@ class WhoisEngine(object):
         inverse_objects.update(obj.get("zone-c"))
         inverse_objects.update(obj.get("org"))
         for inverse in inverse_objects:
-            yield from database.find(types=self.handle_classes,
-                                     keys=inverse)
+            yield from database.find(classes=self.handle_classes,
+                                     keys=(inverse,))
 
     def query_abuse(self, obj, database=None):
         database = self._get_database(database)
@@ -318,7 +318,7 @@ class WhoisEngine(object):
         if not abuse_contact_key:
             return
         try:
-            abuse_contact = next(database.find(types=self.handle_classes,
+            abuse_contact = next(database.find(classes=self.handle_classes,
                                                keys=abuse_contact_key))
         except StopIteration:
             return
@@ -356,7 +356,7 @@ class WhoisEngine(object):
             classes = self.address_classes | self.cidr_classes
             net = obj_or_net
         res = set()
-        for rel in database.find(types=classes):
+        for rel in database.find(classes=classes):
             if rel.ip_network in net:
                 res.add(rel)
         yield from sorted(res, key=lambda o: o.ip_network)
@@ -457,7 +457,7 @@ def args_to_query_kwargs(args):
     return kwargs
 
 
-def main(args=None, stdout=sys.stdout):
+def main(args=None, stdout=sys.stdout, database_cls=lglass.nic.FileDatabase):
     import argparse
     import time
 
@@ -472,7 +472,7 @@ def main(args=None, stdout=sys.stdout):
 
     args = argparser.parse_args()
 
-    db = lglass.nic.FileDatabase(args.database)
+    db = database_cls(args.database)
     eng = WhoisEngine(db)
     eng.ipv4_more_specific_prefixlens = set(range(0, 33))
     eng.ipv6_more_specific_prefixlens = set(range(0, 129))

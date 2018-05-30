@@ -45,12 +45,12 @@ class CacheProxyDatabase(lglass.database.ProxyDatabase):
             self._cache[(object_class, object_key)] = (True, expires_at)
         return obj
 
-    def lookup(self, types=None, keys=None):
-        if isinstance(types, str):
-            types = {types}
+    def lookup(self, classes=None, keys=None):
+        if isinstance(classes, str):
+            classes = {classes}
         if isinstance(keys, str):
             keys = {keys}
-        for object_class, object_key in super().lookup(types=types, keys=keys):
+        for object_class, object_key in super().lookup(classes=classes, keys=keys):
             if (object_class, object_key) not in self._cache and self.cache_presence:
                 expires_at = None
                 if self.lifetime is not None:

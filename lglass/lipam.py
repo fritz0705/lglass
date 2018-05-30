@@ -336,7 +336,7 @@ class IPAMTool(object):
     def add_inverse(self):
         objects = list(
             self.database.lookup(
-                types={
+                classes={
                     "host",
                     "address"},
                 keys=self.args.object))
@@ -471,7 +471,7 @@ class IPAMTool(object):
             else:
                 objs.extend(
                     self.database.lookup(
-                        types={
+                        classes={
                             self.args.object_class}))
         if self.args.object:
             for obj in self.args.object:
@@ -491,16 +491,16 @@ class IPAMTool(object):
         inetnums = set()
         if self.args.delegate:
             domains = set(domain_name for _, domain_name
-                          in db.lookup(types="domain")
+                          in db.lookup(classes="domain")
                           if lglass.dns.is_subdomain(domain_name, dom) and
                           (self.args.exact or
                            not lglass.dns.domain_equal(domain_name, dom)))
         if self.args.fqdn:
-            hosts = set(hostname for _, hostname in db.lookup(types="host")
+            hosts = set(hostname for _, hostname in db.lookup(classes="host")
                         if lglass.dns.is_subdomain(hostname, dom))
         if lglass.dns.is_reverse_domain(dom) or not dom:
             addresses = set(address for _, address
-                            in db.lookup(types="address")
+                            in db.lookup(classes="address")
                             if lglass.dns.is_subdomain(
                                 netaddr.IPAddress(address).reverse_dns, dom))
         for address in sorted(addresses):
@@ -564,7 +564,7 @@ class IPAMTool(object):
             else:
                 objs.extend(
                     self.database.lookup(
-                        types={
+                        classes={
                             self.args.object_class}))
         if self.args.object:
             for obj in self.args.object:
@@ -582,14 +582,14 @@ class IPAMTool(object):
             for res in ms:
                 self.print_object(res)
                 if res.object_class == "address" and self.args.hosts:
-                    for host in self.database.find(types="host",
+                    for host in self.database.find(classes="host",
                                                    keys=res.get("hostname")):
                         self.print_object(host)
         elif self.args.format in {'primary', 'primary-keys', 'keys'}:
             for res in ms:
                 self.print_object(res.primary_key_object())
                 if res.object_class == "address" and self.args.hosts:
-                    for host in self.database.find(types="host",
+                    for host in self.database.find(classes="host",
                                                    keys=res.get("hostname")):
                         self.print_object(host.primary_key_object())
         elif self.args.format == 'table':

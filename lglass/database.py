@@ -45,7 +45,7 @@ class Database(object):
     class_synonyms = []
     primary_key_rules = {}
 
-    def lookup(self, types=None, keys=None):
+    def lookup(self, classes=None, keys=None):
         pass
 
     def fetch(self, typ, key):
@@ -63,8 +63,8 @@ class Database(object):
     def delete(self, obj):
         pass
 
-    def search(self, query={}, types=None, keys=None):
-        for obj in self.find(types=types, keys=keys):
+    def search(self, query={}, classes=None, keys=None):
+        for obj in self.find(classes=classes, keys=keys):
             for key, query_value in query.items():
                 values = obj.get(key)
                 if isinstance(query_value,
@@ -75,8 +75,8 @@ class Database(object):
                     yield obj
                     break
 
-    def find(self, filter=None, types=None, keys=None):
-        for object_class, object_key in self.lookup(types=types, keys=keys):
+    def find(self, filter=None, classes=None, keys=None):
+        for object_class, object_key in self.lookup(classes=classes, keys=keys):
             try:
                 obj = self.fetch(object_class, object_key)
             except:

@@ -23,7 +23,7 @@ def parse_asn(asn):
 
 
 def parse_as_block(as_block):
-    m = re.match(r"(AS)?([0-9]+)\s*[-_/]?\s*(AS)?([0-9]+)$", as_block)
+    m = re.match(r"([Aa][Ss])?([0-9]+)\s*[-_/]\s*([Aa][Ss])?([0-9]+)$", as_block)
     if not m:
         return False
     return int(m[2]), int(m[4])
@@ -394,16 +394,16 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
                 "/",
                 "_"))
 
-    def lookup(self, types=None, keys=None):
-        if types is None:
-            types = self.object_classes
-        elif isinstance(types, str):
-            types = {self.primary_class(types)}
+    def lookup(self, classes=None, keys=None):
+        if classes is None:
+            classes = self.object_classes
+        elif isinstance(classes, str):
+            classes = {self.primary_class(classes)}
         else:
-            types = map(self.primary_class, types)
-        for type in types:
+            classes = map(self.primary_class, classes)
+        for cls in classes:
             try:
-                yield from self._lookup_class(type, keys)
+                yield from self._lookup_class(cls, keys)
             except FileNotFoundError:
                 pass
 
