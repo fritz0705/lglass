@@ -140,6 +140,9 @@ class ProxyDatabase(Database):
     def primary_key(self, *args, **kwargs):
         return self.backend.primary_key(*args, **kwargs)
 
+    def save_manifest(self, *args, **kwargs):
+        return self.backend.save_manifest(*args, **kwargs)
+
     @property
     def object_classes(self):
         return self.backend.object_classes
