@@ -147,8 +147,9 @@ class WhoisEngine(object):
         database = self._get_database(database)
 
         classes = self.filter_classes(classes, database=database)
+        query = query.lower()
 
-        if re.match(r"[aA][sS][0-9]+$", query):
+        if re.match(r"as[0-9]+$", query):
             # aut-num lookup
             if "aut-num" in classes:
                 yield from database.find(keys=query, classes=("aut-num",))
@@ -162,31 +163,31 @@ class WhoisEngine(object):
             k = lglass.nic.ASBlockObject([("as-block", query)])
             yield from database.find(keys=k.primary_key, classes=("as-block",))
             return
-        elif query.startswith("ORG-") and "organisation" in classes:
+        elif query.startswith("org-") and "organisation" in classes:
             yield from database.find(keys=query, classes=("organisation",))
             return
-        elif query.endswith("-MNT") and "mntner" in classes:
+        elif query.endswith("-mnt") and "mntner" in classes:
             yield from database.find(keys=query, classes=("mntner",))
             return
-        elif query.startswith("AS-") and "as-set" in classes:
+        elif query.startswith("as-") and "as-set" in classes:
             yield from database.find(keys=query, classes=("as-set",))
             return
-        elif query.startswith("RS-") and "route-set" in classes:
+        elif query.startswith("rs-") and "route-set" in classes:
             yield from database.find(keys=query, classes=("route-set",))
             return
-        elif query.startswith("RTRS-") and "rtr-set" in classes:
+        elif query.startswith("rtrs-") and "rtr-set" in classes:
             yield from database.find(keys=query, classes=("rtr-set",))
             return
-        elif query.startswith("FLTR-") and "filter-set" in classes:
+        elif query.startswith("fltr-") and "filter-set" in classes:
             yield from database.find(keys=query, classes=("filter-set",))
             return
-        elif query.startswith("PRNG-") and "peering-set" in classes:
+        elif query.startswith("prng-") and "peering-set" in classes:
             yield from database.find(keys=query, classes=("peering-set",))
             return
-        elif query.startswith("IRT-") and "irt" in classes:
+        elif query.startswith("irt-") and "irt" in classes:
             yield from database.find(keys=query, classes=("irt",))
             return
-        elif query.startswith("SEG-") and "segment" in classes:
+        elif query.startswith("seg-") and "segment" in classes:
             yield from database.find(keys=query, classes=("segment",))
             return
 
