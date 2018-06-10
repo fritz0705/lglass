@@ -45,7 +45,9 @@ class WhoisEngine(object):
         self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
 
     def new_query_database(self):
-        if self.query_cache:
+        if hasattr(self.database, "session"):
+            return self.database.session()
+        elif self.query_cache:
             return lglass.proxy.CacheProxyDatabase(self.database)
         return self.database
 
@@ -237,11 +239,19 @@ class WhoisEngine(object):
 
         addresses = database.find(classes=address_classes, keys=(str(net.ip),))
         if exact_match:
-            inetnums = database.lookup(classes=inetnum_classes, keys=(str(net),))
+            inetnums = database.lookup(
+                classes=inetnum_classes, keys=(
+                    str(net),))
+        elif hasattr(database, "lookup_inetnum") and inetnum_classes:
+            inetnums = database.lookup_inetnum(net, limit=1)
         else:
             inetnums = database.lookup(classes=inetnum_classes, keys=supernets)
-        routes = database.lookup(classes=route_classes,
-                                 keys=lambda s: s.startswith(tuple(supernets)))
+        if hasattr(database, "lookup_route") and route_classes:
+            routes = database.lookup_route(net)
+        else:
+            routes = database.lookup(
+                classes=route_classes,
+                keys=lambda s: s.startswith(tuple(supernets)))
         # routes = database.search(
         #        query={rc: set(supernets) for rc in route_classes},
         #        types=route_classes)

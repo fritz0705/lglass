@@ -135,16 +135,21 @@ class SimpleWhoisServer(object):
             inverse_fields = args.inverse.split(",")
 
         db = self.engine.new_query_database()
-        for term in args.terms or []:
-            if inverse_fields is not None:
-                term = {f: term for f in inverse_fields}
-            results = self.engine.query(term, database=db, **query_kwargs)
-            writer.write(self.format_results(results,
-                                             primary_keys=args.primary_keys,
-                                             pretty_print_options={
-                                                 "min_padding": 16,
-                                                 "add_padding": 0},
-                                             database=db).encode())
+        try:
+            for term in args.terms or []:
+                if inverse_fields is not None:
+                    term = {f: term for f in inverse_fields}
+                results = self.engine.query(term, database=db, **query_kwargs)
+                writer.write(self.format_results(
+                    results,
+                    primary_keys=args.primary_keys,
+                    pretty_print_options={
+                        "min_padding": 16,
+                        "add_padding": 0},
+                    database=db).encode())
+        finally:
+            if hasattr(db, "close"):
+                db.close()
 
         writer.write(b"\n")
         await writer.drain()
