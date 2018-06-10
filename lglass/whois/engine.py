@@ -491,7 +491,7 @@ def main(args=None, stdout=sys.stdout, database_cls=lglass.nic.FileDatabase):
     argparser.add_argument("-q")
     argparser.add_argument("--inverse", "-i")
 
-    args = argparser.parse_args()
+    args = argparser.parse_args(args=args)
 
     db = database_cls(args.database)
     eng = WhoisEngine(db)
@@ -513,13 +513,15 @@ def main(args=None, stdout=sys.stdout, database_cls=lglass.nic.FileDatabase):
     if args.inverse is not None:
         inverse_fields = args.inverse.split(",")
 
-    start_time = time.time()
+    first_start_time = time.time()
     for term in args.terms:
         print("% Results for query '{query}'".format(query=term))
         print()
         if inverse_fields is not None:
             term = {f: term for f in inverse_fields}
+        start_time = time.time()
         results = eng.query(term, **query_kwargs)
+        end_time = time.time()
         for primary in sorted(results.keys(), key=lambda k: k.type):
             primary_key = db.primary_key(primary)
             related_objects = list(results[primary])[1:]
@@ -537,8 +539,11 @@ def main(args=None, stdout=sys.stdout, database_cls=lglass.nic.FileDatabase):
             print("".join(primary.pretty_print(**pretty_print_options)))
             for obj in related_objects:
                 print("".join(obj.pretty_print(**pretty_print_options)))
-    print("% Query took {} seconds".format(time.time() - start_time),
-          file=stdout)
+        print("% Query took {} seconds".format(end_time - start_time),
+              file=stdout)
+    print("% All querys took {} seconds".format(
+        time.time() - first_start_time),
+            file=stdout)
 
 
 if __name__ == "__main__":
