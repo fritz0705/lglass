@@ -90,17 +90,18 @@ class WhoisEngine(object):
         if self.address_classes & primary_classes and more_specific_levels:
             primary_classes.update(self.cidr_classes)
 
-        if isinstance(query, dict):
+        if isinstance(query, tuple) and len(query) == 2:
             primary_results = list(
                 self.query_search_inverse(
                     query,
                     classes=primary_classes,
                     database=database))
         else:
-            primary_results = list(self.query_primary(query,
-                                                      classes=primary_classes,
-                                                      database=database,
-                                                      exact_match=exact_match))
+            primary_results = list(self.query_primary(
+                query,
+                classes=primary_classes,
+                database=database,
+                exact_match=exact_match))
 
         if less_specific_levels != 0:
             for obj in list(primary_results):
@@ -142,7 +143,7 @@ class WhoisEngine(object):
     def query_search_inverse(self, query, classes=None, database=None):
         database = self._get_database(database)
         classes = self.filter_classes(classes)
-        yield from database.search(query, classes=classes)
+        yield from database.search_inverse(query[0], query[1], classes=classes)
 
     def query_primary(self, query, classes=None, exact_match=False,
                       database=None):

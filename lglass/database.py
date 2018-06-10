@@ -75,6 +75,10 @@ class Database(object):
                     yield obj
                     break
 
+    def search_inverse(self, inverse_keys, inverse_values, classes=None):
+        return self.search({key: inverse_values for key in inverse_keys},
+                classes=classes)
+
     def find(self, filter=None, classes=None, keys=None):
         for object_class, object_key in self.lookup(classes=classes, keys=keys):
             try:
@@ -130,6 +134,9 @@ class ProxyDatabase(Database):
 
     def search(self, *args, **kwargs):
         return self.backend.search(*args, **kwargs)
+
+    def search_inverse(self, *args, **kwargs):
+        return self.backend.search_inverse(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         return self.backend.delete(*args, **kwargs)

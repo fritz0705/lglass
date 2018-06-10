@@ -25,7 +25,7 @@ class SimpleWhoisServer(object):
     preamble_template = "% This is the {source} Database query service.\n" + \
         "% The objects are in RPSL format.\n\n"
     abuse_template = "% Abuse contact for '{object_key}' is '{contact}'\n"
-    allow_inverse_search = False
+    allow_inverse_search = True
 
     def __init__(self, engine):
         self.engine = engine
@@ -134,15 +134,28 @@ class SimpleWhoisServer(object):
                 return args.persistent_connection
             inverse_fields = args.inverse.split(",")
 
+        self.perform_query(writer, args, query_kwargs, inverse_fields)
+
+        writer.write(b"\n")
+        await writer.drain()
+
+        return args.persistent_connection
+
+    def perform_query(self, writer, query_args, query_kwargs, inverse_keys):
         db = self.engine.new_query_database()
         try:
-            for term in args.terms or []:
-                if inverse_fields is not None:
-                    term = {f: term for f in inverse_fields}
-                results = self.engine.query(term, database=db, **query_kwargs)
+            for term in query_args.terms or []:
+                if inverse_keys is not None:
+                    results = self.engine.query((inverse_keys, (term,)),
+                            database=db,
+                            **query_kwargs)
+                else:
+                    results = self.engine.query(term,
+                            database=db,
+                            **query_kwargs)
                 writer.write(self.format_results(
                     results,
-                    primary_keys=args.primary_keys,
+                    primary_keys=query_args.primary_keys,
                     pretty_print_options={
                         "min_padding": 16,
                         "add_padding": 0},
@@ -150,11 +163,6 @@ class SimpleWhoisServer(object):
         finally:
             if hasattr(db, "close"):
                 db.close()
-
-        writer.write(b"\n")
-        await writer.drain()
-
-        return args.persistent_connection
 
     async def handle_persistent(self, reader, writer):
         while True:
