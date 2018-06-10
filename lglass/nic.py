@@ -268,7 +268,7 @@ class RouteObject(NicObject):
     @property
     def origin(self):
         try:
-            return self["origin"]
+            return self["origin"].split()[0]
         except BaseException:
             pass
 
