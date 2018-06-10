@@ -152,7 +152,7 @@ class WhoisEngine(object):
         if re.match(r"as[0-9]+$", query):
             # aut-num lookup
             if "aut-num" in classes:
-                yield from database.find(keys=query, classes=("aut-num",))
+                yield from database.find(keys=(query,), classes=("aut-num",))
             asn = lglass.nic.parse_asn(query)
             if "as-block" in classes:
                 for as_block in database.find(classes=("as-block",)):
@@ -161,34 +161,35 @@ class WhoisEngine(object):
             return
         elif lglass.nic.parse_as_block(query) and "as-block" in classes:
             k = lglass.nic.ASBlockObject([("as-block", query)])
-            yield from database.find(keys=k.primary_key, classes=("as-block",))
+            yield from database.find(
+                keys=(k.primary_key,), classes=("as-block",))
             return
         elif query.startswith("org-") and "organisation" in classes:
-            yield from database.find(keys=query, classes=("organisation",))
+            yield from database.find(keys=(query,), classes=("organisation",))
             return
         elif query.endswith("-mnt") and "mntner" in classes:
-            yield from database.find(keys=query, classes=("mntner",))
+            yield from database.find(keys=(query,), classes=("mntner",))
             return
         elif query.startswith("as-") and "as-set" in classes:
-            yield from database.find(keys=query, classes=("as-set",))
+            yield from database.find(keys=(query,), classes=("as-set",))
             return
         elif query.startswith("rs-") and "route-set" in classes:
-            yield from database.find(keys=query, classes=("route-set",))
+            yield from database.find(keys=(query,), classes=("route-set",))
             return
         elif query.startswith("rtrs-") and "rtr-set" in classes:
-            yield from database.find(keys=query, classes=("rtr-set",))
+            yield from database.find(keys=(query,), classes=("rtr-set",))
             return
         elif query.startswith("fltr-") and "filter-set" in classes:
-            yield from database.find(keys=query, classes=("filter-set",))
+            yield from database.find(keys=(query,), classes=("filter-set",))
             return
         elif query.startswith("prng-") and "peering-set" in classes:
-            yield from database.find(keys=query, classes=("peering-set",))
+            yield from database.find(keys=(query,), classes=("peering-set",))
             return
         elif query.startswith("irt-") and "irt" in classes:
-            yield from database.find(keys=query, classes=("irt",))
+            yield from database.find(keys=(query,), classes=("irt",))
             return
         elif query.startswith("seg-") and "segment" in classes:
-            yield from database.find(keys=query, classes=("segment",))
+            yield from database.find(keys=(query,), classes=("segment",))
             return
 
         try:
@@ -209,10 +210,10 @@ class WhoisEngine(object):
 
         for hint, cls in self.type_hints.items():
             if _hint_match(hint, query):
-                yield from database.find(keys=query, classes=(cls,))
+                yield from database.find(keys=(query,), classes=(cls,))
                 return
 
-        yield from database.find(keys=query, classes=classes)
+        yield from database.find(keys=(query,), classes=classes)
 
     def query_network(self, net, classes=None, exact_match=False,
                       database=None):
@@ -320,7 +321,7 @@ class WhoisEngine(object):
             return
         try:
             abuse_contact = next(database.find(classes=self.handle_classes,
-                                               keys=abuse_contact_key))
+                                               keys=(abuse_contact_key,)))
         except StopIteration:
             return
         if not abuse_contact:
