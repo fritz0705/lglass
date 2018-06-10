@@ -157,7 +157,10 @@ class WhoisEngine(object):
             if "aut-num" in classes:
                 yield from database.find(keys=(query,), classes=("aut-num",))
             asn = lglass.nic.parse_asn(query)
-            if "as-block" in classes:
+            if "as-block" in classes and hasattr(database, "lookup_as_block"):
+                for class_, key in database.lookup_as_block(asn):
+                    yield database.fetch(class_, key)
+            elif "as-block" in classes:
                 for as_block in database.find(classes=("as-block",)):
                     if asn in as_block:
                         yield as_block
@@ -197,16 +200,19 @@ class WhoisEngine(object):
 
         try:
             net = netaddr.IPNetwork(query)
-            yield from self.query_network(net, classes=classes,
-                                          exact_match=exact_match, database=database)
+            yield from self.query_network(
+                net, classes=classes,
+                exact_match=exact_match, database=database)
             return
         except netaddr.core.AddrFormatError:
             pass
         try:
             netrange = lglass.nic.parse_ip_range(query)
             for net in netrange.cidrs():
-                yield from self.query_network(net, classes=classes,
-                                              exact_match=exact_match, database=database)
+                yield from self.query_network(
+                    net,
+                    classes=classes,
+                    exact_match=exact_match, database=database)
                 pass
         except (netaddr.core.AddrFormatError, IndexError, ValueError):
             pass
@@ -239,17 +245,19 @@ class WhoisEngine(object):
         supernets = {str(n) for n in net.supernet()} | {str(net)}
 
         addresses = database.find(classes=address_classes, keys=(str(net.ip),))
+        inetnums = []
         if exact_match:
             inetnums = database.lookup(
                 classes=inetnum_classes, keys=(
                     str(net),))
         elif hasattr(database, "lookup_inetnum") and inetnum_classes:
             inetnums = database.lookup_inetnum(net, limit=1)
-        else:
+        elif inetnum_classes:
             inetnums = database.lookup(classes=inetnum_classes, keys=supernets)
+        routes = []
         if hasattr(database, "lookup_route") and route_classes:
             routes = database.lookup_route(net)
-        else:
+        elif route_classes:
             routes = database.lookup(
                 classes=route_classes,
                 keys=lambda s: s.startswith(tuple(supernets)))
