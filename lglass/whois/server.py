@@ -234,6 +234,7 @@ def main(args=None, database_cls=lglass.nic.FileDatabase,
     argparser.add_argument("database")
 
     if args is None:
+        import sys
         args = sys.argv[1:]
 
     args = argparser.parse_args(args=args)
