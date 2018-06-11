@@ -228,7 +228,7 @@ if __name__ == "__main__":
         except KeyError:
             pass
 
-    domains = set(db.lookup(classes="domain"))
+    domains = set(db.lookup(classes=("domain",)))
     for _, domain_name in domains:
         if (not domain_name.endswith("." + args.zone) and
                 args.zone) or domain_name == args.zone:
