@@ -227,12 +227,14 @@ class SimpleWhoisServer(Base):
                 continue
             response += "% Information related to '{}'\n\n".format(
                 database.primary_key(primary)).encode()
-            response += "".join(primary.pretty_print(**
-                                                     pretty_print_options)).encode()
+            response += "".join(
+                primary.pretty_print(**
+                                     pretty_print_options)).encode()
             response += b"\n"
             for obj in related_objects:
-                response += "".join(obj.pretty_print(**
-                                                     pretty_print_options)).encode()
+                response += "".join(
+                    obj.pretty_print(**
+                                     pretty_print_options)).encode()
                 response += b"\n"
         return response
 
