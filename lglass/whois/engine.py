@@ -44,12 +44,14 @@ class WhoisEngine(object):
         self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
         self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
 
-    def new_query_database(self):
-        if hasattr(self.database, "session"):
-            return self.database.session()
+    def new_query_database(self, database=None):
+        if database is None:
+            database = self.database
+        if hasattr(database, "session"):
+            return database.session()
         elif self.query_cache:
-            return lglass.proxy.CacheProxyDatabase(self.database)
-        return self.database
+            return lglass.proxy.CacheProxyDatabase(database)
+        return database
 
     def _get_database(self, prototype):
         if prototype is not None:
@@ -142,7 +144,7 @@ class WhoisEngine(object):
 
     def query_search_inverse(self, query, classes=None, database=None):
         database = self._get_database(database)
-        classes = self.filter_classes(classes)
+        classes = self.filter_classes(classes, database=database)
         yield from database.search_inverse(query[0], query[1], classes=classes)
 
     def query_primary(self, query, classes=None, exact_match=False,
@@ -517,10 +519,11 @@ def main(args=None, stdout=sys.stdout, database_cls=lglass.nic.FileDatabase):
     for term in args.terms:
         print("% Results for query '{query}'".format(query=term))
         print()
-        if inverse_fields is not None:
-            term = {f: term for f in inverse_fields}
         start_time = time.time()
-        results = eng.query(term, **query_kwargs)
+        if inverse_fields is not None:
+            results = eng.query((inverse_fields, (term,)), **query_kwargs)
+        else:
+            results = eng.query(term, **query_kwargs)
         end_time = time.time()
         for primary in sorted(results.keys(), key=lambda k: k.type):
             primary_key = db.primary_key(primary)
@@ -543,7 +546,7 @@ def main(args=None, stdout=sys.stdout, database_cls=lglass.nic.FileDatabase):
               file=stdout)
     print("% All querys took {} seconds".format(
         time.time() - first_start_time),
-            file=stdout)
+        file=stdout)
 
 
 if __name__ == "__main__":

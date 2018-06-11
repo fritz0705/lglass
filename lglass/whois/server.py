@@ -16,61 +16,59 @@ class SolidArgumentParser(argparse.ArgumentParser):
         pass
 
 
-class SimpleWhoisServer(object):
+class Base(object):
+    def __init__(self, engine, databases):
+        self.databases = list(databases)
+        self.engine = engine
+
+    @property
+    def sources(self):
+        return [db.database_name for db
+                in self.databases]
+
+    @property
+    def primary_database(self):
+        return self.databases[0]
+
+
+class SimpleWhoisServer(Base):
     version_string = "% lglass.whois.server {}\n".format(
         lglass.version).encode()
     not_found_template = "%ERROR:101: no entries found\n" + \
-        "%\n" + "% No entries found in source {source}.\n\n"
+        "%\n" + "% No entries found in source {sources}.\n\n"
     not_allowed_template = "%ERROR:201: access denied\n\n"
     preamble_template = "% This is the {source} Database query service.\n" + \
         "% The objects are in RPSL format.\n\n"
     abuse_template = "% Abuse contact for '{object_key}' is '{contact}'\n"
     allow_inverse_search = True
 
-    def __init__(self, engine):
+    def __init__(self, engine, databases, default_sources=None):
+        self.databases = list(databases)
+        if default_sources is None:
+            default_sources = [self.primary_database.database_name]
+        self.default_sources = default_sources
         self.engine = engine
-        self._sources = None
-
-    @property
-    def sources(self):
-        if self._sources is None:
-            return [self.database_name]
-        return self._sources
-
-    @sources.setter
-    def sources(self, new_sources):
-        self._sources = new_sources
 
     @property
     def preamble(self):
         if self.preamble_template is not None:
-            return self.preamble_template.format(source=self.database_name)
+            return self.preamble_template.format(
+                source=self.primary_database.database_name)
 
     @preamble.setter
     def preamble(self, new_pre):
         self.preamble_template = new_pre
 
-    @property
-    def not_found_message(self):
+    def not_found_message(self, databases):
         if self.not_found_template is not None:
-            return self.not_found_template.format(source=self.database_name)
+            return self.not_found_template.format(
+                sources=",".join(db.database_name for db in databases))
 
     @property
     def not_allowed_message(self):
         if self.not_allowed_template is not None:
-            return self.not_allowed_template.format(source=self.database_name)
-
-    @not_found_message.setter
-    def not_found_message(self, new_nfm):
-        self.not_found_template = new_nfm
-
-    @property
-    def database_name(self):
-        return self.database.database_name
-
-    @property
-    def database(self):
-        return self.engine.database
+            return self.not_allowed_template.format(
+                source=self.primary_database.database_name)
 
     def abuse_message(self, object_key, contact):
         return self.abuse_template.format(
@@ -88,6 +86,10 @@ class SimpleWhoisServer(object):
             help="do an inverse look-up for specified ATTRibutes")
         argparser.add_argument("-q", help="query specified server info",
                                choices=["version", "types", "sources"])
+        argparser.add_argument("-s", "--sources",
+                               help="search the database mirrored from SOURCE")
+        argparser.add_argument("-a", action="store_true", default=False,
+                               help="search in all sources")
         argparser.add_argument("--template", "-t",
                                help="request template for object of TYPE")
         argparser.add_argument("--help", "-h", action="store_true",
@@ -105,7 +107,7 @@ class SimpleWhoisServer(object):
                 writer.write(
                     "\n".join(
                         sorted(
-                            self.database.object_classes)).encode())
+                            self.primary_database.object_classes)).encode())
                 writer.write(b"\n\n")
             elif args.q == "sources":
                 for source in self.sources:
@@ -123,46 +125,58 @@ class SimpleWhoisServer(object):
             await writer.drain()
             return args.persistent_connection
 
-        query_kwargs = lglass.whois.engine.args_to_query_kwargs(args)
+        if args.a:
+            databases = self.databases
+        else:
+            if args.sources:
+                sources = args.sources.split(",")
+            else:
+                sources = self.default_sources
+            databases = [db for db
+                         in self.databases
+                         if db.database_name in sources]
 
-        inverse_fields = None
-        if args.inverse is not None:
-            if not self.allow_inverse_search:
-                if self.not_allowed_message:
-                    writer.write(self.not_allowed_message.encode() + b"\n")
-                await writer.drain()
-                return args.persistent_connection
+        terms = args.terms
+        if args.inverse:
             inverse_fields = args.inverse.split(",")
+            terms = [(inverse_fields, (term,)) for term in terms]
 
-        self.perform_query(writer, args, query_kwargs, inverse_fields)
+        query_kwargs = lglass.whois.engine.args_to_query_kwargs(args)
+        found_any = False
+
+        for database in databases:
+            results = self.perform_query(database, terms, args,
+                                         query_kwargs, writer)
+            if results:
+                found_any = True
+                break
+
+        if not found_any:
+            writer.write(self.not_found_message(databases).encode())
 
         writer.write(b"\n")
         await writer.drain()
 
         return args.persistent_connection
 
-    def perform_query(self, writer, query_args, query_kwargs, inverse_keys):
-        db = self.engine.new_query_database()
+    def perform_query(self, database, terms, query_args, query_kwargs, writer):
+        database = self.engine.new_query_database(database)
         try:
-            for term in query_args.terms or []:
-                if inverse_keys is not None:
-                    results = self.engine.query((inverse_keys, (term,)),
-                            database=db,
-                            **query_kwargs)
-                else:
-                    results = self.engine.query(term,
-                            database=db,
-                            **query_kwargs)
-                writer.write(self.format_results(
+            for term in terms:
+                results = self.engine.query(term, database=database,
+                                            **query_kwargs)
+                results = self.format_results(
                     results,
                     primary_keys=query_args.primary_keys,
                     pretty_print_options={
                         "min_padding": 16,
                         "add_padding": 0},
-                    database=db).encode())
+                    database=database)
+                writer.write(results)
         finally:
-            if hasattr(db, "close"):
-                db.close()
+            if hasattr(database, "close"):
+                database.close()
+        return bool(results)
 
     async def handle_persistent(self, reader, writer):
         while True:
@@ -194,44 +208,45 @@ class SimpleWhoisServer(object):
     def format_results(self, results, primary_keys=False,
                        include_abuse_contact=True, pretty_print_options={},
                        database=None):
-        if not results and self.not_found_message is not None:
-            return self.not_found_message
-        response = ""
+        response = bytearray()
         for primary in sorted(results.keys(), key=lambda k: k.object_class):
-            primary_key = self.database.primary_key(primary)
+            primary_key = database.primary_key(primary)
             related_objects = list(results[primary])[1:]
             if include_abuse_contact:
                 abuse_contact = self.engine.query_abuse(primary,
                                                         database=database)
                 if abuse_contact:
-                    response += self.abuse_message(primary_key, abuse_contact)
-                    response += "\n"
+                    response += self.abuse_message(primary_key,
+                                                   abuse_contact).encode()
+                    response += b"\n"
             if primary_keys:
                 primary = primary.primary_key_object()
-                response += "".join(primary.pretty_print(**
-                                                         pretty_print_options))
-                response += "\n"
+                response += "".join(primary.pretty_print(
+                    **pretty_print_options)).encode()
+                response += b"\n"
                 continue
             response += "% Information related to '{}'\n\n".format(
-                self.database.primary_key(primary))
-            response += "".join(primary.pretty_print(**pretty_print_options))
-            response += "\n"
+                database.primary_key(primary)).encode()
+            response += "".join(primary.pretty_print(**
+                                                     pretty_print_options)).encode()
+            response += b"\n"
             for obj in related_objects:
-                response += "".join(obj.pretty_print(**pretty_print_options))
-                response += "\n"
+                response += "".join(obj.pretty_print(**
+                                                     pretty_print_options)).encode()
+                response += b"\n"
         return response
 
 
 def main(args=None, database_cls=lglass.nic.FileDatabase,
-        server_cls=SimpleWhoisServer,
-        engine_cls=lglass.whois.engine.WhoisEngine):
+         server_cls=SimpleWhoisServer,
+         engine_cls=lglass.whois.engine.WhoisEngine):
     argparser = argparse.ArgumentParser(description="Simple whois server")
     argparser.add_argument("--port", "-p", default=4343)
     argparser.add_argument("--address", "-a", default="::1,127.0.0.1")
     argparser.add_argument("--preamble", "-P")
     argparser.add_argument("--sources")
     argparser.add_argument("--handle-hint")
-    argparser.add_argument("database")
+    argparser.add_argument("databases", nargs="+")
 
     if args is None:
         import sys
@@ -239,9 +254,12 @@ def main(args=None, database_cls=lglass.nic.FileDatabase,
 
     args = argparser.parse_args(args=args)
 
-    db = database_cls(args.database)
-    engine = engine_cls(db)
-    server = server_cls(engine)
+    databases = []
+    for db in args.databases:
+        databases.append(database_cls(db))
+
+    engine = engine_cls()
+    server = server_cls(engine, databases)
 
     if args.preamble is not None:
         with open(args.preamble) as fh:
@@ -253,11 +271,15 @@ def main(args=None, database_cls=lglass.nic.FileDatabase,
     if args.sources is not None:
         server.sources = args.sources.split(",")
 
+    run_server(server, args.address.split(","), args.port)
+
+
+def run_server(server, addresses, port):
     loop = asyncio.get_event_loop()
     coro = asyncio.start_server(
         server.handle,
-        args.address.split(","),
-        args.port,
+        addresses,
+        port,
         loop=loop)
     s = loop.run_until_complete(coro)
 
