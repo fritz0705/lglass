@@ -49,6 +49,8 @@ class WhoisEngine(object):
             database = self.database
         if hasattr(database, "session"):
             return database.session()
+        elif hasattr(database, "close"):
+            return database
         elif self.query_cache:
             return lglass.proxy.CacheProxyDatabase(database)
         return database
@@ -346,8 +348,8 @@ class WhoisEngine(object):
         if not abuse_contact_key:
             return
         try:
-            abuse_contact = next(database.find(classes=self.handle_classes,
-                                               keys=(abuse_contact_key,)))
+            abuse_contact = next(iter(database.find(classes=self.handle_classes,
+                                               keys=(abuse_contact_key,))))
         except StopIteration:
             return
         if not abuse_contact:
@@ -381,6 +383,10 @@ class WhoisEngine(object):
         else:
             classes = self.address_classes | self.cidr_classes
             net = obj_or_net
+        if hasattr(database, "lookup_inetnum"):
+            for class_, key in database.lookup_inetnum(net, relation='<<'):
+                yield database.fetch(class_, key)
+            return
         res = set()
         for rel in database.find(classes=classes):
             if rel.ip_network in net:
