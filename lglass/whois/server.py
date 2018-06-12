@@ -129,7 +129,7 @@ class SimpleWhoisServer(Base):
             databases = self.databases
         else:
             if args.sources:
-                sources = args.sources.split(",")
+                sources = args.sources.upper().split(",")
             else:
                 sources = self.default_sources
             databases = [db for db
