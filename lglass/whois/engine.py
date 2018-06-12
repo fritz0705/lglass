@@ -351,9 +351,8 @@ class WhoisEngine(object):
             return abuse_contact["abuse-mailbox"]
 
     def query_reverse_domains(self, term, classes=None, database=None):
-        if database is None:
-            database = self.new_query_database()
-        classes = self.filter_classes(classes)
+        database = self._get_database(database)
+        classes = self.filter_classes(classes, database=database)
         domain_class = database.primary_class("domain")
         if domain_class not in classes:
             return
@@ -368,8 +367,7 @@ class WhoisEngine(object):
                 pass
 
     def query_more_specifics(self, obj_or_net, levels=1, database=None):
-        if database is None:
-            database = self.new_query_database()
+        database = self._get_database(database)
         if isinstance(obj_or_net, lglass.object.Object):
             if obj_or_net.type not in self.cidr_classes:
                 return
@@ -385,8 +383,7 @@ class WhoisEngine(object):
         yield from sorted(res, key=lambda o: o.ip_network)
 
     def query_less_specifics(self, obj, levels=1, database=None):
-        if database is None:
-            database = self.new_query_database()
+        database = self._get_database(database)
         if obj.type not in self.cidr_classes:
             return
         found = 0
@@ -401,11 +398,12 @@ class WhoisEngine(object):
             if found == levels:
                 break
 
-    def _load_schema(self, typ):
+    def _load_schema(self, typ, database=None):
+        database = self._get_database(database)
         try:
             return self._schema_cache[typ]
         except KeyError:
-            schema = lglass.schema.load_schema(self.database, typ)
+            schema = lglass.schema.load_schema(database, typ)
             self._schema_cache[typ] = schema
             return schema
 
