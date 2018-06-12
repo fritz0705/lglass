@@ -159,20 +159,50 @@ class SimpleWhoisServer(Base):
 
         return args.persistent_connection
 
+    def send_results(self, writer, results, primary_keys=False,
+                     include_abuse_contact=True, pretty_print_options={},
+                     database=None):
+        for role, obj in results:
+            primary_key = database.primary_key(obj)
+            if role == 'primary' and include_abuse_contact:
+                abuse_contact = self.engine.query_abuse(obj,
+                                                        database=database)
+                if abuse_contact:
+                    writer.write(self.abuse_message(primary_key,
+                                                    abuse_contact).encode())
+                    writer.write(b"\n")
+            if role == 'primary' and primary_keys:
+                writer.write("".join(obj.primary_key_object().pretty_print(
+                    **pretty_print_options)).encode())
+                writer.write(b"\n")
+                continue
+            elif role == 'related' and primary_keys:
+                continue
+            elif role == 'primary':
+                writer.write("% Information related to '{}'\n\n".format(
+                    primary_key).encode())
+
+            writer.write(
+                "".join(
+                    obj.pretty_print(
+                        **pretty_print_options)).encode())
+            writer.write(b"\n")
+
     def perform_query(self, database, terms, query_args, query_kwargs, writer):
         database = self.engine.new_query_database(database)
         try:
             for term in terms:
-                results = self.engine.query(term, database=database,
-                                            **query_kwargs)
-                results = self.format_results(
-                    results,
-                    primary_keys=query_args.primary_keys,
-                    pretty_print_options={
-                        "min_padding": 16,
-                        "add_padding": 0},
-                    database=database)
-                writer.write(results)
+                results = self.engine.query_lazy(
+                    term,
+                    database=database,
+                    **query_kwargs)
+                self.send_results(writer,
+                                  results,
+                                  primary_keys=query_args.primary_keys,
+                                  pretty_print_options={
+                                      "min_padding": 16,
+                                      "add_padding": 0},
+                                  database=database)
         finally:
             if hasattr(database, "close"):
                 database.close()
@@ -204,39 +234,6 @@ class SimpleWhoisServer(Base):
         for line in comment.splitlines():
             res += "% " + line + "\n"
         return res
-
-    def format_results(self, results, primary_keys=False,
-                       include_abuse_contact=True, pretty_print_options={},
-                       database=None):
-        response = bytearray()
-        for primary in sorted(results.keys(), key=lambda k: k.object_class):
-            primary_key = database.primary_key(primary)
-            related_objects = list(results[primary])[1:]
-            if include_abuse_contact:
-                abuse_contact = self.engine.query_abuse(primary,
-                                                        database=database)
-                if abuse_contact:
-                    response += self.abuse_message(primary_key,
-                                                   abuse_contact).encode()
-                    response += b"\n"
-            if primary_keys:
-                primary = primary.primary_key_object()
-                response += "".join(primary.pretty_print(
-                    **pretty_print_options)).encode()
-                response += b"\n"
-                continue
-            response += "% Information related to '{}'\n\n".format(
-                database.primary_key(primary)).encode()
-            response += "".join(
-                primary.pretty_print(**
-                                     pretty_print_options)).encode()
-            response += b"\n"
-            for obj in related_objects:
-                response += "".join(
-                    obj.pretty_print(**
-                                     pretty_print_options)).encode()
-                response += b"\n"
-        return response
 
 
 def main(args=None, database_cls=lglass.nic.FileDatabase,

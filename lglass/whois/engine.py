@@ -81,65 +81,71 @@ class WhoisEngine(object):
                       for c in classes).intersection(database.object_classes)
         return classes
 
-    def query(self, query, classes=None, reverse_domain=False, recursive=True,
-              less_specific_levels=0, exact_match=False, database=None,
-              more_specific_levels=0, sources=None):
+    def query_lazy(self, query, classes=None, reverse_domain=False,
+                   recursive=True, less_specific_levels=0, exact_match=False,
+                   database=None, more_specific_levels=0, sources=None):
         database = self._get_database(database)
         classes = self.filter_classes(classes, database=database)
         primary_classes = set(classes)
-        if database.primary_class("domain") in primary_classes:
-            primary_classes.update(self.cidr_classes)
-        if self.address_classes & primary_classes and more_specific_levels:
-            primary_classes.update(self.cidr_classes)
+        if database.primary_class("domain") in primary_classes or \
+                (self.address_classes & primary_classes and more_specific_levels):
+            pass
 
         if isinstance(query, tuple) and len(query) == 2:
-            primary_results = list(
-                self.query_search_inverse(
-                    query,
-                    classes=primary_classes,
-                    database=database))
+            primary_results = self.query_search_inverse(
+                query,
+                classes=primary_classes,
+                database=database)
         else:
-            primary_results = list(self.query_primary(
+            primary_results = self.query_primary(
                 query,
                 classes=primary_classes,
                 database=database,
-                exact_match=exact_match))
+                exact_match=exact_match)
 
-        if less_specific_levels != 0:
-            for obj in list(primary_results):
-                if obj.object_class in self.cidr_classes:
-                    primary_results = list(
-                        self.query_less_specifics(
-                            obj,
-                            levels=less_specific_levels,
-                            database=database))[
-                        ::-1] + primary_results
-
-        if more_specific_levels != 0:
-            for obj in frozenset(primary_results):
-                if obj.object_class in self.cidr_classes:
-                    primary_results.extend(
-                        self.query_more_specifics(
-                            obj,
-                            levels=more_specific_levels,
-                            database=database))
-
-        if reverse_domain:
-            for obj in list(primary_results):
-                if obj.object_class in self.cidr_classes:
-                    primary_results.extend(self.query_reverse_domains(
+        for obj in primary_results:
+            if obj.object_class in self.cidr_classes and less_specific_levels:
+                for lobj in self.query_less_specifics(
+                        obj,
+                        levels=less_specific_levels,
+                        database=database):
+                    yield ('primary', lobj)
+                    if recursive:
+                        for iv in self.query_inverse(lobj, database=database):
+                            yield ('related', iv)
+            yield ('primary', obj)
+            if recursive:
+                for iv in self.query_inverse(obj, database=database):
+                    yield ('related', iv)
+            if obj.object_class in self.cidr_classes and more_specific_levels:
+                for lobj in self.query_more_specifics(
+                        obj,
+                        levels=more_specific_levels,
+                        database=database):
+                    yield ('primary', lobj)
+                    if recursive:
+                        for iv in self.query_inverse(lobj, database=database):
+                            yield ('related', iv)
+            if reverse_domain and obj.object_class in self.cidr_classes:
+                for lobj in self.query_reverse_domains(
                         obj.ip_network,
                         database=database,
-                        classes=classes))
+                        classes=classes):
+                    yield ('primary', lobj)
+                    if recursive:
+                        for iv in self.query_inverse(lobj, database=database):
+                            yield ('related', iv)
 
-        results = {obj: [obj]
-                   for obj in primary_results
-                   if database.primary_class(obj.object_class) in classes}
-
-        for obj in results.keys():
-            if recursive:
-                results[obj].extend(self.query_inverse(obj, database=database))
-
+    def query(self, *args, **kwargs):
+        primary = None
+        results = {}
+        for role, obj in self.query_lazy(*args, **kwargs):
+            if role == 'primary':
+                primary = obj
+                results[primary] = [primary]
+                continue
+            if primary is not None:
+                results[primary].append(obj)
         return results
 
     def query_search_inverse(self, query, classes=None, database=None):
@@ -155,9 +161,6 @@ class WhoisEngine(object):
         query = query.lower()
 
         if re.match(r"as[0-9]+$", query):
-            # aut-num lookup
-            if "aut-num" in classes:
-                yield from database.find(keys=(query,), classes=("aut-num",))
             asn = lglass.nic.parse_asn(query)
             if "as-block" in classes and hasattr(database, "lookup_as_block"):
                 for class_, key in database.lookup_as_block(asn):
@@ -166,6 +169,8 @@ class WhoisEngine(object):
                 for as_block in database.find(classes=("as-block",)):
                     if asn in as_block:
                         yield as_block
+            if "aut-num" in classes:
+                yield from database.find(keys=(query,), classes=("aut-num",))
             return
         elif lglass.nic.parse_as_block(query) and "as-block" in classes:
             k = lglass.nic.ASBlockObject([("as-block", query)])
