@@ -166,7 +166,8 @@ class NicObject(lglass.object.Object):
                 yield ("auth", auth)
         # Free-form information
         for class_ in {"ds-rdata", "fingerpr"}:
-            pass
+            for value in self.get(class_):
+                yield (class_, value[:128])
         # Special handling for mnt-routes
         for mntroutes in self.get("mnt-routes"):
             mntroutes = mntroutes.split()[0]
