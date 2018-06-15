@@ -139,7 +139,8 @@ class SimpleWhoisServer(Base):
         terms = args.terms
         if args.inverse:
             inverse_fields = args.inverse.split(",")
-            terms = [(inverse_fields, (term,)) for term in terms]
+            terms = [(inverse_fields, (term.replace("_", " "),))
+                    for term in terms]
 
         query_kwargs = lglass.whois.engine.args_to_query_kwargs(args)
         found_any = False
@@ -196,7 +197,8 @@ class SimpleWhoisServer(Base):
         try:
             for term in terms:
                 # Replace underscore by spaces
-                term = term.replace("_", " ")
+                if not isinstance(term, tuple):
+                    term = term.replace("_", " ")
                 results = self.engine.query_lazy(
                     term,
                     database=database,
