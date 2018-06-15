@@ -162,7 +162,9 @@ class SimpleWhoisServer(Base):
     def send_results(self, writer, results, primary_keys=False,
                      include_abuse_contact=True, pretty_print_options={},
                      database=None):
+        n = 0
         for role, obj in results:
+            n += 1
             primary_key = database.primary_key(obj)
             if role == 'primary' and include_abuse_contact:
                 abuse_contact = self.engine.query_abuse(obj,
@@ -187,16 +189,19 @@ class SimpleWhoisServer(Base):
                     obj.pretty_print(
                         **pretty_print_options)).encode())
             writer.write(b"\n")
+        return n
 
     def perform_query(self, database, terms, query_args, query_kwargs, writer):
         database = self.engine.new_query_database(database)
         try:
             for term in terms:
+                # Replace underscore by spaces
+                term = term.replace("_", " ")
                 results = self.engine.query_lazy(
                     term,
                     database=database,
                     **query_kwargs)
-                self.send_results(writer,
+                return self.send_results(writer,
                                   results,
                                   primary_keys=query_args.primary_keys,
                                   pretty_print_options={
@@ -206,7 +211,6 @@ class SimpleWhoisServer(Base):
         finally:
             if hasattr(database, "close"):
                 database.close()
-        return bool(results)
 
     async def handle_persistent(self, reader, writer):
         while True:
