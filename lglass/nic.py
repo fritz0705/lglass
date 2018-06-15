@@ -138,6 +138,52 @@ class NicObject(lglass.object.Object):
     def description(self):
         del self["descr"]
 
+    @property
+    def inverse_keys(self):
+        return ["abuse-c", "abuse-mailbox", "admin-c", "auth", "author",
+                "ds-rdata", "fingerpr", "form", "ifaddr", "irt-nfy",
+                "local-as", "mbrs-by-ref", "member-of", "mnt-by",
+                "mnt-domains", "mnt-irt", "mnt-lower", "mnt-nfy", "mnt-ref",
+                "mnt-routes", "notify", "nserver", "org", "origin", "ping-hdl",
+                "ref-nfy", "tech-c", "upd-to", "zone-c"]
+
+    def inverse_fields(self):
+        # Simple object references
+        for class_ in {"abuse-c", "admin-c", "author", "form", "local-as",
+                       "member-of", "mnt-by", "mnt-domains", "mnt-irt",
+                       "mnt-lower", "mnt-ref", "org", "origin", "ping-hdl",
+                       "tech-c", "zone-c"}:
+            for value in self.get(class_):
+                yield (class_, value)
+        # Email addresses
+        for class_ in {"abuse-mailbox", "irt-nfy", "mnt-nfy", "notify",
+                "ref-nfy", "upd-to"}:
+            for value in self.get(class_):
+                yield (class_, value)
+        # Special handling for auth
+        for auth in self.get("auth"):
+            if auth.startswith("PGPKEY-") or auth.startswith("X509-"):
+                yield ("auth", auth)
+        # Free-form information
+        for class_ in {"ds-rdata", "fingerpr"}:
+            pass
+        # Special handling for mnt-routes
+        for mntroutes in self.get("mnt-routes"):
+            mntroutes = mntroutes.split()[0]
+            yield ("mnt-routes", mntroutes)
+        # Special handling for mbrs-by-ref
+        for mbrsbyref in self.get("mbrs-by-ref"):
+            if mbrsbyref != "ANY":
+                yield ("mbrs-by-ref", mbrsbyref)
+        # Special handling for ifaddr
+        for ifaddr in self.get("ifaddr"):
+            ifaddr = ifaddr.lower().split()[0]
+            yield ("ifaddr", ifaddr)
+        # Special handling for nserver
+        for nserver in self.get("nserver"):
+            nserver = nserver.lower().split()[0]
+            yield ("nserver", nserver)
+
 
 class HandleObject(NicObject):
     @property

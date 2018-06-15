@@ -45,6 +45,19 @@ class HostObject(lglass.nic.NicObject):
     def status(self):
         del self["status"]
 
+    @property
+    def inverse_keys(self):
+        return super().inverse_keys + ["l2-address", "ipv6-prefix", "address"]
+
+    def inverse_fields(self):
+        yield from super().inverse_fields()
+        for l2addr in self.get("l2-address"):
+            yield ("l2-address", l2addr.lower())
+        for ipv6prefix in self.get("ipv6-prefix"):
+            yield ("ipv6-prefix", ipv6prefix.lower())
+        for address in self.get("address"):
+            yield ("address", address.lower())
+
 
 class AddressObject(lglass.nic.NicObject):
     @property
@@ -106,6 +119,17 @@ class AddressObject(lglass.nic.NicObject):
         except BaseException:
             pass
 
+    @property
+    def inverse_keys(self):
+        return super().inverse_keys + ["host", "l2-address"]
+
+    def inverse_fields(self):
+        yield from super().inverse_fields()
+        for host in self.get("host"):
+            yield ("host", host)
+        for l2addr in self.get("l2-address"):
+            yield ("l2-address", l2addr.lower())
+
 
 class SegmentObject(lglass.nic.NicObject):
     @property
@@ -123,6 +147,19 @@ class SegmentObject(lglass.nic.NicObject):
     @property
     def members(self):
         pass
+
+    @property
+    def inverse_keys(self):
+        return super().inverse_keys + ["net", "vlan-id", "vxlan-vni"]
+
+    def inverse_fields(self):
+        yield from super().inverse_fields()
+        for net in self.get("net"):
+            yield ("net", net.lower())
+        for vlanid in self.get("vlan-id"):
+            yield ("vlan-id", vlanid)
+        for vxlanvni in self.get("vxlan-vni"):
+            yield ("vxlan-vni", vxlanvni)
 
 
 class IPAMDatabaseMixin(lglass.nic.NicDatabaseMixin):
