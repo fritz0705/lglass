@@ -150,6 +150,9 @@ class Object(object):
                 pad=" " * (padding - len(key)),
                 value=value_lines[0])
             for line in value_lines[1:]:
+                if not line:
+                    record += "+\n"
+                    continue
                 record += "{pad}{value}\n".format(
                     pad=" " * (padding + 1),
                     value=line)
