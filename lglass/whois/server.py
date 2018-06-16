@@ -98,7 +98,11 @@ class SimpleWhoisServer(Base):
 
     async def query(self, request, writer):
         argparser = self._build_argparser()
-        args = argparser.parse_args(request.split())
+        try:
+            args = argparser.parse_args(request.split())
+        except:
+            await writer.drain()
+            return False
 
         if args.q:
             if args.q == "version":
