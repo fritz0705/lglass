@@ -1,13 +1,10 @@
 # coding: utf-8
 
-
 class Object(object):
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, data=None):
         self._data = []
         if data is not None:
             self.extend(data)
-        if kwargs != {}:
-            self.extend(kwargs)
 
     @property
     def data(self):
@@ -50,67 +47,9 @@ class Object(object):
             [(k, v) for k, v in self.data if k in self.primary_key_fields])
 
     def extend(self, ex, append_group=False):
-        append = self.append
-        if append_group:
-            append = self.append_group
-        if isinstance(ex, list):
-            for offset, item in enumerate(ex):
-                if isinstance(item, (tuple, list)):
-                    if len(item) != 2:
-                        raise ValueError(
-                            "offset {}: expected tuple of length 2, got {}".format(offset))
-                    elif not isinstance(item[0], str):
-                        raise ValueError(
-                            "offset {}: expected key to be of type str, got {}".format(
-                                offset, type(
-                                    item[0])))
-                    elif not isinstance(item[1], str):
-                        raise ValueError(
-                            "offset {}: expected value to be of type str, got {}".format(
-                                offset, type(
-                                    item[1])))
-                else:
-                    raise TypeError(
-                        "offset {}: expected entry to be of type tuple, got {}".format(
-                            offset, item))
-            for key, value in ex:
-                append(key, value)
-        elif isinstance(ex, dict):
-            for key, value in ex:
-                if not isinstance(key, str):
-                    raise ValueError(
-                        "expected key to be of type str, got {}".format(
-                            type(key)))
-                elif not isinstance(value, (str, list)):
-                    raise ValueError(
-                        "expected value to be of type str or list, got {}".format(
-                            type(value)))
-                if isinstance(value, list):
-                    for off, val in enumerate(value):
-                        if not isinstance(val, str):
-                            raise ValueError(
-                                "key {} offset {}: expected value to be of type str, got {}".format(
-                                    key, off, type(val)))
-            for key, value in ex:
-                if isinstance(value, list):
-                    for val in value:
-                        append(key, val)
-                else:
-                    append(key, value)
-            pass
-        elif isinstance(ex, str):
-            self.extend(
-                parse_object(
-                    ex.splitlines()),
-                append_group=append_group)
-        elif isinstance(ex, Object):
-            self.extend(ex.data, append_group=append_group)
-        elif hasattr(ex, "__iter__"):
-            self.extend(list(ex), append_group=append_group)
-        else:
-            raise TypeError(
-                "Expected ex to be dict, list, str, or lglass.object.Object, got {}".format(
-                    type(ex)))
+        if isinstance(ex, str):
+            ex = parse_object(ex.split())
+        self._data.extend(map(tuple, ex))
 
     def __getitem__(self, key):
         if isinstance(key, str):
