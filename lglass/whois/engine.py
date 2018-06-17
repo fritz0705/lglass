@@ -84,7 +84,7 @@ class WhoisEngine(object):
         return classes
 
     def query_lazy(self, query, classes=None, reverse_domain=False,
-                   recursive=True, less_specific_levels=0, exact_match=False,
+                   related=True, less_specific_levels=0, exact_match=False,
                    database=None, more_specific_levels=0, sources=None):
         database = self._get_database(database)
         classes = self.filter_classes(classes, database=database)
@@ -112,12 +112,12 @@ class WhoisEngine(object):
                         levels=less_specific_levels,
                         database=database):
                     yield ('primary', lobj)
-                    if recursive:
-                        for iv in self.query_inverse(lobj, database=database):
+                    if related:
+                        for iv in self.query_related(lobj, database=database):
                             yield ('related', iv)
             yield ('primary', obj)
-            if recursive:
-                for iv in self.query_inverse(obj, database=database):
+            if related:
+                for iv in self.query_related(obj, database=database):
                     yield ('related', iv)
             if obj.object_class in self.cidr_classes and more_specific_levels:
                 for lobj in self.query_more_specifics(
@@ -125,8 +125,8 @@ class WhoisEngine(object):
                         levels=more_specific_levels,
                         database=database):
                     yield ('primary', lobj)
-                    if recursive:
-                        for iv in self.query_inverse(lobj, database=database):
+                    if related:
+                        for iv in self.query_related(lobj, database=database):
                             yield ('related', iv)
             if reverse_domain and obj.object_class in self.cidr_classes:
                 for lobj in self.query_reverse_domains(
@@ -134,8 +134,8 @@ class WhoisEngine(object):
                         database=database,
                         classes=classes):
                     yield ('primary', lobj)
-                    if recursive:
-                        for iv in self.query_inverse(lobj, database=database):
+                    if related:
+                        for iv in self.query_related(lobj, database=database):
                             yield ('related', iv)
 
     def query(self, *args, **kwargs):
@@ -290,7 +290,7 @@ class WhoisEngine(object):
             if net in route.ip_network:
                 yield route
 
-    def query_inverse(self, obj, database=None):
+    def query_related(self, obj, database=None):
         database = self._get_database(database)
         schema = None
         if self.use_schemas:
@@ -383,8 +383,9 @@ class WhoisEngine(object):
         else:
             classes = self.address_classes | self.cidr_classes
             net = obj_or_net
-        if hasattr(database, "lookup_inetnum"):
-            for class_, key in database.lookup_inetnum(net, relation='<<'):
+        if hasattr(database, "lookup_inetnum") and self.cidr_classes | classes:
+            for class_, key in database.lookup_inetnum(net, relation='<<',
+                    order='ASC'):
                 yield database.fetch(class_, key)
             return
         res = set()
@@ -398,6 +399,15 @@ class WhoisEngine(object):
         if obj.type not in self.cidr_classes:
             return
         found = 0
+        if hasattr(database, "lookup_inetnum"):
+            if levels < 0:
+                levels = None
+            for class_, key in list(database.lookup_inetnum(obj.ip_network,
+                    order='DESC', relation='>>', limit=levels))[::-1]:
+                if class_ != obj.type:
+                    continue
+                yield database.fetch(class_, key)
+            return
         for supernet in obj.ip_network.supernet()[::-1]:
             try:
                 res = database.fetch(obj.type, str(supernet))
@@ -425,7 +435,7 @@ query = default_engine.query
 query_search_inverse = default_engine.query_search_inverse
 query_primary = default_engine.query_primary
 query_network = default_engine.query_network
-query_inverse = default_engine.query_inverse
+query_related = default_engine.query_related
 query_abuse = default_engine.query_abuse
 query_reverse_domain = default_engine.query_reverse_domains
 query_more_specifics = default_engine.query_more_specifics
@@ -460,11 +470,11 @@ def new_argparser(cls=argparse.ArgumentParser, *args, **kwargs):
     argparser.add_argument("--exact", "-x", action="store_true",
                            default=False, help="exact match")
     argparser.add_argument(
-        "--no-recurse",
+        "--no-related",
         "-r",
         action="store_true",
         default=False,
-        help="turn off recursive look-ups for contact information")
+        help="turn off related look-ups for contact information")
     argparser.add_argument(
         "--primary-keys",
         "-K",
@@ -481,11 +491,11 @@ def args_to_query_kwargs(args):
         less_specific_levels=args.less_specific_levels,
         more_specific_levels=args.more_specific_levels,
         exact_match=args.exact,
-        recursive=not args.no_recurse)
+        related=not args.no_related)
     if args.types is not None:
         kwargs["classes"] = args.types.split(",")
     if args.primary_keys:
-        kwargs["recursive"] = False
+        kwargs["related"] = False
     return kwargs
 
 
@@ -530,27 +540,29 @@ def main(args=None, stdout=sys.stdout, database_cls=lglass.nic.FileDatabase):
         print()
         start_time = time.time()
         if inverse_fields is not None:
-            results = eng.query((inverse_fields, (term,)), **query_kwargs)
+            results = eng.query_lazy((inverse_fields, (term,)), **query_kwargs)
         else:
-            results = eng.query(term, **query_kwargs)
-        end_time = time.time()
-        for primary in sorted(results.keys(), key=lambda k: k.type):
-            primary_key = db.primary_key(primary)
-            related_objects = list(results[primary])[1:]
-            abuse_contact = eng.query_abuse(primary)
-            if abuse_contact:
-                print("% Abuse contact for '{}' is '{}'".format(primary_key,
-                                                                abuse_contact))
-                print()
-            if args.primary_keys:
-                primary = primary.primary_key_object()
-                print("".join(primary.pretty_print(**pretty_print_options)))
-                continue
-            print("% Information related to '{}'".format(primary_key))
-            print()
-            print("".join(primary.pretty_print(**pretty_print_options)))
-            for obj in related_objects:
+            results = eng.query_lazy(term, **query_kwargs)
+        for role, obj in results:
+            primary_key = db.primary_key(obj)
+            if role == 'primary':
+                abuse_contact = eng.query_abuse(obj)
+                if abuse_contact:
+                    print("% Abuse contact for '{}' is '{}'".format(
+                        primary_key,
+                        abuse_contact))
+                    print()
+            if role == 'primary' and args.primary_keys:
+                obj = obj.primary_key_object()
                 print("".join(obj.pretty_print(**pretty_print_options)))
+                continue
+            elif role == 'related' and args.primary_keys:
+                continue
+            elif role == 'primary':
+                print("% Information related to '{}'".format(primary_key))
+                print()
+            print("".join(obj.pretty_print(**pretty_print_options)))
+        end_time = time.time()
         print("% Query took {} seconds".format(end_time - start_time),
               file=stdout)
     print("% All querys took {} seconds".format(
