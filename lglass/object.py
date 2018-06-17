@@ -48,7 +48,7 @@ class Object(object):
 
     def extend(self, ex, append_group=False):
         if isinstance(ex, str):
-            ex = parse_object(ex.split())
+            ex = parse_object(ex.splitlines())
         self._data.extend(map(tuple, ex))
 
     def __getitem__(self, key):
