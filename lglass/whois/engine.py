@@ -66,7 +66,7 @@ class WhoisEngine(object):
     def filter_classes(self, classes, *other_class_sets, database=None):
         database = self._get_database(database)
         if classes is None:
-            classes = database.object_classes
+            classes = set(database.object_classes)
         elif isinstance(classes, str):
             classes = {classes}
         else:
