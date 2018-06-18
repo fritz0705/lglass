@@ -154,7 +154,8 @@ class SimpleWhoisServer(Base):
                                          query_kwargs, writer)
             if results:
                 found_any = True
-                break
+                if not args.inverse:
+                    break
 
         if not found_any:
             writer.write(self.not_found_message(databases).encode())
