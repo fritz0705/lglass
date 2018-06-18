@@ -8,45 +8,57 @@ class Object(object):
 
     @property
     def data(self):
+        """List of key-value-tuples."""
         return self._data
 
     @property
     def object_class(self):
+        """Object class of this object."""
         return self.data[0][0]
 
     @object_class.setter
     def object_class(self, new_class):
+        """Set object class to new value."""
         self.data[0] = (new_class, self.object_key)
 
     @property
     def object_key(self):
+        """Object key of this object."""
         return self.data[0][1]
 
     @object_key.setter
     def object_key(self, new_key):
+        """Set object key to new value."""
         self.data[0] = (self.object_class, new_key)
 
     @property
     def type(self):
+        """Alias of `object_class`."""
         return self.object_class
 
     @property
     def key(self):
+        """Alias of `object_key`."""
         return self.object_key
 
     @property
     def primary_key(self):
+        """Primary key of this object. This is the concatenation of all
+        primary key field values."""
         return "".join(self[k] for k in self.primary_key_fields)
 
     @property
     def primary_key_fields(self):
+        """List of primary key fields."""
         return [self.object_class]
 
     def primary_key_object(self):
+        """Return object which consists only of the primary key fields."""
         return self.__class__(
             [(k, v) for k, v in self.data if k in self.primary_key_fields])
 
     def extend(self, ex, append_group=False):
+        """Extend object with another object or list."""
         if isinstance(ex, str):
             ex = parse_object(ex.splitlines())
         self._data.extend(map(tuple, ex))
@@ -94,15 +106,20 @@ class Object(object):
         return len(self.data)
 
     def get(self, key):
+        """Return a list of values for a given key."""
         return [v for k, v in self._data if k == key]
 
     def getitems(self, key):
+        """Returns a list of key-value-tuples for a given key."""
         return [kv for kv in self._data if kv[0] == key]
 
     def getfirst(self, key, default=None):
+        """Returns the first occurence of a field with matching key. Supports
+        the `default` keyword."""
         return next(self.get(key), default)
 
     def add(self, key, value, index=None):
+        """Append or insert a new field."""
         value = str(value)
         if index is not None:
             self._data.insert(index, (key, value))
@@ -113,6 +130,7 @@ class Object(object):
         return self.add(key, value)
 
     def append_group(self, key, value):
+        """Appends a field to the last group of fields of the same key."""
         try:
             idx = self.indices(key)[-1] + 1
             return self.insert(idx, key, value)
@@ -123,24 +141,31 @@ class Object(object):
         return self.add(key, value, index)
 
     def indices(self, key):
+        """Returns a list of indices of fields with a given key."""
         return [i for i, (k, v) in enumerate(self.data) if k == key]
 
     def remove(self, key):
+        """Remove all occurences of a key or remove a field with a given
+        index."""
         if isinstance(key, int):
             del self._data[key]
             return
         self._data = [kvpair for kvpair in self._data if kvpair[0] != key]
 
     def items(self):
+        """Returns an iterator of key-value-tuples."""
         return iter(self.data)
 
     def keys(self):
+        """Returns an iterator of field keys."""
         return (key for key, _ in self.items())
 
     def values(self):
+        """Returns an iterator of field values."""
         return (value for _, value in self.items())
 
     def pretty_print(self, min_padding=0, add_padding=8):
+        """Generates a pretty-printed version of the object serialization."""
         padding = max(max((len(k) for k in self.keys()),
                           default=0), min_padding) + add_padding
         for key, value in self:
@@ -186,6 +211,7 @@ class Object(object):
         return bool(self.data)
 
     def copy(self):
+        """Creates new object with same content."""
         return self.__class__(self.data)
 
     def to_json(self):
@@ -193,10 +219,12 @@ class Object(object):
 
     @classmethod
     def from_file(cls, fh):
+        """Creates an object from a file stream."""
         return cls(fh.read())
 
     @classmethod
     def from_str(cls, string):
+        """Creates an object from a string representation."""
         return cls(string)
 
 

@@ -13,6 +13,8 @@ import lglass.object
 
 
 def parse_asn(asn):
+    """Parse a string containing an autonomous system number, returning the
+    autonomous system number as int."""
     try:
         return int(asn)
     except ValueError:
@@ -23,7 +25,10 @@ def parse_asn(asn):
 
 
 def parse_as_block(as_block):
-    m = re.match(r"([Aa][Ss])?([0-9]+)\s*[-_/]\s*([Aa][Ss])?([0-9]+)$", as_block)
+    """Parse a string describing a block of autonomous system numbers,
+    returning a tuple of the first and last numbers."""
+    m = re.match(
+        r"([Aa][Ss])?([0-9]+)\s*[-_/]\s*([Aa][Ss])?([0-9]+)$", as_block)
     if not m:
         return False
     return int(m[2]), int(m[4])
@@ -35,8 +40,11 @@ def parse_ip_range(string):
 
 
 class NicObject(lglass.object.Object):
+    """Object from a NicDatabase"""
+
     @property
     def source(self):
+        """Source database of the object."""
         try:
             return self["source"].split("#")[0].strip()
         except KeyError:
@@ -52,6 +60,7 @@ class NicObject(lglass.object.Object):
 
     @property
     def source_flags(self):
+        """Source flags of the object."""
         try:
             return self["source"].split("#")[1].split()
         except (KeyError, IndexError):
@@ -72,6 +81,7 @@ class NicObject(lglass.object.Object):
 
     @property
     def maintainers(self):
+        """List of maintainer objects."""
         return list(self.get("mnt-by"))
 
     @maintainers.setter
@@ -87,6 +97,7 @@ class NicObject(lglass.object.Object):
 
     @property
     def created(self):
+        """Date and time of creation."""
         try:
             return self["created"]
         except KeyError:
@@ -104,6 +115,7 @@ class NicObject(lglass.object.Object):
 
     @property
     def last_modified(self):
+        """Date and time of last modification."""
         try:
             return self["last-modified"]
         except KeyError:
@@ -128,6 +140,7 @@ class NicObject(lglass.object.Object):
 
     @property
     def description(self):
+        """Description of the object."""
         return self["descr"]
 
     @description.setter
@@ -140,6 +153,7 @@ class NicObject(lglass.object.Object):
 
     @property
     def inverse_keys(self):
+        """List of inverse keys."""
         return ["abuse-c", "abuse-mailbox", "admin-c", "auth", "author",
                 "ds-rdata", "fingerpr", "form", "ifaddr", "irt-nfy",
                 "local-as", "mbrs-by-ref", "member-of", "mnt-by",
@@ -148,6 +162,8 @@ class NicObject(lglass.object.Object):
                 "ref-nfy", "tech-c", "upd-to", "zone-c"]
 
     def inverse_fields(self):
+        """Generates a stream of key-value-tuples, representing key and
+        index values of an inverse field."""
         # Simple object references
         for class_ in {"abuse-c", "admin-c", "author", "form", "local-as",
                        "member-of", "mnt-by", "mnt-domains", "mnt-irt",
@@ -187,12 +203,16 @@ class NicObject(lglass.object.Object):
 
 
 class HandleObject(NicObject):
+    """Object describing a NIC handle."""
+
     @property
     def primary_key_fields(self):
         return ["nic-hdl"]
 
 
 class InetnumObject(NicObject):
+    """Object describing an Internet number resource."""
+
     def add(self, key, value, index=None):
         try:
             return super().add(key, value, index)
@@ -202,6 +222,7 @@ class InetnumObject(NicObject):
 
     @property
     def ip_range(self):
+        """IP address range described by the object."""
         if "-" in self.object_key:
             return parse_ip_range(self.object_key)
         net = self.ip_network
@@ -209,6 +230,7 @@ class InetnumObject(NicObject):
 
     @property
     def ip_network(self):
+        """IP network described by the object."""
         try:
             return netaddr.IPNetwork(self.object_key)
         except netaddr.core.AddrFormatError:
@@ -238,12 +260,14 @@ class InetnumObject(NicObject):
 
     @property
     def ip_version(self):
+        """IP version."""
         if self.object_class == "inet6num":
             return 6
         elif self.object_class == "inetnum":
             return 4
 
     def rdns_domains(self):
+        """List of rDNS domains."""
         net = self.ip_network
         if self.ip_version == 4:
             next_prefixlen = 8 * ((net.prefixlen - 1) // 8 + 1)
@@ -254,26 +278,35 @@ class InetnumObject(NicObject):
 
     @property
     def primary_key(self):
+        if self.is_legacy:
+            r = self.ip_range
+            return str("{} - {}".format(r[0], r[-1]))
         return str(self.ip_network)
 
     @property
     def route_maintainers(self):
+        """List of maintainers for matching route objects."""
         return list(self.get("mnt-routes"))
 
     @property
     def irt_maintainers(self):
+        """List of Incident Response Teams."""
         return list(self.get("mnt-irt"))
 
     @property
     def domain_maintainers(self):
+        """List of maintainers for matching rDNS domain objects."""
         return list(self.get("mnt-domains"))
 
     @property
     def lower_maintainers(self):
+        """List of maintainers for suballocations."""
         return list(self.get("mnt-lower"))
 
 
 class ASBlockObject(NicObject):
+    """Object describing an as-block in a NIC database."""
+
     def __contains__(self, number_or_key):
         if isinstance(number_or_key, int):
             return number_or_key in self.range
@@ -281,14 +314,18 @@ class ASBlockObject(NicObject):
 
     @property
     def start(self):
+        """First autonomous system number in the block."""
         return self.range.start
 
     @property
     def end(self):
+        """Last autonomous system number in the block."""
         return self.range.stop - 1
 
     @property
     def range(self):
+        """range object, starting with the first and ending with the last
+        autonomous system number in the block."""
         start, end = parse_as_block(self.object_key)
         return range(start, end + 1)
 
@@ -298,6 +335,7 @@ class ASBlockObject(NicObject):
 
 
 class RouteObject(NicObject):
+    """Object describing a route in a NIC database."""
     @property
     def ip_network(self):
         if self.ip_version == 6:
@@ -314,6 +352,7 @@ class RouteObject(NicObject):
 
     @property
     def origin(self):
+        """Origin aut-num of this route."""
         try:
             return self["origin"].split()[0]
         except BaseException:
@@ -325,10 +364,12 @@ class RouteObject(NicObject):
 
     @property
     def lower_maintainers(self):
+        """List of maintainers for more-specific objects."""
         return list(self.get("mnt-lower"))
 
     @property
     def route_maintainers(self):
+        """List of maintainers for matching route objects."""
         return list(self.get("mnt-routes"))
 
     @property
@@ -337,6 +378,7 @@ class RouteObject(NicObject):
 
 
 class AutNumObject(NicObject):
+    """Object describing an autonomous system in a NIC database."""
     @property
     def lower_maintainers(self):
         return list(self.get("mnt-lower"))
@@ -386,6 +428,8 @@ object_class_types = {
 
 
 class NicDatabaseMixin(object):
+    """Mixin which turns a normal database into a NIC database."""
+
     def __init__(self):
         self.object_classes = object_classes
         self.class_synonyms = class_synonyms

@@ -9,6 +9,8 @@ primary_key_rules = {}
 
 def primary_class(object_class, class_synonyms=class_synonyms,
                   object_classes=object_classes):
+    """Find primary class name, i.e. the class synonym which is an object
+    class."""
     if isinstance(object_class, lglass.object.Object):
         object_class = object_class.object_class
     for synonym_group in class_synonyms:
@@ -21,6 +23,9 @@ def primary_class(object_class, class_synonyms=class_synonyms,
 
 def primary_key(obj, primary_key_rules=primary_key_rules,
                 primary_class=primary_class):
+    """Find primary key by applying primary key rules, determined by the object
+    itself or the primary_key_rules dictionary. Depends on the primary class of
+    the object."""
     object_class = primary_class(obj.object_class)
     try:
         rule = primary_key_rules[object_class]
@@ -41,29 +46,38 @@ def primary_key(obj, primary_key_rules=primary_key_rules,
 
 
 class Database(object):
+    """Base class for data sources of lglass.object.Object instances."""
     object_classes = {}
     class_synonyms = []
     primary_key_rules = {}
 
     def lookup(self, classes=None, keys=None):
+        """Lookup object specifications (tuples of primary classes and primary
+        keys) in database."""
         pass
 
     def fetch(self, typ, key):
+        """Fetch object by object specification. Raises KeyError when the
+        appropriate object is not present."""
         pass
 
     def try_fetch(self, typ, key):
+        """Same as fetch, but returns None instead of raising a KeyError."""
         try:
             return self.fetch(typ, key)
         except KeyError:
             return None
 
     def save(self, obj, **options):
+        """Save object in database."""
         pass
 
     def delete(self, obj):
+        """Delete object in database."""
         pass
 
     def search(self, query={}, classes=None, keys=None):
+        """Perform a complex search in the database, returning objects."""
         for obj in self.find(classes=classes, keys=keys):
             for key, query_value in query.items():
                 values = obj.get(key)
@@ -76,10 +90,12 @@ class Database(object):
                     break
 
     def search_inverse(self, inverse_keys, inverse_values, classes=None):
-        return self.search({key: inverse_values for key in inverse_keys},
-                classes=classes)
+        return self.search({key: set(inverse_values) for key in inverse_keys},
+                           classes=classes)
 
     def find(self, filter=None, classes=None, keys=None):
+        """Perform a lookup similarly to lookup, but fetches the objects and
+        applies a (optional) filter on the resulting generator."""
         for object_class, object_key in self.lookup(classes=classes, keys=keys):
             try:
                 obj = self.fetch(object_class, object_key)
@@ -89,15 +105,20 @@ class Database(object):
                 yield obj
 
     def primary_class(self, object_class):
+        """Return the primary class for an object class, using the database
+        internal class synonyms and object classes."""
         return primary_class(object_class, class_synonyms=self.class_synonyms,
                              object_classes=self.object_classes)
 
     def primary_key(self, object_class):
+        """Return the primary key function for an object class."""
         return primary_key(object_class,
                            primary_key_rules=self.primary_key_rules,
                            primary_class=self.primary_class)
 
     def primary_spec(self, obj):
+        """Generate the database-specific primary specification of an
+        object."""
         return self.primary_class(obj), self.primary_key(obj)
 
     def __contains__(self, obj):
@@ -120,6 +141,9 @@ def perform_key_match(key_pat, key):
 
 
 class ProxyDatabase(Database):
+    """Proxy database, which passes (most) requests to the underlying backend
+    database."""
+
     def __init__(self, backend):
         self.backend = backend
 
