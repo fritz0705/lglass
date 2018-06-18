@@ -272,6 +272,7 @@ class IPAMTool(object):
         renumber_parser.add_argument("new_ip_address")
         # lipam whois ...
         whois_parser = self.command_parsers.add_parser('whois')
+        whois_parser.add_argument("--inverse", "-i")
         lglass.whois.engine.new_argparser(whois_parser)
         # lipam whois-server
         whois_server_parser = self.command_parsers.add_parser('whois-server')
@@ -616,25 +617,33 @@ class IPAMTool(object):
     def whois(self):
         eng = self.whois_engine()
         query_kwargs = lglass.whois.engine.args_to_query_kwargs(self.args)
+        inverse_fields = None
+        if self.args.inverse is not None:
+            inverse_fields = self.args.inverse.split(",")
         for term in self.args.terms:
-            results = eng.query(term, **query_kwargs)
-            for primary in sorted(results.keys(), key=lambda k: k.type):
-                primary_key = self.database.primary_key(primary)
-                related_objects = list(results[primary])[1:]
-                abuse_contact = eng.query_abuse(primary)
-                if abuse_contact:
-                    self.print("% Abuse contact for '{}' is '{}'".format(
-                        primary_key, abuse_contact))
-                    self.print()
-                if self.args.primary_keys:
-                    primary = primary.primary_key_object()
-                    self.print_object(primary)
-                    continue
-                self.print("% Information related to '{}'".format(primary_key))
-                self.print()
-                self.print_object(primary)
-                for obj in related_objects:
+            if inverse_fields is not None:
+                results = eng.query_lazy((inverse_fields, (term,)),
+                        **query_kwargs)
+            else:
+                results = eng.query_lazy(term, **query_kwargs)
+            for role, obj in results:
+                primary_key = self.database.primary_key(obj)
+                if role == 'primary':
+                    abuse_contact = eng.query_abuse(obj)
+                    if abuse_contact:
+                        self.print("% Abuse contact for '{}' is '{}'".format(
+                            primary_key, abuse_contact))
+                        self.print()
+                if role == 'primary' and self.args.primary_keys:
+                    obj = obj.primary_key_object()
                     self.print_object(obj)
+                elif role == 'related' and self.args.primary_keys:
+                    continue
+                elif role == 'primary':
+                    self.print(
+                            "% Information related to '{}'".format(primary_key))
+                    self.print()
+                self.print_object(obj)
 
     def whois_server(self):
         server = lglass.whois.server.SimpleWhoisServer(self.whois_engine())
