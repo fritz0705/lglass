@@ -164,10 +164,11 @@ class WhoisEngine(object):
 
         if re.match(r"as[0-9]+$", query):
             asn = lglass.nic.parse_asn(query)
-            if "as-block" in classes and hasattr(database, "lookup_as_block"):
+            if "as-block" in classes and hasattr(database, "lookup_as_block") \
+                    and not exact_match:
                 for class_, key in database.lookup_as_block(asn):
                     yield database.fetch(class_, key)
-            elif "as-block" in classes:
+            elif "as-block" in classes and not exact_match:
                 for as_block in database.find(classes=("as-block",)):
                     if asn in as_block:
                         yield as_block
