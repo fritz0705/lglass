@@ -31,11 +31,6 @@ setuptools.setup(
         "netaddr",
         "python-dateutil"
     ],
-    entry_points={
-        "console_scripts": [
-            "lipam = lglass.lipam:main"
-        ]
-    },
     package_data={
     }
 )
