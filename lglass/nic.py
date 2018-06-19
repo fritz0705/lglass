@@ -259,6 +259,22 @@ class InetnumObject(NicObject):
             self.object_class = "inet6num"
 
     @property
+    def ip_networks(self):
+        """IP networks for legacy range objects, if multiple CIDR networks
+        apply. Read-only attribute."""
+        try:
+            return [netaddr.IPNetwork(self.object_key)]
+        except netaddr.core.AddrFormatError:
+            pass
+        return self.ip_range.cidrs()
+
+    @property
+    def is_legacy(self):
+        """Return True when this object is legacy, i.e. it stands for multiple
+        CIDR networks."""
+        return len(self.ip_networks) > 1
+
+    @property
     def ip_version(self):
         """IP version."""
         if self.object_class == "inet6num":
