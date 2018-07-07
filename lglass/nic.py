@@ -198,8 +198,8 @@ class NicObject(lglass.object.Object):
             yield ("ifaddr", ifaddr)
         # Special handling for nserver
         for nserver in self.get("nserver"):
-            nserver = nserver.lower().split()[0]
-            yield ("nserver", nserver)
+            for n in nserver.lower().split():
+                yield ("nserver", n)
 
 
 class HandleObject(NicObject):
