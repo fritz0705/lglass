@@ -94,6 +94,8 @@ class SimpleWhoisServer(Base):
                                help="request template for object of TYPE")
         argparser.add_argument("--help", "-h", action="store_true",
                                help="display this help")
+        argparser.add_argument("--client-address", action="store_true",
+                help="perform query for client ip address")
         return argparser
 
     async def query(self, request, writer):
@@ -140,7 +142,11 @@ class SimpleWhoisServer(Base):
                          in self.databases
                          if db.database_name in sources]
 
-        terms = args.terms
+        if args.client_address:
+            terms = [writer.get_extra_info('peername')[0]]
+            writer.write("% Your client IP address is {}\n\n".format(terms[0]).encode())
+        else:
+            terms = args.terms
         if args.inverse:
             inverse_fields = args.inverse.split(",")
             terms = [(inverse_fields, (term.replace("_", " "),))
