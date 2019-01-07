@@ -106,14 +106,27 @@ class SimpleWhoisServer(Base):
             await writer.drain()
             return False
 
+        primary_database = self.primary_database
+        if args.a:
+            databases = self.databases
+        else:
+            if args.sources:
+                sources = args.sources.upper().split(",")
+            else:
+                sources = self.default_sources
+            databases = [db for db
+                         in self.databases
+                         if db.database_name in sources]
+            if args.sources:
+                primary_database = databases[0]
+
         if args.q:
             if args.q == "version":
                 writer.write(self.version_string)
             elif args.q == "types":
                 writer.write(
                     "\n".join(
-                        sorted(
-                            self.primary_database.object_classes)).encode())
+                        sorted(primary_database.object_classes)).encode())
                 writer.write(b"\n\n")
             elif args.q == "sources":
                 for source in self.sources:
@@ -130,17 +143,6 @@ class SimpleWhoisServer(Base):
                 b"\n")
             await writer.drain()
             return args.persistent_connection
-
-        if args.a:
-            databases = self.databases
-        else:
-            if args.sources:
-                sources = args.sources.upper().split(",")
-            else:
-                sources = self.default_sources
-            databases = [db for db
-                         in self.databases
-                         if db.database_name in sources]
 
         if args.client_address:
             terms = [writer.get_extra_info('peername')[0]]
