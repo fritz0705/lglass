@@ -16,6 +16,27 @@ class SolidArgumentParser(argparse.ArgumentParser):
         pass
 
 
+class AsyncIteratorWrapper(object):
+    def __init__(self, iterable, loop=None, executor=None):
+        if loop is None:
+            loop = asyncio.get_running_loop()
+        self._iterable = iterable
+        self._loop = loop
+        self._executor = executor
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        def _next(iterator):
+            try:
+                return next(iterator)
+            except StopIteration:
+                raise StopAsyncIteration
+        return await self._loop.run_in_executor(
+            self._executor, _next, self._iterable)
+
+
 class Base(object):
     def __init__(self, engine, databases):
         self.databases = list(databases)
@@ -42,12 +63,13 @@ class SimpleWhoisServer(Base):
     abuse_template = "% Abuse contact for '{object_key}' is '{contact}'\n"
     allow_inverse_search = True
 
-    def __init__(self, engine, databases, default_sources=None):
+    def __init__(self, engine, databases, default_sources=None, executor=None):
         self.databases = list(databases)
         if default_sources is None:
             default_sources = [self.primary_database.database_name]
         self.default_sources = default_sources
         self.engine = engine
+        self.executor = executor
 
     @property
     def preamble(self):
@@ -95,7 +117,7 @@ class SimpleWhoisServer(Base):
         argparser.add_argument("--help", "-h", action="store_true",
                                help="display this help")
         argparser.add_argument("--client-address", action="store_true",
-                help="perform query for client ip address")
+                               help="perform query for client ip address")
         return argparser
 
     async def query(self, request, writer):
@@ -146,20 +168,21 @@ class SimpleWhoisServer(Base):
 
         if args.client_address:
             terms = [writer.get_extra_info('peername')[0]]
-            writer.write("% Your client IP address is {}\n\n".format(terms[0]).encode())
+            writer.write(
+                "% Your client IP address is {}\n\n".format(terms[0]).encode())
         else:
             terms = args.terms
         if args.inverse:
             inverse_fields = args.inverse.split(",")
             terms = [(inverse_fields, (term.replace("_", " "),))
-                    for term in terms]
+                     for term in terms]
 
         query_kwargs = lglass.whois.engine.args_to_query_kwargs(args)
         found_any = False
 
         for database in databases:
-            results = self.perform_query(database, terms, args,
-                                         query_kwargs, writer)
+            results = await self.perform_query(database, terms, args,
+                                               query_kwargs, writer)
             if results:
                 found_any = True
                 if not args.inverse:
@@ -173,16 +196,26 @@ class SimpleWhoisServer(Base):
 
         return args.persistent_connection
 
-    def send_results(self, writer, results, primary_keys=False,
-                     include_abuse_contact=True, pretty_print_options={},
-                     database=None):
+    async def send_results(self, writer, results, primary_keys=False,
+                           include_abuse_contact=True, pretty_print_options={},
+                           database=None):
+        """ This coroutine takes objects from an asynchronous iterator, called
+        'results', and writes them to the writer, called 'writer'. It performs
+        the formatting steps according to 'pretty_print_options', determines
+        the abuse contact, if required, and deduces the canonical primary keys
+        of the returned objects. """
+
+        loop = asyncio.get_running_loop()
         n = 0
-        for role, obj in results:
+        async for role, obj in results:
             n += 1
             primary_key = database.primary_key(obj)
             if role == 'primary' and include_abuse_contact:
-                abuse_contact = self.engine.query_abuse(obj,
-                                                        database=database)
+                # query_abuse is potentially blocking, hence we are calling it
+                # through loop.run_in_executor()
+                abuse_contact = await loop.run_in_executor(
+                    self.executor,
+                    lambda: self.engine.query_abuse(obj, database=database))
                 if abuse_contact:
                     writer.write(self.abuse_message(primary_key,
                                                     abuse_contact).encode())
@@ -205,24 +238,33 @@ class SimpleWhoisServer(Base):
             writer.write(b"\n")
         return n
 
-    def perform_query(self, database, terms, query_args, query_kwargs, writer):
+    async def perform_query(self, database, terms, query_args, query_kwargs,
+                            writer):
         database = self.engine.new_query_database(database)
         try:
             for term in terms:
                 # Replace underscore by spaces
                 if not isinstance(term, tuple):
                     term = term.replace("_", " ")
-                results = self.engine.query_lazy(
-                    term,
-                    database=database,
-                    **query_kwargs)
-                return self.send_results(writer,
-                                  results,
-                                  primary_keys=query_args.primary_keys,
-                                  pretty_print_options={
-                                      "min_padding": 16,
-                                      "add_padding": 0},
-                                  database=database)
+                # Here we request the generator synchronously, since it won't
+                # execute until we issue the first next() call on the
+                # generator.
+                results = self.engine.query_lazy(term, database=database,
+                                                 **query_kwargs)
+                # To execute the blocking call to next() on the results
+                # generator, we use AsyncIteratorWrapper to execute it in an
+                # executor, turning the iterator into an asynchronous iterator.
+                results = AsyncIteratorWrapper(results, executor=self.executor)
+                # We further defer the formatting and iteration into another
+                # method.
+                return await self.send_results(
+                    writer,
+                    results,
+                    primary_keys=query_args.primary_keys,
+                    pretty_print_options={
+                        "min_padding": 16,
+                        "add_padding": 0},
+                    database=database)
         finally:
             if hasattr(database, "close"):
                 database.close()
