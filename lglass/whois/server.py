@@ -105,15 +105,15 @@ class SimpleWhoisServer(Base):
         argparser.add_argument(
             "--inverse",
             "-i",
-            help="do an inverse look-up for specified ATTRibutes")
+            help="do an inverse look-up for specified attributes")
         argparser.add_argument("-q", help="query specified server info",
                                choices=["version", "types", "sources"])
         argparser.add_argument("-s", "--sources",
-                               help="search the database mirrored from SOURCE")
+                               help="search the database mirrored from source")
         argparser.add_argument("-a", action="store_true", default=False,
                                help="search in all sources")
         argparser.add_argument("--template", "-t",
-                               help="request template for object of TYPE")
+                               help="request template for object of type")
         argparser.add_argument("--help", "-h", action="store_true",
                                help="display this help")
         argparser.add_argument("--client-address", action="store_true",
@@ -240,6 +240,8 @@ class SimpleWhoisServer(Base):
 
     async def perform_query(self, database, terms, query_args, query_kwargs,
                             writer):
+        """ Performs a query, given by its search terms and query options,
+        asynchronously on a database and writes the response to a writer. """
         database = self.engine.new_query_database(database)
         try:
             for term in terms:

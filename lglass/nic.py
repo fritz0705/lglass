@@ -162,7 +162,7 @@ class NicObject(lglass.object.Object):
                 "ref-nfy", "tech-c", "upd-to", "zone-c"]
 
     def inverse_fields(self):
-        """Generates a stream of key-value-tuples, representing key and
+        """Generator that yields key-value-tuples, representing key and
         index values of an inverse field."""
         # Simple object references
         for class_ in {"abuse-c", "admin-c", "author", "form", "local-as",
@@ -481,6 +481,8 @@ class NicDatabaseMixin(object):
 
 
 class FileDatabase(lglass.database.Database, NicDatabaseMixin):
+    """NIC database instance that fetches from a directory structure."""
+
     _manifest = None
 
     def __init__(self, path, read_only=False, case_insensitive=True):
