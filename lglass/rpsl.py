@@ -20,7 +20,6 @@ def pure(r: T) -> Parser[T]:
     @wraps(pure)
     def _parser(s: str) -> Tuple[T, str]:
         return r, s
-    _parser.value = r
     return _parser
 
 
@@ -31,7 +30,7 @@ def char(_input: str) -> Tuple[str, str]:
 
 
 class Const(object):
-    def __init__(self, const):
+    def __init__(self, const: str) -> None:
         self.const = const
 
     def __call__(self, s: str) -> Tuple[str, str]:
@@ -39,10 +38,10 @@ class Const(object):
         for c1 in self.const:
             c2, s = char(s)
             if c1.lower() != c2.lower():
-                raise ParseException(s_orig)
+                raise ParseException(s_orig, self.const)
         return self.const, s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Const({self.const!r})"
 
 
@@ -50,7 +49,7 @@ const = Const
 
 
 class Options(Generic[T]):
-    def __init__(self, *parsers: Parser[T]):
+    def __init__(self, *parsers: Parser[T]) -> None:
         self.parsers = parsers
 
     def __call__(self, s: str) -> Tuple[T, str]:
@@ -66,7 +65,7 @@ class Options(Generic[T]):
             raise last_exc
         raise ParseException(s_orig)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Options{self.parsers!r}"
 
 
@@ -74,7 +73,7 @@ options = Options
 
 
 class Chain(Generic[T]):
-    def __init__(self, *parsers: Parser[T]):
+    def __init__(self, *parsers: Parser[T]) -> None:
         self.parsers = parsers
 
     def __call__(self, s: str) -> Tuple[List[T], str]:
@@ -84,7 +83,7 @@ class Chain(Generic[T]):
             rets.append(res)
         return rets, s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Chain{self.parsers!r}"
 
 
@@ -92,7 +91,7 @@ chain = Chain
 
 
 class Optional(Generic[T]):
-    def __init__(self, parser: Parser[T]):
+    def __init__(self, parser: Parser[T]) -> None:
         self.parser = parser
 
     def __call__(self, s: str) -> Tuple[Optional[T], str]:
@@ -102,7 +101,7 @@ class Optional(Generic[T]):
             pass
         return None, s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Optional({self.parser!r})"
 
 
@@ -110,7 +109,7 @@ optional = Optional
 
 
 class Some(object):
-    def __init__(self, parser):
+    def __init__(self, parser: Parser[T]) -> None:
         self._many_parser = Many(parser)
         self.parser = parser
 
@@ -119,7 +118,7 @@ class Some(object):
         res, s = self._many_parser(s)
         return [ret] + res, s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Some({self.parser!r})"
 
 
@@ -127,7 +126,7 @@ some = Some
 
 
 class Many(object):
-    def __init__(self, parser):
+    def __init__(self, parser: Parser[T]) -> None:
         self.parser = parser
 
     def __call__(self, s: str) -> Tuple[List[T], str]:
@@ -141,7 +140,7 @@ class Many(object):
                 ret.append(res)
         return ret, s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Many({self.parser!r})"
 
 
@@ -165,10 +164,10 @@ class Satisfy(object):
     def __call__(self, s: str) -> Tuple[str, str]:
         x, s_new = char(s)
         if not self.cond(x):
-            raise ParseException(s_new)
+            raise ParseException(s)
         return x, s_new
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Satisfy({self.cond!r})"
 
 
@@ -224,7 +223,7 @@ class Token(object):
         _, s = spaces(s)
         return ret, s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Token({self.parser!r})"
 
 
@@ -236,7 +235,7 @@ def one_of(chars: str) -> Parser[str]:
 
 
 class SepBy(object):
-    def __init__(self, parser: Parser[T], sep: Parser[U], inject=False):
+    def __init__(self, parser: Parser[T], sep: Parser[U], inject: bool = False) -> None:
         self.parser = parser
         self.sep = sep
         self.inject = inject
@@ -246,17 +245,16 @@ class SepBy(object):
         ret = [res]
         while True:
             try:
-                res, s = self.sep(s)
+                res1, s1 = self.sep(s)
+                res, s = self.parser(s1)
             except ParseException:
                 break
-            else:
-                if self.inject:
-                    ret.append(res)
-            res, s = self.parser(s)
+            if self.inject:
+                ret.append(res1)
             ret.append(res)
         return ret, s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"SepBy({self.parser!r}, {self.sep!r})"
 
 
@@ -264,7 +262,7 @@ sep_by = SepBy
 
 
 class PMap(object):
-    def __init__(self, f: Callable[[T], U], parser: Parser[T]):
+    def __init__(self, f: Callable[[T], U], parser: Parser[T]) -> None:
         self.f = f
         self.parser = parser
 
@@ -272,7 +270,7 @@ class PMap(object):
         res, s = self.parser(s)
         return self.f(res), s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"PMap({self.f!r}, {self.parser!r})"
 
 
@@ -283,7 +281,7 @@ def mark(m: U, parser: Parser[T]) -> Parser[Tuple[U, T]]:
     return pmap(lambda r: (m, r), parser)
 
 
-def forward(resolve):
+def forward(resolve: Callback[[], T]) -> T:
     def f(*args, **kwargs):
         return resolve()(*args, **kwargs)
     return f
@@ -295,7 +293,7 @@ action_lit = token(const("action"))
 accept_lit = token(const("accept"))
 noun_lit = pmap("".join, token(some(options(satisfy(is_letter),
                                             satisfy(is_number),
-                                            one_of(":-")))))
+                                            one_of(":-_")))))
 announce_lit = token(const("announce"))
 to_lit = token(const("to"))
 op_lit = token(options(const("<<="),
@@ -312,7 +310,7 @@ op_lit = token(options(const("<<="),
                        const("="),
                        const("<"),
                        const(">")))
-address_lit = pmap("".join, token(some(one_of("abcdefABCDEF0123456789:."))))
+hex_lit = pmap("".join, token(some(one_of("abcdefABCDEF0123456789"))))
 filter_lit = noun_lit
 any_lit = token(const("any"))
 protocol_lit = token(const("protocol"))
@@ -321,7 +319,7 @@ caret_lit = token(const("^"))
 minus_lit = token(const("-"))
 plus_lit = token(const("+"))
 slash_lit = token(const("/"))
-num_lit = pmap(int, pmap("".join, token(some(one_of("0123456789")))))
+num_lit = pmap(int, pmap("".join, token(some(satisfy(is_number)))))
 comma_lit = token(const(","))
 semicolon_lit = token(const(";"))
 dot_lit = token(const("."))
@@ -358,8 +356,31 @@ or_lit = token(const("OR"))
 not_lit = token(const("NOT"))
 as_lit = pmap(lambda r: r[0] + str(r[1]), chain(const("AS"), num_lit))
 as_set_lit = pmap(lambda r: r[0] + r[1], chain(const("AS-"), noun_lit))
+peering_set_lit = pmap(lambda r: r[0] + r[1], chain(const("PRNG-"), noun_lit))
+router_lit = pmap(lambda r: r[0] + r[1], chain(const("RTRS-"), noun_lit))
 dollar_lit = token(const("$"))
+upon_lit = token(const("upon"))
+static_lit = token(const("static"))
+at_lit = token(const("at"))
+double_colon_lit = token(const("::"))
+have_components_lit = token(const("HAVE-COMPONENTS"))
+exclude_lit = token(const("EXCLUDE"))
 
+
+# Addresses
+
+ipv4_address_clause = chain(num_lit, dot_lit,
+                            num_lit, dot_lit,
+                            num_lit, dot_lit,
+                            num_lit)
+ipv6_address_clause = token(sep_by(
+    many(one_of("abcdefABCDEF0123456789")),
+    options(const("::"), const(":")),
+    True))
+
+address_clause = options(
+    ipv4_address_clause,
+    ipv6_address_clause)
 
 # Prefix sets
 prefix_range_clause = chain(caret_lit,
@@ -367,7 +388,7 @@ prefix_range_clause = chain(caret_lit,
                                     plus_lit,
                                     chain(num_lit, minus_lit, num_lit),
                                     num_lit))
-prefix_clause = chain(address_lit,
+prefix_clause = chain(address_clause,
                       slash_lit,
                       num_lit,
                       optional(prefix_range_clause))
@@ -377,15 +398,13 @@ prefix_set_clause = chain(lbr_lit,
                           optional(prefix_range_clause))
 
 # Values
-ValueClause = Union[str, List['ValueClause']]
 value_clause = forward(lambda: value_clause)
-value_clause: Parser[ValueClause]
 value_set_clause = chain(lbr_lit,
                          optional(sep_by(value_clause, comma_lit)),
                          rbr_lit)
-value_range_clause = chain(num_lit, colon_lit, num_lit)
+value_int_clause = chain(num_lit, colon_lit, num_lit)
 value_clause = options(value_set_clause,
-                       value_range_clause,
+                       value_int_clause,
                        noun_lit)
 
 # Actions
@@ -424,30 +443,57 @@ as_regex_expr_clause = chain(options(
     as_lit,
     as_set_lit,
     as_set_clause,
+    dot_lit,
+    dollar_lit,
+    caret_lit,
     chain(lpar_lit, as_regex_clause, rpar_lit)),
     many(as_regex_op_clause))
 as_regex_clause = sep_by(
-        many(as_regex_expr_clause),
-        pipe_lit)
+    many(as_regex_expr_clause),
+    pipe_lit)
 
-filter_rs_clause = chain(noun_lit, prefix_range_clause)
+filter_rs_clause = chain(noun_lit, optional(prefix_range_clause))
 
 filter_clause = forward(lambda: filter_clause)
 filter_expr_clause = options(
     chain(lpar_lit, filter_clause, rpar_lit),
     any_lit,
     peer_as_lit,
+    action_call_clause,
     filter_rs_clause,
     prefix_set_clause,
     chain(lt_lit, as_regex_clause, gt_lit))
 filter_clause = sep_by(
-        chain(optional(not_lit), filter_expr_clause),
-        options(and_lit, or_lit, lookahead(filter_expr_clause)),
-        inject=True)
+    chain(optional(not_lit), filter_expr_clause),
+    options(and_lit, or_lit, pmap(
+        lambda s: 'OR', lookahead(filter_expr_clause))),
+    inject=True)
+
+
+# Peering specification
+
+as_expr_clause = forward(lambda: as_expr_clause)
+as_expr_clause = sep_by(
+    options(as_lit, as_set_lit, chain(lbr_lit, as_expr_clause, rbr_lit)),
+    options(and_lit, or_lit, except_lit),
+    True)
+
+router_expr_clause = forward(lambda: router_expr_clause)
+router_expr_clause = sep_by(
+    options(address_clause, router_lit,
+            chain(lbr_lit, router_expr_clause, rbr_lit)),
+    options(and_lit, or_lit, except_lit),
+    True)
+
+peering_clause = options(
+    chain(as_expr_clause,
+          optional(router_expr_clause),
+          optional(chain(at_lit, router_expr_clause))),
+    peering_set_lit)
 
 # Import
 import_factor_clause = chain(some(chain(from_lit,
-                                        noun_lit,
+                                        peering_clause,
                                         optional(chain(action_lit,
                                                        action_clause)))),
                              accept_lit,
@@ -458,11 +504,10 @@ import_term_clause = options(import_factor_clause,
                              chain(lbr_lit, many(import_factor_clause), rbr_lit))
 
 import_expression_clause = forward(lambda: import_expression_clause)
-import_expression_clause = options(
-    chain(import_term_clause, except_lit, import_expression_clause),
-    chain(import_term_clause, refine_lit, import_expression_clause),
-    import_term_clause
-)
+import_expression_clause = sep_by(
+    import_term_clause,
+    options(except_lit, refine_lit),
+    inject=True)
 
 import_clause = chain(optional(chain(protocol_lit,
                                      noun_lit)),
@@ -473,7 +518,7 @@ import_clause = chain(optional(chain(protocol_lit,
 
 # Export
 export_factor_clause = chain(some(chain(to_lit,
-                                        noun_lit,
+                                        peering_clause,
                                         optional(chain(action_lit,
                                                        action_clause)))),
                              announce_lit,
@@ -495,6 +540,18 @@ export_clause = chain(optional(chain(protocol_lit,
                                      noun_lit)),
                       export_expression_clause,
                       eof)
+
+# Inject
+condition_clause = sep_by(options(
+    static_lit,
+    chain(have_components_lit, prefix_set_clause),
+    chain(exclude_lit, prefix_set_clause),
+), options(and_lit, or_lit), True)
+
+inject_clause = chain(many(chain(at_lit, router_expr_clause)),
+                      optional(chain(action_lit, action_clause)),
+                      optional(chain(upon_lit, condition_clause)))
+
 
 # Multiprotocol
 afi_clause = chain(afi_lit, afi_value_lit)
