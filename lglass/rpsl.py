@@ -322,6 +322,17 @@ minus_lit = token(const("-"))
 plus_lit = token(const("+"))
 slash_lit = token(const("/"))
 num_lit = pmap(int, pmap("".join, token(some(satisfy(is_number)))))
+
+
+def colon_num_lit(s):
+    h, s = some(satisfy(is_number))(s)
+    c, s = const(":")(s)
+    l, s = some(satisfy(is_number))(s)
+    _, s = spaces(s)
+    h, l = int("".join(h)), int("".join(l))
+    return (h << 16) | l, s
+
+
 comma_lit = token(const(","))
 semicolon_lit = token(const(";"))
 dot_lit = token(const("."))
@@ -362,11 +373,18 @@ static_lit = token(const("STATIC"))
 at_lit = token(const("at"))
 have_components_lit = token(const("HAVE-COMPONENTS"))
 exclude_lit = token(const("EXCLUDE"))
+networks_lit = token(const("networks"))
+atomic_lit = token(const("ATOMIC"))
+inbound_lit = token(const("inbound"))
+outbound_lit = token(const("outbound"))
+mandatory_lit = token(const("MANDATORY"))
+optional_lit = token(const("OPTIONAL"))
 
 
 class SyntaxNode(object):
     def sub_nodes(self):
         ...
+
 
 class ObjectRef(SyntaxNode):
     parser = token(chain(satisfy(is_letter), many(options(
@@ -434,7 +452,7 @@ class RouterRef(ObjectRef):
     parser = token(chain(
         component_parser,
         const("."),
-        optional(sep_by(component_parser, const(".")))))
+        optional(sep_by(component_parser, const("."), True))))
 
     def __init__(self, primary_key, classes={"inet-rtr"}):
         super().__init__(primary_key, classes)
@@ -525,7 +543,7 @@ class PrefixRange(SyntaxNode):
         return f"PrefixRange({self.range!r})"
 
     def __str__(self):
-        return self.range
+        return flatten(self.range)
 
     def sub_nodes(self):
         yield from ()
@@ -573,16 +591,19 @@ class PrefixSet(object):
 value_parser = forward(lambda: value_parser)
 
 
-class ValueSet(SyntaxNode):
+class ValueList(SyntaxNode):
     parser = chain(lbr_lit,
                    optional(sep_by(value_parser, comma_lit)),
                    rbr_lit)
 
-    def __init__(self, values=set()):
-        self.values = set(values)
+    def __init__(self, values=list()):
+        self.values = list(values)
 
     def __repr__(self):
-        return f"ValueSet({self.values!r})"
+        return f"ValueList({self.values!r})"
+
+    def __str__(self):
+        return "{ " + ", ".join(map(str, self.values)) + " }"
 
     @classmethod
     def parse(cls, s):
@@ -597,7 +618,8 @@ class ValueSet(SyntaxNode):
 
 
 # TODO Implement A:B integer representation
-value_parser = options(ValueSet.parse,
+value_parser = options(ValueList.parse,
+                       colon_num_lit,
                        num_lit,
                        ObjectRef.parse)
 
@@ -616,7 +638,7 @@ class ActionCall(SyntaxNode):
     @classmethod
     def parse(cls, s):
         r, s = cls.parser(s)
-        return cls(r[0], r[1] or ()), s
+        return cls(r[0], r[2] or ()), s
 
     def __repr__(self):
         return f"ActionCall({self.func!r}, {self.args!r})"
@@ -654,10 +676,11 @@ class ActionOp(SyntaxNode):
         yield self.value
 
 
-action_parser = some(
+action_parser = options(ActionCall.parse, ActionOp.parse)
+actions_parser = some(
     pmap(lambda s: s[0],
          chain(
-        options(ActionCall.parse, ActionOp.parse),
+        action_parser,
         semicolon_lit
     )))
 
@@ -842,9 +865,10 @@ class ASRegex(SyntaxNode):
     def sub_nodes(self):
         yield from self.children
 
+
 class ASRegexAlt(SyntaxNode):
     parser = sep_by(ASRegex.parse, pipe_lit)
-    
+
     def __init__(self, alternatives):
         self.alternatives = alternatives
 
@@ -880,6 +904,9 @@ class FilterRS(SyntaxNode):
 
     def __repr__(self):
         return f"FilterRS({self.obj!r}, {self.range_!r})"
+
+    def __str__(self):
+        return f"{self.obj}{self.range_ if self.range_ else ''}"
 
     @classmethod
     def parse(cls, s):
@@ -957,6 +984,9 @@ class FilterNot(Filter):
     def sub_nodes(self):
         yield self.expr
 
+    def __str__(self):
+        return f"NOT {self.expr}"
+
 
 class FilterAnd(Filter):
     parser = sep_by(
@@ -968,6 +998,9 @@ class FilterAnd(Filter):
 
     def __repr__(self):
         return f"FilterAnd({self.exprs!r})"
+
+    def __str__(self):
+        return " AND ".join(map(str, self.exprs))
 
     @classmethod
     def parse(cls, s):
@@ -1001,6 +1034,9 @@ class FilterOr(Filter):
 
     def sub_nodes(self):
         yield from self.exprs
+
+    def __str__(self):
+        return f" OR ".join(map(str, self.exprs))
 
 
 filter_parser = FilterOr.parse
@@ -1051,7 +1087,7 @@ class RouterExpr(SyntaxNode):
         self.children = children
 
     def __repr__(self):
-        return r"RouterExpr({self.children!r})"
+        return f"RouterExpr({self.children!r})"
 
     def __str__(self):
         return " ".join(map(str, self.children))
@@ -1107,23 +1143,18 @@ peering_parser = options(
 # Import
 
 
-def _mk_factor_parser(from_lit, accept_lit):
+class ImportFactor(SyntaxNode):
     peerings_parser = pmap(
         lambda r: (r[1], r[2]),
         chain(from_lit, peering_parser,
               optional(pmap(
                   lambda r: r[1],
-                  chain(action_lit, action_parser)))))
+                  chain(action_lit, actions_parser)))))
     parser = chain(
         many(peerings_parser),
         accept_lit,
         filter_parser,
         optional(semicolon_lit))
-    return parser
-
-
-class ImportFactor(SyntaxNode):
-    parser = _mk_factor_parser(from_lit, accept_lit)
 
     def __init__(self, peering_actions, filter_):
         self.peering_actions = list(peering_actions)
@@ -1158,46 +1189,99 @@ class ImportFactor(SyntaxNode):
         yield self.filter_
 
 
-import_term_parser = options(
-    ImportFactor.parse,
-    pmap(lambda s: s[1],
-         chain(lbr_lit, many(ImportFactor.parse), rbr_lit)))
-
-
-class ImportExpr(SyntaxNode):
-    parser = forward(lambda: ImportExpr.parse)
-    parser = sep_by(
-        import_term_parser,
-        options(except_lit, refine_lit),
-        inject=True)
+class ImportFactorList(SyntaxNode):
+    parser = chain(lbr_lit, many(ImportFactor.parse), rbr_lit)
 
     def __init__(self, children):
         self.children = children
 
     def __repr__(self):
-        return f"ImportExpr({self.children!r})"
+        return f"ImportTermList({self.children!r})"
 
     def __str__(self):
-        return " ".join(map(str, self.children))
+        return "{ " + " ".join(map(str, self.children)) + " }"
 
     @classmethod
     def parse(cls, s):
         r, s = cls.parser(s)
-        return cls(r), s
+        return cls(r[1]), s
 
     def sub_nodes(self):
         yield from self.children
 
 
-def _mk_policy_parser(expr):
-    return chain(optional(chain(protocol_lit, ObjectRef.parse)),
-                 optional(chain(into_lit, ObjectRef.parse)),
-                 expr,
-                 eof)
+import_term_parser = options(
+    ImportFactor.parse,
+    ImportFactorList.parse)
+
+import_expr_parser = forward(lambda: ImportExpr.parse)
+
+
+class ImportExpr(SyntaxNode):
+    parser = options(
+        forward(lambda: ImportExceptExpr.parse),
+        forward(lambda: ImportRefineExpr.parse),
+        import_term_parser)
+
+    @classmethod
+    def parse(cls, s):
+        return cls.parser(s)
+
+
+class ImportExceptExpr(ImportExpr):
+    parser = chain(import_term_parser, except_lit, import_expr_parser)
+
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        return str(self.left) + " EXCEPT " + str(self.right)
+
+    def __repr__(self):
+        return f"ImportExceptExpr({self.left!r}, {self.right!r})"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(r[0], r[2]), s
+
+    def sub_nodes(self):
+        yield self.left
+        yield self.right
+
+
+class ImportRefineExpr(ImportExpr):
+    parser = chain(import_term_parser, refine_lit, import_expr_parser)
+
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        return str(self.left) + " REFINE " + str(self.right)
+
+    def __repr__(self):
+        return f"ImportRefineExpr({self.left!r}, {self.right!r})"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(r[0], r[2]), s
+
+    def sub_nodes(self):
+        yield self.left
+        yield self.right
+
+
+import_expr_parser = ImportExpr.parse
 
 
 class ImportPolicy(SyntaxNode):
-    parser = _mk_policy_parser(ImportExpr.parse)
+    parser = chain(optional(chain(protocol_lit, ObjectRef.parse)),
+                   optional(chain(into_lit, ObjectRef.parse)),
+                   import_expr_parser,
+                   eof)
 
     def __init__(self, expression, source_proto=None, sink_proto=None):
         self.expression = expression
@@ -1239,13 +1323,30 @@ import_parser = ImportPolicy.parse
 # Export
 
 
-class ExportFactor(ImportFactor):
-    parser = _mk_factor_parser(to_lit, announce_lit)
+class ExportFactor(SyntaxNode):
+    peerings_parser = pmap(
+        lambda r: (r[1], r[2]),
+        chain(to_lit, peering_parser,
+              optional(pmap(
+                  lambda r: r[1],
+                  chain(action_lit, actions_parser)))))
+    parser = chain(
+        many(peerings_parser),
+        announce_lit,
+        filter_parser,
+        optional(semicolon_lit))
+
+    def __init__(self, peering_actions, filter_):
+        self.peering_actions = list(peering_actions)
+        self.filter_ = filter_
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.peering_actions!r}, {self.filter_!r})"
 
     def __str__(self):
         s = ""
         for peering, actions in self.peering_actions:
-            s += f"to {peering} "
+            s += f"from {peering} "
             if actions is not None:
                 s += "action "
                 for action in actions:
@@ -1255,57 +1356,296 @@ class ExportFactor(ImportFactor):
         s += ";"
         return s
 
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(r[0], r[2]), s
 
-export_term_parser = options(
-    ExportFactor.parse,
-    pmap(lambda s: s[1],
-         chain(lbr_lit, many(ExportFactor.parse), rbr_lit)))
+    def sub_nodes(self):
+        for peering, actions in self.peering_actions:
+            yield peering
+            if actions:
+                yield from actions
+        yield self.filter_
 
 
-class ExportExpr(SyntaxNode):
-    parser = forward(lambda: ExportExpr.parse)
-    parser = sep_by(
-        export_term_parser,
-        options(except_lit, refine_lit),
-        inject=True)
+class ExportFactorList(SyntaxNode):
+    parser = chain(lbr_lit, many(ExportFactor.parse), rbr_lit)
 
     def __init__(self, children):
         self.children = children
 
     def __repr__(self):
-        return f"ExportExpr({self.children!r})"
+        return f"ExportTermList({self.children!r})"
 
     def __str__(self):
-        return " ".join(map(str, self.children))
+        return "{ " + " ".join(map(str, self.children)) + " }"
 
     @classmethod
     def parse(cls, s):
         r, s = cls.parser(s)
-        return cls(r), s
+        return cls(r[1]), s
 
     def sub_nodes(self):
         yield from self.children
 
 
-class ExportPolicy(ImportPolicy):
-    parser = _mk_policy_parser(ExportExpr.parse)
+export_term_parser = options(
+    ExportFactor.parse,
+    ExportFactorList.parse)
+
+export_expr_parser = forward(lambda: ExportExpr.parse)
+
+
+class ExportExpr(SyntaxNode):
+    parser = options(
+        forward(lambda: ExportExceptExpr.parse),
+        forward(lambda: ExportRefineExpr.parse),
+        export_term_parser)
+
+    @classmethod
+    def parse(cls, s):
+        return cls.parser(s)
+
+
+class ExportExceptExpr(ExportExpr):
+    parser = chain(export_term_parser, except_lit, export_expr_parser)
+
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        return str(self.left) + " EXCEPT " + str(self.right)
+
+    def __repr__(self):
+        return f"ExportExceptExpr({self.left!r}, {self.right!r})"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(r[0], r[2]), s
+
+    def sub_nodes(self):
+        yield self.left
+        yield self.right
+
+
+class ExportRefineExpr(ExportExpr):
+    parser = chain(export_term_parser, refine_lit, export_expr_parser)
+
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        return str(self.left) + " REFINE " + str(self.right)
+
+    def __repr__(self):
+        return f"ExportRefineExpr({self.left!r}, {self.right!r})"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(r[0], r[2]), s
+
+    def sub_nodes(self):
+        yield self.left
+        yield self.right
+
+
+export_expr_parser = ExportExpr.parse
+
+
+class ExportPolicy(SyntaxNode):
+    parser = chain(optional(chain(protocol_lit, ObjectRef.parse)),
+                   optional(chain(into_lit, ObjectRef.parse)),
+                   export_expr_parser,
+                   eof)
+
+    def __init__(self, expression, source_proto=None, sink_proto=None):
+        self.expression = expression
+        self.source_proto = source_proto
+        self.sink_proto = sink_proto
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.expression!r}, {self.source_proto!r}, " + \
+            f"{self.sink_proto!r})"
+
+    def __str__(self):
+        s = ""
+        if self.source_proto:
+            s += f"protocol {self.source_proto} "
+        if self.sink_proto:
+            s += f"into {self.sink_proto} "
+        return s + str(self.expression)
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        proto = r[0]
+        into = r[1]
+        expr = r[2]
+        if proto is not None:
+            proto = proto[1]
+        if into is not None:
+            into = into[1]
+        return cls(expr, proto, into), s
+
+    def sub_nodes(self):
+        yield self.expression
+        yield self.source_proto
+        yield self.sink_proto
+
+
+export_parser = ExportPolicy.parse
+
+# Default
+
+
+class DefaultPolicy(SyntaxNode):
+    parser = chain(to_lit, peering_parser,
+                   optional(chain(action_lit, actions_parser)),
+                   optional(chain(networks_lit, filter_parser)),
+                   eof)
+
+    def __init__(self, peering, action, filter_):
+        self.peering = peering
+        self.action = action
+        self.filter = filter_
+
+    def __repr__(self):
+        return f"DefaultPolicy({self.peering!r}, {self.action!r}, {self.filter!r})"
+
+    def __str__(self):
+        s = "to " + str(self.peering)
+        if self.action:
+            s += " action " + str(self.action)
+        if self.filter:
+            s += " networks " + str(self.filter)
+        return s
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        action = r[2][1] if r[2] else None
+        filter_ = r[3][1] if r[3] else None
+        return cls(r[1], action, filter_), s
+
+    def sub_nodes(self):
+        yield self.peering
+        yield self.action
+        yield self.filter
 
 
 # Inject
-condition_parser = sep_by(
-    options(
-        static_lit,
-        chain(have_components_lit, PrefixSet.parse),
-        chain(exclude_lit, PrefixSet.parse),
-    ), options(and_lit, or_lit),
-    inject=True)
+class InjectCondition(SyntaxNode):
+    pass
+
+
+class InjectHaveComponents(InjectCondition):
+    parser = chain(have_components_lit, PrefixSet.parse)
+
+    def __init__(self, prefixes):
+        self.prefixes = prefixes
+
+    def __repr__(self):
+        return f"InjectHaveComponents({self.prefixes!r})"
+
+    def __str__(self):
+        return f"HAVE-COMPONENTS {self.prefixes}"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(r[1]), s
+
+
+class InjectExclude(InjectCondition):
+    parser = chain(exclude_lit, PrefixSet.parse)
+
+    def __init__(self, prefixes):
+        self.prefixes = prefixes
+
+    def __repr__(self):
+        return f"InjectExclude({self.prefixes!r})"
+
+    def __str__(self):
+        return f"EXCLUDE {self.prefixes}"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(r[1]), s
+
+
+class InjectStatic(InjectCondition):
+    parser = static_lit
+
+    def __repr__(self):
+        return "InjectStatic()"
+
+    def __str__(self):
+        return "STATIC"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        return cls(), s
+
+
+class InjectAnd(InjectCondition):
+    parser = sep_by(options(
+        InjectStatic.parse,
+        InjectHaveComponents.parse,
+        InjectExclude.parse),
+        and_lit)
+
+    def __init__(self, exprs):
+        self.exprs = exprs
+
+    def __str__(self):
+        return " AND ".join(map(str, self.exprs))
+
+    def __repr__(self):
+        return f"InjectAnd({self.exprs!r})"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        if len(r) == 1:
+            return r[0], s
+        return cls(r), s
+
+
+class InjectOr(InjectCondition):
+    parser = sep_by(InjectAnd.parser, or_lit)
+
+    def __init__(self, exprs):
+        self.exprs = exprs
+
+    def __str__(self):
+        return " OR ".join(map(str, self.exprs))
+
+    def __repr__(self):
+        return f"InjectOr({self.exprs!r})"
+
+    @classmethod
+    def parse(cls, s):
+        r, s = cls.parser(s)
+        if len(r) == 1:
+            return r[0], s
+        return cls(r), s
+
+
+inject_condition_parser = InjectOr.parse
 
 
 class InjectPolicy(SyntaxNode):
     expression_parser = chain(
         many(chain(at_lit, RouterExpr.parse)),
-        optional(chain(action_lit, action_parser)),
-        optional(chain(upon_lit, condition_parser)))
+        optional(chain(action_lit, actions_parser)),
+        optional(chain(upon_lit, inject_condition_parser)))
     parser = chain(expression_parser, eof)
 
     def __init__(self, routers, action, condition):
@@ -1405,56 +1745,53 @@ class MPExportPolicy(ExportPolicy):
         yield from super().sub_nodes()
 
 
-
 import_parser = ImportPolicy.parse
 export_parser = ExportPolicy.parse
 inject_parser = InjectPolicy.parse
+default_parser = DefaultPolicy.parse
 
 mp_import_parser = MPImportPolicy.parse
 mp_export_parser = MPExportPolicy.parse
 
-def pprint_ast(node):
-    # TODO Repair output
-    _dl = "\N{box drawings light down and left}"
-    _v = "\N{box drawings light vertical}"
-    _vr = "\N{box drawings light vertical and right}"
-    _h = "\N{box drawings light horizontal}"
-    s = f"{_dl} {node!r}\n"
+
+def extract_ast(node):
+    sub_nodes = []
     for sub_node in node.sub_nodes():
-        if not isinstance(sub_node, SyntaxNode):
-            s += f"{_vr}{_h}{_h} «" + str(sub_node) + "»\n"
-            continue
-        sub_s = pprint_ast(sub_node)
-        sub_s = sub_s.replace("\n", f"\n{_v}  ")
-        s += f"{_vr}{_h}{_h}" + sub_s
-    return s
+        if isinstance(sub_node, SyntaxNode):
+            sub_nodes.append(extract_ast(sub_node))
+        else:
+            sub_nodes.append(sub_node)
+    return (str(node), sub_nodes)
+
 
 if __name__ == "__main__":
     import argparse
     import sys
+    import pprint
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument("type", choices=("import", "export", "mp-import",
-        "mp-export", "filter", "inject",
-        "prefix-set", "as-regex",
-        "peering", "router"))
+                                            "mp-export", "filter", "inject",
+                                            "prefix-set", "as-regex",
+                                            "peering", "router", "default"))
     argparser.add_argument("-o", "--output", choices=("str", "repr", "ast"),
-            default="str")
+                           default="str")
 
     args = argparser.parse_args()
     r = sys.stdin.read()
     parsers = {
-            "import": import_parser,
-            "export": export_parser,
-            "mp-import": mp_import_parser,
-            "mp-export": mp_export_parser,
-            "filter": filter_parser,
-            "inject": inject_parser,
-            "prefix-set": PrefixSet.parse,
-            "as-regex": as_regex_parser,
-            "peering": PeeringSpec.parse,
-            "router": RouterExpr.parse
-            }
+        "import": import_parser,
+        "export": export_parser,
+        "mp-import": mp_import_parser,
+        "mp-export": mp_export_parser,
+        "filter": filter_parser,
+        "inject": inject_parser,
+        "prefix-set": PrefixSet.parse,
+        "as-regex": as_regex_parser,
+        "peering": PeeringSpec.parse,
+        "router": RouterExpr.parse,
+        "default": default_parser,
+    }
 
     r, s = parsers[args.type](r)
 
@@ -1463,4 +1800,4 @@ if __name__ == "__main__":
     elif args.output == "repr":
         print(repr(r))
     elif args.output == "ast":
-        print(pprint_ast(r))
+        pprint.pprint(extract_ast(r))
