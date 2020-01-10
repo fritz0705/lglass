@@ -82,7 +82,10 @@ class NicObject(lglass.object.Object):
     @property
     def maintainers(self):
         """List of maintainer objects."""
-        return list(self.get("mnt-by"))
+        ret = []
+        for maintainers in self.get("mnt-by"):
+            ret.extend(map(str.strip, maintainers.split(",")))
+        return ret
 
     @maintainers.setter
     def maintainers(self, new_maintainers):
@@ -166,11 +169,18 @@ class NicObject(lglass.object.Object):
         index values of an inverse field."""
         # Simple object references
         for class_ in {"abuse-c", "admin-c", "author", "form", "local-as",
-                       "member-of", "mnt-by", "mnt-domains", "mnt-irt",
+                       "mnt-domains", "mnt-irt",
                        "mnt-lower", "mnt-ref", "org", "origin", "ping-hdl",
                        "tech-c", "zone-c"}:
             for value in self.get(class_):
                 yield (class_, value)
+        # Object list references
+        for class_ in {"member-of", "members", "mbrs-by-ref", "mnt-by"}:
+            for values in self.get(class_):
+                for value in values.split(","):
+                    if class_ == "mbrs-by-ref" and value.strip() == "ANY":
+                        continue
+                    yield (class_, value.strip())
         # Email addresses
         for class_ in {"abuse-mailbox", "irt-nfy", "mnt-nfy", "notify",
                 "ref-nfy", "upd-to"}:
@@ -188,10 +198,6 @@ class NicObject(lglass.object.Object):
         for mntroutes in self.get("mnt-routes"):
             mntroutes = mntroutes.split()[0]
             yield ("mnt-routes", mntroutes)
-        # Special handling for mbrs-by-ref
-        for mbrsbyref in self.get("mbrs-by-ref"):
-            if mbrsbyref != "ANY":
-                yield ("mbrs-by-ref", mbrsbyref)
         # Special handling for ifaddr
         for ifaddr in self.get("ifaddr"):
             ifaddr = ifaddr.lower().split()[0]
