@@ -1,8 +1,3 @@
-# coding: utf-8
-# XXX This module does not generate ROA by parsing RPSL information from your
-# and foreign aut-num objects, but reads the route objects and generates
-# according roa entries.
-
 import re
 
 import netaddr

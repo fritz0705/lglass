@@ -1,5 +1,3 @@
-# coding: utf-8
-
 class Object(object):
     def __init__(self, data=None):
         self._data = []
