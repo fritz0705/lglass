@@ -399,10 +399,10 @@ class WhoisEngine(object):
                     order='ASC'):
                 yield database.fetch(class_, key)
             return
-        res = set()
+        res = []
         for rel in database.find(classes=classes):
             if rel.ip_network in net:
-                res.add(rel)
+                res.append(rel)
         yield from sorted(res, key=lambda o: o.ip_network)
 
     def query_less_specifics(self, obj, levels=1, database=None):
