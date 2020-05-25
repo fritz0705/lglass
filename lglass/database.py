@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 
 import lglass.object
 
@@ -44,17 +45,19 @@ def primary_key(obj, primary_key_rules=primary_key_rules,
     return "".join(_components())
 
 
-class Database(object):
+class Database(ABC):
     """Base class for data sources of lglass.object.Object instances."""
     object_classes = {}
     class_synonyms = []
     primary_key_rules = {}
 
+    @abstractmethod
     def lookup(self, classes=None, keys=None):
         """Lookup object specifications (tuples of primary classes and primary
         keys) in database."""
         pass
 
+    @abstractmethod
     def fetch(self, typ, key):
         """Fetch object by object specification. Raises KeyError when the
         appropriate object is not present."""
@@ -67,13 +70,15 @@ class Database(object):
         except KeyError:
             return None
 
+    @abstractmethod
     def save(self, obj, **options):
         """Save object in database."""
-        pass
+        ...
 
+    @abstractmethod
     def delete(self, obj):
         """Delete object in database."""
-        pass
+        ...
 
     def search(self, query={}, classes=None, keys=None):
         """Perform a complex search in the database, returning objects."""
@@ -120,8 +125,13 @@ class Database(object):
         object."""
         return self.primary_class(obj), self.primary_key(obj)
 
+    @abstractmethod
     def __contains__(self, obj):
-        pass
+        ...
+
+    @abstractmethod
+    def close(self):
+        ...
 
 
 def perform_key_match(key_pat, key):
@@ -172,6 +182,12 @@ class ProxyDatabase(Database):
 
     def save_manifest(self, *args, **kwargs):
         return self.backend.save_manifest(*args, **kwargs)
+
+    def __contains__(self, obj):
+        return obj in self.backend
+
+    def close(self):
+        return self.backend.close()
 
     @property
     def object_classes(self):

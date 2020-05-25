@@ -607,6 +607,13 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
         object_key = self.primary_key(obj).replace("/", "_")
         os.unlink(self._build_path(object_class, object_key))
 
+    def __contains__(self, obj):
+        primary_spec = self.primary_spec(obj)
+        return os.path.exists(self._build_path(*primary_spec))
+
+    def close(self):
+        pass
+
     @property
     def manifest(self):
         if self._manifest is not None:
