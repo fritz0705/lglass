@@ -15,9 +15,9 @@ def primary_class(object_class, class_synonyms=class_synonyms,
         object_class = object_class.object_class
     for synonym_group in class_synonyms:
         if object_class in synonym_group:
-            for synonyme in synonym_group:
-                if synonyme in object_classes:
-                    return synonyme
+            for synonym in synonym_group:
+                if synonym in object_classes:
+                    return synonym
     return object_class
 
 
@@ -55,13 +55,13 @@ class Database(ABC):
     def lookup(self, classes=None, keys=None):
         """Lookup object specifications (tuples of primary classes and primary
         keys) in database."""
-        pass
+        ...
 
     @abstractmethod
     def fetch(self, typ, key):
         """Fetch object by object specification. Raises KeyError when the
         appropriate object is not present."""
-        pass
+        ...
 
     def try_fetch(self, typ, key):
         """Same as fetch, but returns None instead of raising a KeyError."""
