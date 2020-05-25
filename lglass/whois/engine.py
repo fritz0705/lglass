@@ -27,7 +27,8 @@ class WhoisEngine(object):
     def __init__(self, database=None, use_schemas=False, type_hints=None,
                  global_cache=None, query_cache=True,
                  ipv4_more_specific_prefixlens=None,
-                 ipv6_more_specific_prefixlens=None):
+                 ipv6_more_specific_prefixlens=None,
+                 case_insensitive=True):
         self.database = database
         self.use_schemas = use_schemas
         self._schema_cache = {}
@@ -41,6 +42,7 @@ class WhoisEngine(object):
             ipv6_more_specific_prefixlens = set()
         self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
         self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
+        self.case_insensitive = case_insensitive
 
     def new_query_database(self, database=None):
         if database is None:
@@ -158,7 +160,8 @@ class WhoisEngine(object):
         database = self._get_database(database)
 
         classes = self.filter_classes(classes, database=database)
-        query = query.lower()
+        if self.case_insensitive:
+            query = query.lower()
 
         if re.match(r"as[0-9]+$", query):
             asn = lglass.nic.parse_asn(query)
