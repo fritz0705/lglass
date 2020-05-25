@@ -98,6 +98,7 @@ class Object(object):
             self.remove(key)
 
     def __contains__(self, key):
+        """ Checks whether a given key is contained in the object instance. """
         return key in set(self.keys())
 
     def __len__(self):
@@ -114,7 +115,10 @@ class Object(object):
     def getfirst(self, key, default=None):
         """Returns the first occurence of a field with matching key. Supports
         the `default` keyword."""
-        return next(self.get(key), default)
+        try:
+            return self.get(key)[0]
+        except IndexError:
+            return default
 
     def add(self, key, value, index=None):
         """Append or insert a new field."""
@@ -191,16 +195,10 @@ class Object(object):
             object_class=self.object_class,
             object_key=self.object_key)
 
-    def __hash__(self):
-        return hash((self.type, self.key))
-
     def __eq__(self, other):
-        if hash(self) != hash(other):
-            return False
-        try:
-            return self.data == other.data
-        except AttributeError:
-            return False
+        if not isinstance(other, Object):
+            return NotImplemented
+        return self.data == other.data
 
     def __ne__(self, other):
         return not self == other

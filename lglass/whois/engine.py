@@ -37,12 +37,21 @@ class WhoisEngine(object):
             self.type_hints.update(type_hints)
         self.query_cache = query_cache
         if ipv4_more_specific_prefixlens is None:
-            ipv4_more_specific_prefixlens = set(range(20, 33))
+            ipv4_more_specific_prefixlens = set(range(20, 32+1))
         if ipv6_more_specific_prefixlens is None:
             ipv6_more_specific_prefixlens = set()
         self.ipv4_more_specific_prefixlens = ipv4_more_specific_prefixlens
         self.ipv6_more_specific_prefixlens = ipv6_more_specific_prefixlens
         self.case_insensitive = case_insensitive
+
+    def __repr__(self):
+        return f"WhoisEngine(database={self.database!r}, "\
+                f"use_schemas={self.use_schemas!r}, "\
+                f"type_hints={self.type_hints!r}, "\
+                f"query_cache={self.query_cache!r}, "\
+                f"ipv4_more_specific_prefixlens={self.ipv4_more_specific_prefixlens!r}, "\
+                f"ipv6_more_specific_prefixlens={self.ipv6_more_specific_prefixlens!r}, "\
+                f"case_insensitive={self.case_insensitive!r})"
 
     def new_query_database(self, database=None):
         if database is None:

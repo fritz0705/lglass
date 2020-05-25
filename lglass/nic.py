@@ -625,3 +625,6 @@ class FileDatabase(lglass.database.Database, NicDatabaseMixin):
             obj = NicObject([("database", os.path.basename(self._path))])
         self._manifest = obj
         return obj
+
+__all__ = ("NicObject", "HandleObject", "InetnumObject", "ASBlockObject",
+        "RouteObject", "AutNumObject", "NicDatabaseMixin", "FileDatabase")

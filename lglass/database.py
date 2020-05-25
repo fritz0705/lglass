@@ -94,6 +94,7 @@ class Database(ABC):
                     break
 
     def search_inverse(self, inverse_keys, inverse_values, classes=None):
+        """Performs an inverse search in the database, returning objects."""
         return self.search({key: set(inverse_values) for key in inverse_keys},
                            classes=classes)
 
@@ -135,18 +136,15 @@ class Database(ABC):
 
 
 def perform_key_match(key_pat, key):
-    return (
-        key_pat is None) or (
-        isinstance(
-            key_pat,
-            str) and key == key_pat) or (
-                isinstance(
-                    key_pat,
-                    (list,
-                     set,
-                     tuple,
-                     frozenset)) and key in key_pat) or (
-        callable(key_pat) and key_pat(key))
+    if key_pat is None:
+        return True
+    elif isinstance(key_pat, str) and key == key_pat:
+        return True
+    elif isinstance(key_pat, (list, set, tuple, frozenset)) and key in key_pat:
+        return True
+    elif callable(key_pat) and key_pat(key):
+        return True
+    return False
 
 
 class ProxyDatabase(Database):
@@ -208,3 +206,5 @@ class ProxyDatabase(Database):
     @property
     def database_name(self):
         return self.backend.database_name
+
+__all__ = ('Database', 'ProxyDatabase')
